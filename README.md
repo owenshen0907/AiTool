@@ -1,17 +1,26 @@
-# Nihongo
+# Owenshen‘s AI Tool 平台
 
 [![Node.js](https://img.shields.io/badge/Node.js-v18.20.7-green)](https://nodejs.org/) [![npm](https://img.shields.io/badge/npm-v10.8.2-blue)](https://www.npmjs.com/)
 
-## **Nihongo**
-- 是一款支持**翻译**、**笔记记录**、**学习推荐**的工具。**可拍照或输入文本翻译**，**提取单词和语法并解析**，**自动生成学习笔记**，**支持熟练度标记与推荐复习**。**提供单词/语法卡片打印**、**线下练习记录**、Markdown 笔记管理，并**跟踪学习进度**。未来将增强实体笔记扫描。欢迎反馈，我会尽快适配上线！
-- 是一个使用 **Next.js**、**TypeScript** 和 **Tailwind CSS** 构建的现代化 Web 应用。它集成了 Casdoor 认证、PostgreSQL 数据库管理，并支持 Markdown 渲染。
+## 介绍
+
+Owenshen‘s AI Tool 平台是一款一站式 AI 能力工具集，集成了以下六大核心模块：
+
+- **Prompt**：Prompt 管理、生成与调试
+- **知识库**：知识库管理与文件管理
+- **模型微调**：微调任务管理与数据集管理
+- **语音**：ASR、TTS 与实时语音交互
+- **图片**：AI 图片生成
+- **实用 Agent**：视频、图片、文件、代码与自定义接口测试等多场景 Agent
+
+平台基于 **Next.js**、**TypeScript** 和 **Tailwind CSS** 构建，并集成了 Casdoor 认证与 PostgreSQL 数据存储，为开发者和产品团队提供高效、可扩展的 AI 能力支撑。
 
 ---
 
 ## 目录
 
-- [概述](#概述)
 - [功能](#功能)
+- [技术栈](#技术栈)
 - [要求](#要求)
 - [安装](#安装)
 - [开发](#开发)
@@ -21,23 +30,52 @@
 
 ---
 
-## 概述
+## 功能
 
-本项目基于 Next.js 构建，支持服务端渲染（SSR）和静态站点生成（SSG）。利用 TypeScript 保证类型安全，并通过 Tailwind CSS 快速构建响应式用户界面。主要集成包括：
-- **Casdoor** 用于安全认证。
-- **PostgreSQL**（使用 `pg` 和 `pgvector`）进行数据存储。
-- **Markdown 渲染**：使用 `react-markdown` 和 `remark-gfm` 解析 Markdown 内容。
+### Prompt
+
+- Prompt 管理：列表、编辑、删除与权限控制
+- Prompt 生成：快速创建模板化 Prompt
+- Prompt 调试：实时测试与对比不同 Prompt 效果
+
+### 知识库
+
+- 知识库管理：统一创建与维护多个知识库
+- 文件管理：上传、索引与检索文档、图片等资源
+
+### 模型微调
+
+- 微调管理：提交、监控与管理微调任务
+- 数据集管理：上传、标注与划分训练集/验证集
+
+### 语音
+
+- ASR：实时语音转文字
+- TTS：文本转语音合成
+- Real‑Time：低时延双向语音交互示例
+
+### 图片
+
+- 图片生成：基于文本或模板批量生成 AI 图片
+
+### 实用 Agent
+
+- 视频：视频总结、剪辑脚本与文案生成
+- 图片：图片批量分析与标注
+- 文件：一键文本/图片总结
+- 代码：一键生成 README 与接口文档
+- 其它：自定义接口测试 Agent
 
 ---
 
-## 功能
+## 技术栈
 
-- **Next.js**：支持 SSR 和 SSG。
-- **TypeScript**：利用静态类型提高代码质量。
-- **Tailwind CSS**：快速构建响应式设计。
-- **PostgreSQL**：通过 `pg` 和 `pgvector` 实现数据管理。
-- **Casdoor 认证**：实现安全的用户认证。
-- **Markdown 渲染**：使用 `react-markdown` 和 `remark-gfm` 解析 Markdown 内容。
+- **框架**：Next.js (App Router)
+- **语言**：TypeScript
+- **样式**：Tailwind CSS
+- **认证**：Casdoor
+- **数据库**：PostgreSQL (`pg` + `pgvector`)
+- **Markdown 渲染**：`react-markdown` + `remark-gfm`
 
 ---
 
@@ -50,94 +88,91 @@
 
 ---
 
+## 安装
 
+1. 克隆仓库
 
+   ```bash
+   git clone https://github.com/owenshen0907/AiTool.git
+   ```
 
-# 安装
+2. 进入项目目录
 
-## 1. 克隆仓库
+   ```bash
+   cd AiTool
+   ```
 
-```bash
-git clone https://github.com/owenshen0907/NihonGO.git
-```
+3. 安装依赖
 
-## 2. 进入项目目录
+   ```bash
+   npm install
+   ```
 
-```bash
-cd nihongo
-```
+---
 
-## 3. 安装依赖
+## 开发
 
-```bash
-npm install
-```
+- 启动开发服务器（包含 DB 初始化）
 
-# 开发
+  ```bash
+  npm run dev
+  ```
 
-## 1. 启动开发服务器
+- 构建生产环境静态文件
 
-此命令将初始化数据库并启动 Next.js 开发服务器：
+  ```bash
+  npm run build
+  ```
 
-```bash
-npm run dev
-```
+- 启动生产服务器
 
-## 2. 构建生产环境
+  ```bash
+  npm run start
+  ```
 
-生成生产环境所需的静态文件：
+- 单独执行数据库初始化脚本
 
-```bash
-npm run build
-```
+  ```bash
+  npm run init-db
+  ```
 
-## 3. 启动生产服务器
+---
 
-在构建完成后，启动生产环境服务器：
-
-```bash
-npm run start
-```
-
-## 4. 数据库初始化
-
-仅执行数据库初始化脚本：
-
-```bash
-npm run init-db
-```
-
-# 项目结构
+## 项目结构
 
 ```
-nihongo/
-├── src/                    # 源码目录
-│   ├── db/                 # 数据库相关文件
-│   │   └── initDb.ts       # 数据库初始化脚本
-│   ├── pages/              # Next.js 页面
-│   ├── components/         # 可复用的 React 组件
-│   └── styles/             # Tailwind CSS 样式文件
-├── public/                 # 静态资源（图片、字体等）
-├── .env                    # 环境变量文件（本地）
-├── .gitignore              # Git 忽略文件
-├── package.json            # 项目依赖与脚本管理
-└── README.md               # 项目说明文档
+AiTool/
+├── src/                  # 源码目录
+│   ├── app/              # Next.js App Router 页面与布局
+│   ├── components/       # 可复用 React 组件
+│   ├── db/               # 数据库初始化与连接逻辑
+│   ├── lib/              # 公用工具函数
+│   └── styles/           # 全局与模块化 Tailwind CSS 样式
+├── public/               # 静态资源
+├── .env                  # 环境变量示例
+├── package.json          # 项目依赖与脚本
+└── README.md             # 项目说明文档
 ```
 
-# 环境变量
+---
 
-本项目使用 dotenv 管理环境变量。在项目根目录下创建 `.env` 文件，并填写如下配置：
+## 环境变量
+
+在项目根目录创建 `.env` 并配置：
 
 ```env
-# 数据库配置
-DATABASE_URL=postgres://username:password@localhost:5432/your_database
+# 数据库连接
+DATABASE_URL=postgres://username:password@localhost:5432/your_db
 
-# Casdoor 配置
+# Casdoor
 CASDOOR_ENDPOINT=https://your-casdoor-domain.com
 CASDOOR_CLIENT_ID=your_client_id
 CASDOOR_CLIENT_SECRET=your_client_secret
 ```
 
-# 许可证
+---
 
-本项目采用 [MIT 许可证](https://opensource.org/licenses/MIT) 进行授权。
+## 许可证
+
+本项目基于 [MIT 许可证](https://opensource.org/licenses/MIT) 开源。
+

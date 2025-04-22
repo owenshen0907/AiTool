@@ -1,38 +1,96 @@
+/* components/NavBar.module.css */
 .navContainer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 2rem;
-    background-color: #f5f5f5;
-    border-bottom: 1px solid #ddd;
+    padding: 0 2rem;
+    height: 60px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     position: relative;
+    z-index: 100;
 }
 
 .logo {
-    font-size: 1.2rem;
-    font-weight: bold;
-    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #0070f3;
 }
 
 .navMenu {
     list-style: none;
     display: flex;
-    gap: 1rem;
     margin: 0;
     padding: 0;
 }
 
 .navMenu li {
+    position: relative;
+    margin: 0 1rem;
+}
+
+.navMenu a,
+.navMenu span {
+    font-size: 1rem;
+    color: #333;
+    text-decoration: none;
+    padding: 0.5rem 0;
+    display: inline-block;
+}
+
+.navMenu a:hover,
+.navMenu span:hover {
+    color: #0070f3;
+}
+
+.navItem:hover > .dropdownMenu {
+    display: block;
+}
+
+.dropdownMenu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 160px;
+    background-color: #fff;
+    border: 1px solid #eaeaea;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    padding: 0.5rem 0;
+}
+
+.dropdownMenu li {
     margin: 0;
 }
 
-.navMenu a {
-    text-decoration: none;
-    color: #333;
+.dropdownMenu a,
+.dropdownMenu span {
+    padding: 0.5rem 1rem;
+    width: 100%;
+    display: block;
 }
 
-.navMenu a:hover {
-    color: #0070f3;
+.dropdownMenu a:hover,
+.dropdownMenu span:hover {
+    background-color: #f5f5f5;
+}
+
+.navItem:hover > .dropdownMenu .navItem:hover > .subDropdownMenu {
+    display: block;
+}
+
+.subDropdownMenu {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    min-width: 160px;
+    background-color: #fff;
+    border: 1px solid #eaeaea;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    padding: 0.5rem 0;
 }
 
 .userInfo {

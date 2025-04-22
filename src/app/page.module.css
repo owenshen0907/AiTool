@@ -1,119 +1,108 @@
+/* app/page.module.css */
 .main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem 2rem;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f9fafb;
     font-family: 'Inter', sans-serif;
 }
 
-/* 统计区域 */
-.statistics {
-    display: flex;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    justify-content: center;
-}
-
-.statsBlock {
-    width: 650px;
-    height: 80px;
-    background-color: #f7f7f7;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    overflow: hidden;
+/* 英雄区 */
+.hero {
+    flex: 1;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
-}
-
-.statsRow {
-    display: flex;
-    flex-wrap: nowrap;
     align-items: center;
-    justify-content: space-evenly;
-    flex: 1;
-}
-
-.statsCell {
-    flex: 1;
+    justify-content: center;
     text-align: center;
-    padding: 6px;
-    border-right: 1px solid #ddd;
-    font-size: 0.9rem;
+    padding: 3rem 1rem;
 }
-
-.statsCell:last-child {
-    border-right: none;
-}
-
-/* 第一列：单词/语法标题，较宽且有区分背景色 */
-.cellWide {
-    flex: 2;
-    font-size: 1.1rem;
-    font-weight: bold;
-    background-color: #e0e0e0;
-    padding: 6px;
-    border-right: 1px solid #ddd;
-}
-
-/* 第一列数据：数字略大 */
-.cellWideLarge {
-    flex: 2;
-    font-size: 1.3rem;
-    font-weight: bold;
-    padding: 6px;
-    border-right: 1px solid #ddd;
-}
-
-/* 介绍区域 */
-.introduction {
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background-color: #eaf4ff;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.introduction h2 {
-    font-size: 2rem;
+.title {
+    font-size: 2.75rem;
+    font-weight: 700;
     margin-bottom: 1rem;
 }
-
-.introduction p {
-    font-size: 1.1rem;
+.subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+    max-width: 600px;
     line-height: 1.6;
 }
+.cta {
+    background-color: #fff;
+    color: #667eea;
+    padding: 0.75rem 2rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+.cta:hover {
+    background-color: #f0f0f0;
+}
 
-/* 轮播导航区域 */
-.carousel {
-    background-color: #f1f1f1;
-    padding: 1rem;
+/* 功能区 */
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    padding: 2rem;
+}
+.card {
+    background-color: #fff;
     border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    padding: 1.5rem;
+    text-decoration: none;
+    color: #333;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.cardTitle {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+.cardDesc {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.cardDesc li {
+    font-size: 0.95rem;
+    color: #555;
+    margin: 0.25rem 0;
+}
+
+/* 平台介绍 */
+.intro {
+    background-color: #fff;
+    padding: 2rem;
     text-align: center;
 }
-
-.carouselNav {
+.intro h2 {
+    font-size: 1.75rem;
+    color: #333;
     margin-bottom: 1rem;
 }
-
-.navButton {
-    background-color: #0070f3;
-    color: #fff;
-    border: none;
-    padding: 0.5rem 1rem;
-    margin: 0 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
+.intro p {
     font-size: 1rem;
+    color: #555;
+    line-height: 1.6;
+    max-width: 720px;
+    margin: 0 auto;
 }
 
-.navButton:hover {
-    background-color: #005bb5;
-}
-
-.carouselContent {
-    padding: 1rem;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1.1rem;
+/* 响应式 */
+@media (max-width: 640px) {
+    .title { font-size: 2rem; }
+    .subtitle { font-size: 1rem; }
+    .features { padding: 1rem; }
+    .intro { padding: 1rem; }
 }

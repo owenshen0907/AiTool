@@ -1,73 +1,73 @@
+// app/page.tsx
 import React from 'react';
+import Link from 'next/link';
 import styles from './page.module.css';
 
 export default function HomePage() {
+    const features = [
+        {
+            title: 'Prompt',
+            desc: ['管理', '生成', '调试'],
+            href: '/prompt/manage'
+        },
+        {
+            title: '知识库',
+            desc: ['知识库管理', '文件管理'],
+            href: '/kb/manage'
+        },
+        {
+            title: '模型微调',
+            desc: ['微调管理', '数据集管理'],
+            href: '/fine-tune/manage'
+        },
+        {
+            title: '语音',
+            desc: ['ASR', 'TTS', 'Real‑Time'],
+            href: '/speech/asr'
+        },
+        {
+            title: '图片',
+            desc: ['图片生成'],
+            href: '/image/generate'
+        },
+        {
+            title: '实用Agent',
+            desc: ['视频', '图片', '文件', '代码', '其它'],
+            href: '/agent/video/summary'
+        }
+    ];
+
     return (
         <main className={styles.main}>
-            {/* 上部分：统计区域 */}
-            <section className={styles.statistics}>
-                {/* 单词统计 */}
-                <div className={styles.statsBlock}>
-                    <div className={styles.statsRow}>
-                        <div className={`${styles.statsCell} ${styles.cellWide}`}>单词</div>
-                        <div className={styles.statsCell}>N5</div>
-                        <div className={styles.statsCell}>N4</div>
-                        <div className={styles.statsCell}>N3</div>
-                        <div className={styles.statsCell}>N2</div>
-                        <div className={styles.statsCell}>N1</div>
-                    </div>
-                    <div className={styles.statsRow}>
-                        <div className={`${styles.statsCell} ${styles.cellWideLarge}`}>17,446</div>
-                        <div className={styles.statsCell}>1,124</div>
-                        <div className={styles.statsCell}>1,674</div>
-                        <div className={styles.statsCell}>3,741</div>
-                        <div className={styles.statsCell}>3,575</div>
-                        <div className={styles.statsCell}>7,332</div>
-                    </div>
-                </div>
-                {/* 语法统计 */}
-                <div className={styles.statsBlock}>
-                    <div className={styles.statsRow}>
-                        <div className={`${styles.statsCell} ${styles.cellWide}`}>语法</div>
-                        <div className={styles.statsCell}>N5</div>
-                        <div className={styles.statsCell}>N4</div>
-                        <div className={styles.statsCell}>N3</div>
-                        <div className={styles.statsCell}>N2</div>
-                        <div className={styles.statsCell}>N1</div>
-                    </div>
-                    <div className={styles.statsRow}>
-                        <div className={`${styles.statsCell} ${styles.cellWideLarge}`}>445</div>
-                        <div className={styles.statsCell}>75</div>
-                        <div className={styles.statsCell}>64</div>
-                        <div className={styles.statsCell}>93</div>
-                        <div className={styles.statsCell}>100</div>
-                        <div className={styles.statsCell}>123</div>
-                    </div>
-                </div>
+            {/* 英雄区 */}
+            <section className={styles.hero}>
+                <h1 className={styles.title}>一站式 AI 能力平台</h1>
+                <p className={styles.subtitle}>从 Prompt 到微调，从知识库到多模态 Agent，全面提升你的开发效率。</p>
+                <Link href="/prompt/manage" className={styles.cta}>
+                    立即体验
+                </Link>
             </section>
 
-            {/* 中部分：网站介绍 */}
-            <section className={styles.introduction}>
-                <h2>关于本站</h2>
+            {/* 功能区 */}
+            <section className={styles.features}>
+                {features.map(f => (
+                    <Link key={f.title} href={f.href} className={styles.card}>
+                        <h3 className={styles.cardTitle}>{f.title}</h3>
+                        <ul className={styles.cardDesc}>
+                            {f.desc.map(item => <li key={item}>{item}</li>)}
+                        </ul>
+                    </Link>
+                ))}
+            </section>
+
+            {/* 平台介绍 */}
+            <section className={styles.intro}>
+                <h2>关于本平台</h2>
                 <p>
-                    本日语学习网站兼顾考试与实用日语，采用最先进的人工智能技术，让学习变得如同游戏般有趣。
-                    本站提供多维度线上学习工具，从听、说、写、阅四个方面逐步提升您的日语能力，
-                    每一步学习都清晰展示进度，系统会根据您的学习情况生成个性化内容，让学习更轻松高效。
+                    本平台集成了 AI 场景下常用的六大模块：
+                    <strong>Prompt 管理、知识库管理、模型微调、语音处理、图片生成</strong>及
+                    <strong>实用 Agent</strong>，支持多级子功能一键访问，帮助你快速搭建智能应用、优化工作流程。
                 </p>
-            </section>
-
-            {/* 下部分：轮播导航模块 */}
-            <section className={styles.carousel}>
-                <nav className={styles.carouselNav}>
-                    <button className={styles.navButton}>体验</button>
-                    <button className={styles.navButton}>学习助手</button>
-                    <button className={styles.navButton}>听说写阅</button>
-                    <button className={styles.navButton}>学习笔记</button>
-                    <button className={styles.navButton}>考试</button>
-                </nav>
-                <div className={styles.carouselContent}>
-                    <p>根据导航选项展示相应功能的预览内容。</p>
-                </div>
             </section>
         </main>
     );
