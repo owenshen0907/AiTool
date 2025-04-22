@@ -1,0 +1,64 @@
+.prose {
+    max-width: 800px;
+    margin: 1rem auto;
+    line-height: 1.75;
+    font-family: 'Georgia', serif;
+    color: #333;
+    padding: 1rem;
+}
+
+/* 标题样式 */
+.prose h1 {
+    font-size: 2.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.prose h2 {
+    font-size: 2rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.prose h3 {
+    font-size: 1.75rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+/* 段落、列表等 */
+.prose p {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.prose ul, .prose ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.prose li {
+    margin-bottom: 0.5rem;
+}
+
+/* 表格样式 */
+.prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.prose th, .prose td {
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+/* 引用 */
+.prose blockquote {
+    border-left: 4px solid #ddd;
+    padding-left: 1rem;
+    color: #666;
+    margin: 1rem 0;
+    font-style: italic;
+}

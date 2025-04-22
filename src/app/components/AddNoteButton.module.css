@@ -1,0 +1,200 @@
+.addNoteButton {
+    background-color: #0070f3;
+    color: #fff;
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.addNoteButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.addNoteButton:hover:enabled {
+    background-color: #005bb5;
+}
+
+.buttonWrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.error {
+    margin-top: 0.3rem;
+    color: red;
+    font-size: 0.8rem;
+}
+
+/* 成功动画整体容器，悬浮在按钮上方 */
+.successContainer {
+    position: absolute;
+    top: -100px;
+    left: 50%;
+    width: 150px;
+    height: 150px;
+    pointer-events: none;
+    transform: translateX(-50%);
+    animation: containerFadeOut 3s ease-out forwards;
+}
+
+/* 整体容器动画：从正常状态逐渐放大并淡出 */
+@keyframes containerFadeOut {
+    0% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) scale(1.5);
+    }
+}
+
+/* 粒子样式 */
+.particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: #ffcc00;
+    border-radius: 50%;
+    opacity: 0;
+}
+
+/* 定义 15 个粒子动画（示例方向，各粒子延迟和方向略有不同） */
+.successContainer .particle:nth-child(1) {
+    animation: explode1 1s ease-out forwards;
+    animation-delay: 0s;
+}
+.successContainer .particle:nth-child(2) {
+    animation: explode2 1s ease-out forwards;
+    animation-delay: 0.1s;
+}
+.successContainer .particle:nth-child(3) {
+    animation: explode3 1s ease-out forwards;
+    animation-delay: 0.15s;
+}
+.successContainer .particle:nth-child(4) {
+    animation: explode4 1s ease-out forwards;
+    animation-delay: 0.05s;
+}
+.successContainer .particle:nth-child(5) {
+    animation: explode5 1s ease-out forwards;
+    animation-delay: 0.2s;
+}
+.successContainer .particle:nth-child(6) {
+    animation: explode6 1s ease-out forwards;
+    animation-delay: 0.1s;
+}
+.successContainer .particle:nth-child(7) {
+    animation: explode7 1s ease-out forwards;
+    animation-delay: 0.12s;
+}
+.successContainer .particle:nth-child(8) {
+    animation: explode8 1s ease-out forwards;
+    animation-delay: 0.18s;
+}
+.successContainer .particle:nth-child(9) {
+    animation: explode9 1s ease-out forwards;
+    animation-delay: 0.08s;
+}
+.successContainer .particle:nth-child(10) {
+    animation: explode10 1s ease-out forwards;
+    animation-delay: 0.14s;
+}
+.successContainer .particle:nth-child(11) {
+    animation: explode11 1s ease-out forwards;
+    animation-delay: 0.16s;
+}
+.successContainer .particle:nth-child(12) {
+    animation: explode12 1s ease-out forwards;
+    animation-delay: 0.09s;
+}
+.successContainer .particle:nth-child(13) {
+    animation: explode13 1s ease-out forwards;
+    animation-delay: 0.11s;
+}
+.successContainer .particle:nth-child(14) {
+    animation: explode14 1s ease-out forwards;
+    animation-delay: 0.07s;
+}
+.successContainer .particle:nth-child(15) {
+    animation: explode15 1s ease-out forwards;
+    animation-delay: 0.13s;
+}
+
+/* 定义各个粒子的动画效果 */
+@keyframes explode1 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(-30px, -30px) scale(1); opacity: 0; }
+}
+@keyframes explode2 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(30px, -30px) scale(1); opacity: 0; }
+}
+@keyframes explode3 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(-25px, 25px) scale(1); opacity: 0; }
+}
+@keyframes explode4 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(25px, 25px) scale(1); opacity: 0; }
+}
+@keyframes explode5 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(0, -40px) scale(1); opacity: 0; }
+}
+@keyframes explode6 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(0, 40px) scale(1); opacity: 0; }
+}
+@keyframes explode7 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(-40px, 0) scale(1); opacity: 0; }
+}
+@keyframes explode8 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(40px, 0) scale(1); opacity: 0; }
+}
+@keyframes explode9 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(-20px, -40px) scale(1); opacity: 0; }
+}
+@keyframes explode10 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(20px, -40px) scale(1); opacity: 0; }
+}
+@keyframes explode11 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(40px, -20px) scale(1); opacity: 0; }
+}
+@keyframes explode12 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(-20px, 40px) scale(1); opacity: 0; }
+}
+@keyframes explode13 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(20px, 40px) scale(1); opacity: 0; }
+}
+@keyframes explode14 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(-40px, -20px) scale(1); opacity: 0; }
+}
+@keyframes explode15 {
+    0% { transform: translate(0, 0) scale(0); opacity: 1; }
+    100% { transform: translate(0px, -50px) scale(1); opacity: 0; }
+}
+
+/* 鼓励文字样式，与烟花容器融合 */
+.encouragement {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    color: #ff4500;
+    font-weight: bold;
+    pointer-events: none;
+}

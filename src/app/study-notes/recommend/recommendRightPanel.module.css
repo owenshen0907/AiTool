@@ -1,0 +1,153 @@
+.rightPanel {
+    flex: 2;
+    border: 1px solid #ddd;
+    padding: 1rem;
+    font-family: sans-serif;
+}
+
+/* 头部与图例 */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.legend {
+    display: flex;
+    gap: 1rem;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.legendColor {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    margin-right: 4px;
+    border-radius: 3px;
+}
+
+/* 卡片样式 */
+.noteCard {
+    border: 1px solid #ccc;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 4px;
+    background-color: #fafafa;
+}
+
+.firstRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* 左侧文本区域 */
+.textGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.kanji, .grammarFormula {
+    font-size: 1.1rem;
+}
+
+.readings {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.pos {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* 右侧整体区域：包含选择框、熟悉度和扩展按钮 */
+.familiarityWrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2rem;  /* 固定高度，确保与“听说写阅”区域一致 */
+}
+
+/* 将选择框高度固定为 1.6rem，并使内容居中 */
+.selectionArea {
+    width: 20px;
+    height: 1.6rem;
+    cursor: pointer;
+    border: 2px solid #28a745;
+    border-top-left-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selectionArea.selected {
+    background-color: #28a745;
+}
+
+.selectionArea.selected::after {
+    content: "✓";
+    color: #fff;
+    font-size: 14px;
+}
+
+/* 熟悉度区域 */
+.familiarity {
+    display: flex;
+    gap: 0.3rem;
+}
+
+.familiarityItem {
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 扩展按钮区域，同样固定高度为 2rem */
+.expandArea {
+    height: 1.6rem;
+    display: flex;
+    align-items: center;
+}
+
+/* 如果扩展按钮内部的按钮样式使用了 .expandButton，可以这样覆盖 */
+.expandArea :global(.expandButton) {
+    height: 100%;
+    line-height: 1.6rem;
+    padding: 0 0.4rem; /* 根据需要调整内边距 */
+}
+/* 第二行 */
+.secondRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.translation, .explanation {
+    flex: 1;
+    font-size: 1rem;
+}
+
+.studyTime {
+    font-size: 0.8rem;
+    color: #999;
+    margin-left: 1rem;
+}

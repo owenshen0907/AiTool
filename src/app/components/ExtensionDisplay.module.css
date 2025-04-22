@@ -1,0 +1,58 @@
+.extensionContainer {
+    padding: 1rem;
+    font-family: 'Inter', sans-serif;
+}
+
+.section {
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.5rem;
+}
+
+.sectionTitle {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.3rem;
+}
+
+.sectionContent {
+    margin-top: 0.5rem;
+}
+
+.valueRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.3rem;
+}
+
+.valueText {
+    flex: 1;
+    word-break: break-all;
+}
+
+.copyButton {
+    margin-left: 0.5rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    border: 1px solid #0070f3;
+    background-color: #0070f3;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.copyButton:hover {
+    background-color: #005bb5;
+}
+
+.arrayContainer {
+    padding-left: 1rem;
+}
+
+.objectContainer {
+    padding-left: 1rem;
+}

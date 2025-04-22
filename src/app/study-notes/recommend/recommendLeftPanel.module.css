@@ -1,0 +1,143 @@
+.leftPanel {
+    flex: 1;
+    border: 1px solid #ddd;
+    padding: 1rem;
+}
+
+.filterSection {
+    margin-bottom: 1rem;
+}
+
+/* 类型选择组 */
+.toggleGroup {
+    display: flex;
+}
+
+/* 公共按钮样式 */
+.toggleButton {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    border: 2px solid #28a745;
+    background-color: #fff;
+    color: #28a745;
+}
+
+/* 左侧按钮（单词）：左边圆角，去除右边边框 */
+.leftButton {
+    border-radius: 6px 0 0 6px;
+    border-right: none;
+}
+
+/* 右侧按钮（语法）：右边圆角 */
+.rightButton {
+    border-radius: 0 6px 6px 0;
+}
+
+/* 选中状态 */
+.wordSelected {
+    background-color: #20C997;
+    color: #fff;
+    border-color: #20C997;
+}
+
+.grammarSelected {
+    background-color: #2A3F8F;
+    color: #fff;
+    border-color: #2A3F8F;
+}
+
+/* 熟悉度组 */
+.familiarityGroup {
+    display: inline-flex;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.familiarityButton {
+    flex: 1;
+    padding: 0.3rem 0.6rem;
+    text-align: center;
+    border: none;
+    cursor: pointer;
+    background-color: #fff;
+    color: #000;
+}
+
+.familiarityButton:not(:last-child) {
+    border-right: 1px solid #ccc;
+}
+
+.familiarityGroup :first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.familiarityGroup :last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* 搜索组 */
+.searchGroup {
+    display: inline-flex;
+    width: 100%;
+    border: 2px solid #007bff;
+    overflow: hidden;
+    border-radius: 6px;
+}
+
+.searchInput {
+    flex: 1;
+    padding: 0.4rem;
+    border: none;
+    outline: none;
+}
+
+.searchButton {
+    padding: 0.4rem 1rem;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+}
+
+.previewArea {
+    margin-top: 1rem;
+    border-top: 1px solid #ccc;
+    padding-top: 1rem;
+}
+
+.previewItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.detailButton {
+    padding: 0.2rem 0.5rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+/* 新增：用于显示听、说、写、阅的标签 */
+.dimensionLabel {
+    display: inline-block;
+    width: 1.5rem; /* 根据需要调整宽度 */
+    font-weight: bold;
+    text-align: center;
+    margin-right: 0.5rem;
+}
+/* 新增：用于显示维度图标 */
+.dimensionIcon {
+    display: inline-block;
+    width: 1.5rem;      /* 可根据需要调整 */
+    text-align: center;
+    font-size: 1.2rem;  /* 图标大小 */
+}

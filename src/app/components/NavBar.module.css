@@ -1,0 +1,103 @@
+.navContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 2rem;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    position: relative;
+}
+
+.logo {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.navMenu {
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+}
+
+.navMenu li {
+    margin: 0;
+}
+
+.navMenu a {
+    text-decoration: none;
+    color: #333;
+}
+
+.navMenu a:hover {
+    color: #0070f3;
+}
+
+.userInfo {
+    position: relative;
+    cursor: pointer;
+}
+
+.userAvatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #0070f3;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+/* 下拉菜单改为竖向排列，并将右边与头像右对齐 */
+.dropdown {
+    position: absolute;
+    top: 32px;  /* 调整与头像的间距 */
+    right: 0;   /* 与头像右侧对齐 */
+    background-color: white;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 10;
+    display: block;
+}
+
+.dropdownItem {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 1px solid #eee;
+}
+
+.dropdownItem:last-child {
+    border-bottom: none;
+}
+
+.dropdownItem:hover {
+    background-color: #f5f5f5;
+}
+
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.modalContent {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 4px;
+    width: 300px;
+}

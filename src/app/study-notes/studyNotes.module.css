@@ -1,0 +1,59 @@
+.mainContainer {
+    width: 80%;
+    margin: 0 auto;
+    padding: 1rem 0;
+}
+
+.headerRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.functionSelect {
+    border: 1px solid #ddd;
+    padding: 0.5rem 1rem;
+    background-color: #fafafa;
+    border-radius: 14px;
+    position: relative;
+    width: fit-content;
+}
+
+.navItem {
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.activeIndicator {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background-color: blue;
+    border-radius: 0 0 14px 14px;
+}
+
+.pageSwitcher {
+    display: flex;
+    gap: 1rem;
+}
+
+.switchButton {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+.activeButton {
+    background-color: #e0f0ff;
+    border-color: blue;
+}
+
+.contentArea {
+    padding: 1rem 0;
+}
