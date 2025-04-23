@@ -39,7 +39,7 @@ export default function NavBar() {
 
     return (
         <nav className={styles.navContainer}>
-            <div className={styles.logo}>NihonGO</div>
+            <div className={styles.logo}>AiTool</div>
 
             <ul className={styles.navMenu}>
                 <li><Link href="/">首页</Link></li>
