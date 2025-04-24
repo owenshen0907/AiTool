@@ -1,5 +1,5 @@
 {
-  "name": "nihongo",
+  "name": "aitool",
   "version": "0.1.0",
   "license": "MIT",
   "private": true,
@@ -8,11 +8,12 @@
     "dev": "npm run init-db && next dev",
     "build": "next build",
     "start": "next start",
-    "init-db": "node --loader ts-node/esm ./src/db/initDb.ts"
+    "init-db": "DB_INIT=true node --loader ts-node/esm src/lib/db/initDb.ts"
   },
   "dependencies": {
     "casdoor-js-sdk": "^0.16.0",
     "dotenv": "^16.4.7",
+    "idb": "^8.0.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.503.0",
     "next": "^13.4.19",
@@ -23,7 +24,8 @@
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.3",
     "remark-gfm": "^4.0.1",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

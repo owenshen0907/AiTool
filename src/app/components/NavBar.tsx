@@ -29,10 +29,10 @@ export default function NavBar() {
     }, []);
 
     const handleLogout = () => {
-        document.cookie = "sessionToken=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-        document.cookie = "userId=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        // 清本地缓存
         sessionStorage.removeItem('userData');
-        window.location.reload();
+        // 让浏览器去调用后端注销接口
+        window.location.href = '/api/auth/logout';
     };
 
     const nickname = userData?.data.displayName || userData?.data.name || '未登录';
