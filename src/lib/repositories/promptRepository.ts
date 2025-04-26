@@ -41,12 +41,12 @@ export async function insertPrompt(data: Partial<Prompt>): Promise<Prompt> {
     } = data;
     const { rows } = await pool.query<Prompt>(
         `INSERT INTO prompts(
-       id, parent_id, type, title, content,
-       description, tags, attributes, comments,
-       is_public, created_by
-     ) VALUES(
-       $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
-     ) RETURNING *`,
+            id, parent_id, type, title, content,
+            description, tags, attributes, comments,
+            is_public, created_by
+        ) VALUES(
+                    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11
+                ) RETURNING *`,
         [
             id,
             parent_id || null,
@@ -72,7 +72,9 @@ export async function updatePrompt(
     const values: any[] = [];
     let idx = 1;
 
+    // 排除 updated_at，避免后续重复赋值
     for (const [key, val] of Object.entries(changes)) {
+        if (key === 'updated_at') continue;
         sets.push(`${key} = $${idx}`);
         if (['tags', 'attributes', 'comments', 'update_log'].includes(key)) {
             values.push(JSON.stringify(val));
@@ -81,9 +83,10 @@ export async function updatePrompt(
         }
         idx++;
     }
+
     if (sets.length === 0) return;
 
-    // always update the timestamp
+    // 始终更新时间戳
     sets.push(`updated_at = NOW()`);
 
     values.push(id);

@@ -1,5 +1,7 @@
+// src/app/prompt/manage/page.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import PromptLeftPanel from './PromptLeftPanel';
 import PromptContentPanel from './PromptContentPanel';
 import PromptRightPanel from './PromptRightPanel';
@@ -15,99 +17,142 @@ import {
 export default function PromptManagePage() {
     const [nodes, setNodes] = useState<PromptNode[]>([]);
     const [selected, setSelected] = useState<PromptItem | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // 首次加载根目录
     useEffect(() => {
-        fetchPrompts()
-            .then(list => {
+        const init = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const list = await fetchPrompts();
                 setNodes(list);
-                // 默认选中第一个真正的 Prompt
-                const firstPrompt = list.find(i => i.type === 'prompt');
-                if (firstPrompt) setSelected(firstPrompt as PromptItem);
-            })
-            .catch(console.error);
+                const first = list.find(i => i.type === 'prompt');
+                if (first) {
+                    try {
+                        const full = await fetchPromptById(first.id);
+                        setSelected(full);
+                    } catch {
+                        console.warn('fetchPromptById failed, using raw node');
+                        setSelected(first as PromptItem);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                setError('加载提示列表失败');
+            } finally {
+                setLoading(false);
+            }
+        };
+        init();
     }, []);
 
-    const handleSelect = async (node: PromptNode) => {
+    const handleSelect = useCallback(async (node: PromptNode) => {
         if (node.type === 'dir') {
-            // 目录：展开子节点 & 读列表
-            const children = await fetchPrompts(node.id);
-            setNodes(prev => [
-                ...prev.filter(p => p.parentId !== node.id),
-                ...children,
-            ]);
-            setSelected(null);
+            try {
+                const children = await fetchPrompts(node.id);
+                setNodes(prev =>
+                    [...prev.filter(p => p.parentId !== node.id), ...children]
+                );
+                setSelected(null);
+            } catch (e) {
+                console.error(e);
+                setError('加载子节点失败');
+            }
         } else {
-            // Prompt：读详情
             try {
                 const full = await fetchPromptById(node.id);
                 setSelected(full);
             } catch (e) {
-                console.error('fetchPromptById 失败，fallback raw node', e);
+                console.error(e);
                 setSelected(node as PromptItem);
             }
         }
-    };
+    }, []);
 
-    const handleSave = (content: string) => {
+    const handleSave = useCallback(async (content: string) => {
         if (!selected) return;
-        updatePrompt({ id: selected.id, content })
-            .then(updated => setSelected(updated))
-            .catch(console.error);
-    };
+        try {
+            const updated = await updatePrompt({ id: selected.id, content });
+            setSelected(updated);
+        } catch (e) {
+            console.error(e);
+            setError('保存失败');
+        }
+    }, [selected]);
 
-    const handleSmartSave = (content: string, suggestion?: string) => {
+    const handleSmartSave = useCallback(async (content: string, suggestion?: string) => {
         if (!selected) return;
-        updatePrompt({ id: selected.id, content, comments: suggestion ? [suggestion] : [] })
-            .then(updated => setSelected(updated))
-            .catch(console.error);
-    };
+        try {
+            const updated = await updatePrompt({
+                id: selected.id,
+                content,
+                comments: suggestion ? [suggestion] : [],
+            });
+            setSelected(updated);
+        } catch (e) {
+            console.error(e);
+            setError('智能保存失败');
+        }
+    }, [selected]);
 
-    const handleAdopt = (optimized: string) => {
+    const handleAdopt = useCallback(async (optimized: string) => {
         if (!selected) return;
-        updatePrompt({ id: selected.id, content: optimized })
-            .then(updated => setSelected(updated))
-            .catch(console.error);
-    };
+        try {
+            const updated = await updatePrompt({ id: selected.id, content: optimized });
+            setSelected(updated);
+        } catch (e) {
+            console.error(e);
+            setError('采纳失败');
+        }
+    }, [selected]);
 
-    const handleNewDir = (parent: PromptNode | null) => {
+    const handleNewDir = useCallback(async (parent: PromptNode | null) => {
         const title = prompt('请输入新目录名称');
         if (!title) return;
-        createPrompt({ parent_id: parent?.id, type: 'dir', title, tags: [] })
-            .then(created => setNodes(prev => [...prev, created]))
-            .catch(console.error);
-    };
+        try {
+            const created = await createPrompt({ parent_id: parent?.id, type: 'dir', title, tags: [] });
+            setNodes(prev => [...prev, created]);
+        } catch (e) {
+            console.error(e);
+            setError('创建目录失败');
+        }
+    }, []);
 
-    const handleCreatePrompt = (parent: PromptNode | null) => {
+    const handleCreatePrompt = useCallback(async (parent: PromptNode | null) => {
         const title = prompt('请输入新 Prompt 标题');
         if (!title) return;
-        createPrompt({
-            parent_id: parent?.id,
-            type: 'prompt',
-            title,
-            content: '',
-            description: '',
-            tags: [],
-            attributes: [],
-        })
-            .then(created => {
-                setNodes(prev => [...prev, created]);
-                setSelected(created);
-            })
-            .catch(console.error);
-    };
+        try {
+            const created = await createPrompt({
+                parent_id: parent?.id,
+                type: 'prompt',
+                title,
+                content: '',
+                description: '',
+                tags: [],
+                attributes: [],
+            });
+            setNodes(prev => [...prev, created]);
+            setSelected(created);
+        } catch (e) {
+            console.error(e);
+            setError('创建 Prompt 失败');
+        }
+    }, []);
 
-    const handleDelete = (node: PromptNode) => {
+    const handleDelete = useCallback(async (node: PromptNode) => {
         if (!confirm(`确认删除 "${node.title}" 吗？`)) return;
-        apiDeletePrompt(node.id)
-            .then(() => {
-                setNodes(prev => prev.filter(p => p.id !== node.id));
-                if (selected?.id === node.id) setSelected(null);
-            })
-            .catch(console.error);
-    };
+        try {
+            await apiDeletePrompt(node.id);
+            setNodes(prev => prev.filter(p => p.id !== node.id));
+            if (selected?.id === node.id) setSelected(null);
+        } catch (e) {
+            console.error(e);
+            setError('删除失败');
+        }
+    }, [selected]);
 
-    const handleReorder = (srcId: string, dstId: string) => {
+    const handleReorder = useCallback((srcId: string, dstId: string) => {
         setNodes(prev => {
             const arr = [...prev];
             const i = arr.findIndex(p => p.id === srcId);
@@ -117,11 +162,13 @@ export default function PromptManagePage() {
             arr.splice(j, 0, m);
             return arr;
         });
-    };
+    }, []);
+
+    if (loading) return <div className="p-4">加载中...</div>;
+    if (error) return <div className="p-4 text-red-500">错误：{error}</div>;
 
     return (
         <div className="flex flex-col h-[90vh] bg-gray-100">
-            {/* 面包屑 ... */}
             <div className="flex flex-1 overflow-hidden">
                 <aside className="w-72 border-r bg-white">
                     <PromptLeftPanel
@@ -136,7 +183,9 @@ export default function PromptManagePage() {
                     />
                 </aside>
                 <main className="flex-1 bg-white overflow-auto">
-                    {selected && (
+                    {!selected ? (
+                        <div className="p-4">请选择一个 Prompt</div>
+                    ) : (
                         <PromptContentPanel
                             promptId={selected.id}
                             parentId={selected.parentId}

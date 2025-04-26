@@ -1,164 +1,291 @@
-// components/NavBar.tsx
 'use client';
+
 import Link from 'next/link';
-import React, { useState, useEffect } from 'react';
-import styles from './NavBar.module.css';
+import React, { useState, useEffect, useRef } from 'react';
+import UserInfoModal from './UserInfoModal';        // ← 路径改为新文件名
+import ModelManagementModal from './ModelManagementModal';
+
+interface MenuItem {
+    title: string;
+    href?: string;
+    children?: MenuItem[];
+}
+
+function HoverMenu({
+                       item,
+                       level = 0,
+                   }: {
+    item: MenuItem;
+    level?: number;
+}) {
+    const [open, setOpen] = useState(false);
+    const closeTimer = useRef<number>();
+
+    const handleMouseEnter = () => {
+        window.clearTimeout(closeTimer.current);
+        setOpen(true);
+    };
+    const handleMouseLeave = () => {
+        closeTimer.current = window.setTimeout(() => setOpen(false), 50);
+    };
+
+    const isRoot = level === 0;
+    const ulPosition = isRoot ? 'left-0 top-full mt-1' : 'left-full top-0 ml-1';
+    const ulWidth = isRoot ? 'w-36' : 'w-48';
+    const zIndex = 50 + level;
+
+    return (
+        <li
+            className="relative"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
+            {item.href ? (
+                <Link
+                    href={item.href}
+                    className="block px-3 py-2 text-gray-800 hover:bg-gray-100 whitespace-nowrap rounded"
+                >
+                    {item.title}
+                </Link>
+            ) : (
+                <span className="block px-3 py-2 text-gray-800 hover:bg-gray-100 cursor-pointer whitespace-nowrap rounded">
+          {item.title}
+        </span>
+            )}
+
+            {item.children && open && (
+                <ul
+                    className={`
+            absolute ${ulPosition} ${ulWidth}
+            bg-white border border-gray-200 shadow-lg rounded-md
+            py-1
+            z-[${zIndex}]
+          `}
+                >
+                    {item.children.map((child) => (
+                        <HoverMenu key={child.title} item={child} level={level + 1} />
+                    ))}
+                </ul>
+            )}
+        </li>
+    );
+}
+
+interface User {
+    id: string;
+    data: { displayName?: string; name: string; avatar?: string };
+    models: any[];
+}
 
 export default function NavBar() {
-    const [userData, setUserData] = useState<any>(null);
+    const [userData, setUserData] = useState<User | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [showModal, setShowModal] = useState(false);
+    const [showUserModal, setShowUserModal] = useState(false);
+    const [showModelModal, setShowModelModal] = useState(false);
+    const userTimer = useRef<number>();
 
     useEffect(() => {
-        const fetchUserData = async () => {
+        const abort = new AbortController();
+        async function fetchUser() {
             try {
                 const res = await fetch('/api/user/get', {
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
+                    signal: abort.signal,
                 });
                 if (!res.ok) throw new Error(`请求失败：${res.status}`);
-                const data = await res.json();
-                setUserData(data.user);
-                sessionStorage.setItem('userData', JSON.stringify(data.user));
+                const { user } = await res.json();
+                setUserData({
+                    id: user.data.name,
+                    data: user.data,
+                    models: user.model_list ?? [],
+                });
+                sessionStorage.setItem('userData', JSON.stringify(user));
             } catch (err) {
-                console.error('获取用户信息出错：', err);
+                if (abort.signal.aborted) return;
+                console.error(err);
             }
-        };
+        }
         const cached = sessionStorage.getItem('userData');
-        if (cached) setUserData(JSON.parse(cached));
-        else fetchUserData();
+        cached ? setUserData(JSON.parse(cached)) : fetchUser();
+        return () => abort.abort();
     }, []);
 
     const handleLogout = () => {
-        // 清本地缓存
         sessionStorage.removeItem('userData');
-        // 让浏览器去调用后端注销接口
         window.location.href = '/api/auth/logout';
     };
 
-    const nickname = userData?.data.displayName || userData?.data.name || '未登录';
+    const nickname = userData?.data.displayName ?? userData?.data.name ?? '未登录';
+    const firstChar = Array.from(nickname)[0];
+
+    const onUserEnter = () => {
+        window.clearTimeout(userTimer.current);
+        setDropdownOpen(true);
+    };
+    const onUserLeave = () => {
+        userTimer.current = window.setTimeout(() => setDropdownOpen(false), 150);
+    };
+
+    const menuData: MenuItem[] = [
+        { title: '首页', href: '/' },
+        {
+            title: 'Prompt',
+            children: [
+                { title: 'Prompt管理', href: '/prompt/manage' },
+                { title: 'Prompt生成', href: '/prompt/create' },
+                { title: 'Prompt调试', href: '/prompt/debug' },
+            ],
+        },
+        {
+            title: '知识库',
+            children: [
+                { title: '知识库管理', href: '/kb/manage' },
+                { title: '文件管理', href: '/kb/files' },
+            ],
+        },
+        {
+            title: '模型微调',
+            children: [
+                { title: '微调管理', href: '/fine-tune/manage' },
+                { title: '数据集管理', href: '/fine-tune/datasets' },
+            ],
+        },
+        {
+            title: '语音',
+            children: [
+                { title: 'ASR', href: '/speech/asr' },
+                { title: 'TTS', href: '/speech/tts' },
+                { title: 'Real-Time', href: '/speech/real-time' },
+            ],
+        },
+        {
+            title: '图片',
+            children: [{ title: '图片生成', href: '/image/generate' }],
+        },
+        {
+            title: '实用Agent',
+            children: [
+                {
+                    title: '视频',
+                    children: [
+                        { title: '视频总结', href: '/agent/video/summary' },
+                        { title: '生成剪辑脚本', href: '/agent/video/script' },
+                        { title: '生成文案', href: '/agent/video/copy' },
+                    ],
+                },
+                {
+                    title: '图片',
+                    children: [
+                        { title: '批量分析', href: '/agent/image/batch-analysis' },
+                        { title: '批量标注', href: '/agent/image/batch-annotate' },
+                    ],
+                },
+                {
+                    title: '文件',
+                    children: [
+                        { title: '文本总结', href: '/agent/file/text-summary' },
+                        { title: '图片总结', href: '/agent/file/image-summary' },
+                    ],
+                },
+                {
+                    title: '代码',
+                    children: [
+                        { title: '生成README', href: '/agent/code/readme' },
+                        { title: '生成接口文档', href: '/agent/code/docs' },
+                    ],
+                },
+                {
+                    title: '其它',
+                    children: [
+                        { title: '自定义测试', href: '/agent/other/custom-test' },
+                    ],
+                },
+            ],
+        },
+    ];
 
     return (
-        <nav className={styles.navContainer}>
-            <div className={styles.logo}>AiTool</div>
+        <nav className="flex items-center justify-between px-8 h-14 bg-white shadow-md relative z-50">
+            <div className="text-2xl font-semibold text-blue-600">AiTool</div>
 
-            <ul className={styles.navMenu}>
-                <li><Link href="/">首页</Link></li>
-
-                <li className={styles.navItem}>
-                    <span>Prompt</span>
-                    <ul className={styles.dropdownMenu}>
-                        <li><Link href="/prompt/manage">Prompt管理</Link></li>
-                        <li><Link href="/prompt/create">Prompt生成</Link></li>
-                        <li><Link href="/prompt/debug">Prompt调试</Link></li>
-                    </ul>
-                </li>
-
-                <li className={styles.navItem}>
-                    <span>知识库</span>
-                    <ul className={styles.dropdownMenu}>
-                        <li><Link href="/kb/manage">知识库管理</Link></li>
-                        <li><Link href="/kb/files">文件管理</Link></li>
-                    </ul>
-                </li>
-
-                <li className={styles.navItem}>
-                    <span>模型微调</span>
-                    <ul className={styles.dropdownMenu}>
-                        <li><Link href="/fine-tune/manage">微调管理</Link></li>
-                        <li><Link href="/fine-tune/datasets">数据集管理</Link></li>
-                    </ul>
-                </li>
-
-                <li className={styles.navItem}>
-                    <span>语音</span>
-                    <ul className={styles.dropdownMenu}>
-                        <li><Link href="/speech/asr">ASR</Link></li>
-                        <li><Link href="/speech/tts">TTS</Link></li>
-                        <li><Link href="/speech/real-time">Real‑Time</Link></li>
-                    </ul>
-                </li>
-
-                <li className={styles.navItem}>
-                    <span>图片</span>
-                    <ul className={styles.dropdownMenu}>
-                        <li><Link href="/image/generate">图片生成</Link></li>
-                    </ul>
-                </li>
-
-                <li className={styles.navItem}>
-                    <span>实用Agent</span>
-                    <ul className={styles.dropdownMenu}>
-                        <li className={styles.navItem}>
-                            <span>视频</span>
-                            <ul className={styles.subDropdownMenu}>
-                                <li><Link href="/agent/video/summary">视频总结</Link></li>
-                                <li><Link href="/agent/video/script">生成剪辑脚本</Link></li>
-                                <li><Link href="/agent/video/copy">生成文案</Link></li>
-                            </ul>
-                        </li>
-                        <li className={styles.navItem}>
-                            <span>图片</span>
-                            <ul className={styles.subDropdownMenu}>
-                                <li><Link href="/agent/image/batch-analysis">图片批量分析</Link></li>
-                                <li><Link href="/agent/image/batch-annotate">图片批量标注</Link></li>
-                            </ul>
-                        </li>
-                        <li className={styles.navItem}>
-                            <span>文件</span>
-                            <ul className={styles.subDropdownMenu}>
-                                <li><Link href="/agent/file/text-summary">一键总结（文本）</Link></li>
-                                <li><Link href="/agent/file/image-summary">一键总结（图片）</Link></li>
-                            </ul>
-                        </li>
-                        <li className={styles.navItem}>
-                            <span>代码</span>
-                            <ul className={styles.subDropdownMenu}>
-                                <li><Link href="/agent/code/readme">一键生成README</Link></li>
-                                <li><Link href="/agent/code/docs">一键生成接口文档</Link></li>
-                            </ul>
-                        </li>
-                        <li className={styles.navItem}>
-                            <span>其它</span>
-                            <ul className={styles.subDropdownMenu}>
-                                <li><Link href="/agent/other/custom-test">自定义接口测试</Link></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
+            <ul className="flex space-x-4">
+                {menuData.map((item) => (
+                    <HoverMenu key={item.title} item={item} />
+                ))}
             </ul>
 
+            {/* 用户头像与下拉 */}
             <div
-                className={styles.userInfo}
-                onMouseEnter={() => setDropdownOpen(true)}
-                onMouseLeave={() => setDropdownOpen(false)}
+                className="relative flex items-center"
+                onMouseEnter={onUserEnter}
+                onMouseLeave={onUserLeave}
             >
-                <div className={styles.userAvatar}>{nickname.charAt(0)}</div>
+                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold cursor-pointer">
+                    {firstChar}
+                </div>
+
                 {dropdownOpen && (
-                    <div className={styles.dropdown}>
-                        <div className={styles.dropdownItem} onClick={() => setShowModal(true)}>个人信息</div>
-                        <div className={styles.dropdownItem} onClick={handleLogout}>注销登录</div>
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg">
+                        <div
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => {
+                                setShowUserModal(true);
+                                setDropdownOpen(false);
+                            }}
+                        >
+                            个人信息
+                        </div>
+                        <div
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => {
+                                setShowModelModal(true);
+                                setDropdownOpen(false);
+                            }}
+                        >
+                            模型管理
+                        </div>
+                        <div
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={handleLogout}
+                        >
+                            注销登录
+                        </div>
                     </div>
                 )}
             </div>
 
-            {showModal && (
-                <div className={styles.modalOverlay} onClick={() => setShowModal(false)}>
-                    <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-                        <h2>个人信息</h2>
-                        {userData ? (
-                            <>
-                                <p><strong>用户ID：</strong>{userData.data.name || '未知'}</p>
-                                <p><strong>昵称：</strong>{userData.data.displayName || '未知'}</p>
-                                <p><strong>邮箱：</strong>{userData.data.email || '未提供'}</p>
-                                <p><strong>电话：</strong>{userData.data.phone || '未提供'}</p>
-                                <p><strong>微信：</strong>{userData.data.wechat || '未提供'}</p>
-                            </>
-                        ) : (
-                            <p>未获取到用户信息</p>
-                        )}
-                        <button onClick={() => setShowModal(false)}>关闭</button>
-                    </div>
-                </div>
+            {/* 个人信息弹框 */}
+            {showUserModal && (
+                <UserInfoModal
+                    data={userData?.data || {}}
+                    onClose={() => setShowUserModal(false)}
+                />
+            )}
+
+            {/* 模型管理弹框（保持原逻辑） */}
+            {showModelModal && (
+                <ModelManagementModal
+                    initialModels={userData?.models ?? []}
+                    onAdd={async (m) => {
+                        await fetch('/api/user/models', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(m),
+                        });
+                    }}
+                    onDelete={async (id) => {
+                        await fetch(`/api/user/models/${id}`, { method: 'DELETE' });
+                    }}
+                    onUpdate={async (id, upd) => {
+                        await fetch(`/api/user/models/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(upd),
+                        });
+                    }}
+                    onClose={() => setShowModelModal(false)}
+                />
             )}
         </nav>
     );

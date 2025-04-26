@@ -1,5 +1,4 @@
 import type { PromptNode, PromptItem, AttributeItem } from '@/lib/models/prompt';
-import { getAllByParent, getById, putMany, putOne, deleteById } from '@/lib/utils/indexedDb';
 
 interface RawPrompt {
     id: string;
@@ -25,38 +24,28 @@ function mapRaw(raw: RawPrompt): PromptItem {
     };
 }
 
-/** 拉列表，先读 IDB；如果没命中，则网络拉再写回 IDB */
+/** 直接总是网络拉，不做任何缓存 */
 export async function fetchPrompts(parentId?: string): Promise<PromptNode[]> {
     const pid = parentId ?? null;
-    const cached = await getAllByParent(pid);
-    if (cached.length) {
-        console.log('[API] 📦 fetchPrompts from IDB →', pid, cached.map(i=>i.id));
-        return cached;
-    }
-    const url = pid ? `/api/prompt?parent_id=${pid}` : `/api/prompt`;
+    const url = pid
+        ? `/api/prompt?parent_id=${encodeURIComponent(pid)}`
+        : `/api/prompt`;
+
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch prompts: ${res.status}`);
-    const raw: RawPrompt[] = await res.json();
-    const list = raw.map(mapRaw);
-    await putMany(list);
-    console.log('[API] 🌐 fetchPrompts from network & cache →', pid, list.map(i=>i.id));
-    return list;
+    if (!res.ok) {
+        throw new Error(`fetchPrompts failed: ${res.status}`);
+    }
+
+    const raws: RawPrompt[] = await res.json();
+    return raws.map(mapRaw);
 }
 
-/** 拉单条 Prompt，先查 IDB；若没命中再网络拉，写回 IDB */
+// 其余接口也保持网络拉写法
 export async function fetchPromptById(id: string): Promise<PromptItem> {
-    const cached = await getById(id);
-    if (cached && cached.type === 'prompt') {
-        console.log('[API] 📦 fetchPromptById from IDB →', id);
-        return cached as PromptItem;
-    }
-    const res = await fetch(`/api/prompt?id=${id}`);
-    if (!res.ok) throw new Error(`Failed to fetch prompt ${id}: ${res.status}`);
+    const res = await fetch(`/api/prompt?id=${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`fetchPromptById failed: ${res.status}`);
     const raw: RawPrompt = await res.json();
-    const item = mapRaw(raw);
-    await putOne(item);
-    console.log('[API] 🌐 fetchPromptById network & cache →', id);
-    return item;
+    return mapRaw(raw);
 }
 
 export async function createPrompt(params: {
@@ -77,9 +66,7 @@ export async function createPrompt(params: {
     });
     if (!res.ok) throw new Error(`createPrompt failed: ${res.status}`);
     const raw: RawPrompt = await res.json();
-    const item = mapRaw(raw);
-    await putOne(item);
-    return item;
+    return mapRaw(raw);
 }
 
 export async function updatePrompt(params: {
@@ -101,14 +88,13 @@ export async function updatePrompt(params: {
     });
     if (!res.ok) throw new Error(`updatePrompt failed: ${res.status}`);
     const raw: RawPrompt = await res.json();
-    const item = mapRaw(raw);
-    await putOne(item);
-    return item;
+    return mapRaw(raw);
 }
 
 export async function deletePrompt(id: string): Promise<{ success: boolean }> {
-    const res = await fetch(`/api/prompt?id=${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/prompt?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    });
     if (!res.ok) throw new Error(`deletePrompt failed: ${res.status}`);
-    await deleteById(id);
     return res.json();
 }

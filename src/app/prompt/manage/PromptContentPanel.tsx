@@ -1,7 +1,10 @@
+
+// src/app/prompt/manage/PromptContentPanel.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
-import InputBox from '@/app/components/InputBox';
-import type { PromptItem, AttributeItem } from '@/lib/models/prompt';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import ChatInput from '@/app/components/ChatInput';
+import type { PromptItem } from '@/lib/models/prompt';
 
 export interface PromptContentPanelProps {
     promptId: string;
@@ -18,6 +21,7 @@ export interface PromptContentPanelProps {
 
 export default function PromptContentPanel({
                                                promptId,
+                                               promptTitle,
                                                initialPrompt,
                                                tags,
                                                description,
@@ -29,27 +33,53 @@ export default function PromptContentPanel({
     const [original, setOriginal] = useState(initialPrompt);
     const [optimized, setOptimized] = useState('');
     const [suggestion, setSuggestion] = useState('');
-    const [experienceInput, setExperienceInput] = useState('');
-    const [experienceOutput, setExperienceOutput] = useState('');
-    const [mode, setMode] = useState<'exp'|'opt'>('exp');
+    const [mode, setMode] = useState<'exp' | 'opt'>('exp');
 
     useEffect(() => {
         setOriginal(initialPrompt);
         setOptimized('');
         setSuggestion('');
-        setExperienceInput('');
-        setExperienceOutput('');
         setMode('exp');
     }, [initialPrompt]);
 
-    const handleCopy = (txt: string) => {
-        navigator.clipboard.writeText(txt);
-    };
+    const handleChatSend = useCallback(
+        ({ text }: { text: string }) => {
+            if (mode === 'exp') {
+                onExperienceRun(text);
+            } else {
+                setSuggestion(text);
+            }
+        },
+        [mode, onExperienceRun]
+    );
+
+    const handleCopy = useCallback((txt: string) => {
+        navigator.clipboard.writeText(txt).catch(console.error);
+    }, []);
 
     return (
-        <div className="flex flex-col h-full p-2">
-            <div className="flex-1 flex gap-2">
-                {/* 左侧 */}
+        <div className="flex flex-col h-full p-4 bg-white rounded-lg shadow">
+            {/* 标题 */}
+            <h2 className="text-xl font-semibold mb-4">{promptTitle}</h2>
+            {/* 模式切换 */}
+            <div className="flex gap-2 mb-4">
+                {( ['exp', 'opt'] as const ).map(m => (
+                    <button
+                        key={m}
+                        className={`px-4 py-1 rounded ${
+                            mode === m
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-gray-200 text-gray-700'
+                        }`}
+                        onClick={() => setMode(m)}
+                    >
+                        {m === 'exp' ? '体验模式' : '优化模式'}
+                    </button>
+                ))}
+            </div>
+            {/* 主区域 */}
+            <div className="flex-1 flex gap-4 overflow-hidden mb-4">
+                {/* 原始 */}
                 <div className="relative flex-1">
                     <button
                         className="absolute top-2 left-2 p-2 bg-white rounded shadow"
@@ -57,8 +87,14 @@ export default function PromptContentPanel({
                     >
                         复制
                     </button>
+                    <textarea
+                        value={original}
+                        onChange={e => setOriginal(e.target.value)}
+                        readOnly={mode === 'exp'}
+                        className="w-full h-full p-4 border border-gray-300 rounded resize-none focus:outline-none focus:ring"
+                    />
                     {mode === 'opt' && (
-                        <div className="absolute top-2 right-2 flex gap-1">
+                        <div className="absolute top-2 right-2 flex flex-col gap-2">
                             <button
                                 className="px-3 py-1 bg-green-600 text-white rounded"
                                 onClick={() => onSave(original)}
@@ -73,23 +109,21 @@ export default function PromptContentPanel({
                             </button>
                         </div>
                     )}
-                    <InputBox
-                        className="h-full w-full pt-10"
-                        value={original}
-                        onChange={mode === 'opt' ? setOriginal : () => {}}
-                        readOnly={mode === 'exp'}
-                    />
                 </div>
-                {/* 右侧 */}
+                {/* 优化/体验 输出 */}
                 <div className="relative flex-1">
                     <button
                         className="absolute top-2 left-2 p-2 bg-white rounded shadow"
-                        onClick={() =>
-                            handleCopy(mode === 'opt' ? optimized : experienceOutput)
-                        }
+                        onClick={() => handleCopy(optimized)}
                     >
                         复制
                     </button>
+                    <textarea
+                        value={optimized}
+                        onChange={e => setOptimized(e.target.value)}
+                        readOnly={mode === 'exp'}
+                        className="w-full h-full p-4 border border-gray-300 rounded bg-gray-50 resize-none focus:outline-none focus:ring"
+                    />
                     {mode === 'opt' && (
                         <button
                             className="absolute top-2 right-2 px-3 py-1 bg-purple-600 text-white rounded"
@@ -98,41 +132,17 @@ export default function PromptContentPanel({
                             采纳
                         </button>
                     )}
-                    <InputBox
-                        className="h-full w-full pt-10"
-                        value={mode === 'opt' ? optimized : experienceOutput}
-                        readOnly
-                        onChange={() => {}}
-                    />
                 </div>
             </div>
-
-            <div className="flex gap-2 mt-2">
-                <InputBox
-                    className="flex-1 h-24"
-                    placeholder={mode === 'opt' ? '优化建议...' : '测试输入...'}
-                    value={mode === 'opt' ? suggestion : experienceInput}
-                    onChange={mode === 'opt' ? setSuggestion : setExperienceInput}
-                />
-                <div className="flex flex-col gap-2">
-                    <button
-                        className={mode === 'exp'
-                            ? 'px-3 py-1 bg-indigo-600 text-white rounded'
-                            : 'px-3 py-1 bg-gray-200 text-gray-700 rounded'}
-                        onClick={() => setMode('exp')}
-                    >
-                        体验模式
-                    </button>
-                    <button
-                        className={mode === 'opt'
-                            ? 'px-3 py-1 bg-indigo-600 text-white rounded'
-                            : 'px-3 py-1 bg-gray-200 text-gray-700 rounded'}
-                        onClick={() => setMode('opt')}
-                    >
-                        优化模式
-                    </button>
-                </div>
-            </div>
+            {/* 输入 */}
+            <ChatInput
+                context={{ promptId }}
+                models={['gpt-4o', 'step-2-16k']}
+                placeholder={mode === 'exp' ? '测试输入...' : '请输入优化建议...'}
+                enableImage
+                enableVoice
+                onSend={handleChatSend}
+            />
         </div>
     );
 }

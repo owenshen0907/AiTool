@@ -57,7 +57,17 @@ export async function GET(request: NextRequest) {
 
     // 4. 设置 Cookie 并跳转到首页
     const response = NextResponse.redirect(new URL('/', request.url));
-    response.cookies.set('sessionToken', accessToken, { httpOnly: true, secure: true });
-    response.cookies.set('userId', userId,            { httpOnly: true, secure: true });
+    response.cookies.set('sessionToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // 本地开发也能用
+        sameSite: 'lax',
+        path: '/',                                    // 整站都可见
+    });
+    response.cookies.set('userId', userId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // 本地开发也能用
+        sameSite: 'lax',
+        path: '/',                                      // 整站都可见
+    });
     return response;
 }
