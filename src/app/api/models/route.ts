@@ -1,107 +1,122 @@
-// src/app/api/models/route.ts
+// app/api/models/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { CASDOOR_CONFIG } from '@/config';
-import { sql } from '@/lib/db/client';
-import { v4 as uuid } from 'uuid';
+import {
+    getModelsBySupplier,
+    createModel,
+    updateModel,
+} from '@/lib/repositories/modelRepository';
 
-// helper: 根据 sessionToken 去 Casdoor 拿 userId
-async function getUserIdFromToken(token: string) {
-    const res = await fetch(`${CASDOOR_CONFIG.endpoint}/api/get-account`, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return null;
-    const { data } = await res.json();
-    return data.id as string;
-}
-
+/**
+ * GET /api/models?supplier_id=...
+ * 返回指定供应商下的模型
+ */
 export async function GET(req: NextRequest) {
-    const token = req.cookies.get('sessionToken')?.value;
-    if (!token) return NextResponse.json({ error: '未登录' }, { status: 401 });
-
-    const userId = await getUserIdFromToken(token);
-    if (!userId) return NextResponse.json({ error: '无法获取用户信息' }, { status: 401 });
-
-    const { rows } = await sql`
-        SELECT
-            id,
-            name,
-            url,
-            api_key      AS "apiKey",
-            is_default   AS "isDefault",
-            supplier,
-            model_type   AS "modelType",
-            notes,
-            passed_test  AS "passedTest"
-        FROM models
-    WHERE user_id = ${userId}
-    ORDER BY created_at DESC
-  `;
-    return NextResponse.json(rows);
+    const userId = req.headers.get('x-user-id');
+    if (!userId) {
+        return new NextResponse('Unauthorized', { status: 401 });
+    }
+    const supplierId = req.nextUrl.searchParams.get('supplier_id');
+    if (!supplierId) {
+        return new NextResponse('Missing supplier_id', { status: 400 });
+    }
+    try {
+        const models = await getModelsBySupplier(supplierId);
+        return NextResponse.json(models);
+    } catch (err) {
+        console.error('getModelsBySupplier error', err);
+        return new NextResponse('Failed to fetch models', { status: 500 });
+    }
 }
 
+/**
+ * POST /api/models
+ * 新增模型（使用 snake_case）
+ */
 export async function POST(req: NextRequest) {
-    const token = req.cookies.get('sessionToken')?.value;
-    if (!token) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const userId = req.headers.get('x-user-id');
+    if (!userId) {
+        return new NextResponse('Unauthorized', { status: 401 });
+    }
+    const {
+        supplier_id,
+        name,
+        model_type,
+        supports_image_input,
+        supports_video_input,
+        supports_audio_output,
+        supports_json_mode,
+        supports_tool,
+        supports_web_search,
+        supports_deep_thinking,
+    } = await req.json();
 
-    const userId = await getUserIdFromToken(token);
-    if (!userId) return NextResponse.json({ error: '无法获取用户信息' }, { status: 401 });
+    if (!supplier_id || !name || !model_type) {
+        return new NextResponse('Missing required fields', { status: 400 });
+    }
 
-    const { name, url, apiKey, isDefault, supplier, modelType, notes } =
-        await req.json();
-
-    const id = uuid();
-    await sql`
-        INSERT INTO models (
-            id, name, url, api_key, is_default,
-            supplier, model_type, user_id, notes, passed_test
-        ) VALUES (
-                     ${id}, ${name}, ${url}, ${apiKey}, ${isDefault},
-                     ${supplier}, ${modelType}, ${userId}, ${notes ?? null}, false
-                 )
-    `;
-    return NextResponse.json({ id }, { status: 201 });
+    try {
+        const model = await createModel({
+            supplierId:          supplier_id,
+            name,
+            modelType:           model_type,
+            supportsImageInput:  Boolean(supports_image_input),
+            supportsVideoInput:  Boolean(supports_video_input),
+            supportsAudioOutput: Boolean(supports_audio_output),
+            supportsJsonMode:    Boolean(supports_json_mode),
+            supportsTool:        Boolean(supports_tool),
+            supportsWebSearch:   Boolean(supports_web_search),
+            supportsDeepThinking:Boolean(supports_deep_thinking),
+        });
+        return NextResponse.json(model);
+    } catch (err) {
+        console.error('createModel error', err);
+        return new NextResponse('Failed to create model', { status: 500 });
+    }
 }
 
-export async function DELETE(req: NextRequest) {
-    const token = req.cookies.get('sessionToken')?.value;
-    if (!token) return NextResponse.json({ error: '未登录' }, { status: 401 });
-
-    const userId = await getUserIdFromToken(token);
-    if (!userId) return NextResponse.json({ error: '无法获取用户信息' }, { status: 401 });
-
-    const id = req.nextUrl.searchParams.get('id');
-    if (!id) return NextResponse.json({ error: '缺少模型 ID' }, { status: 400 });
-
-    await sql`
-    DELETE FROM models
-    WHERE user_id = ${userId} AND id = ${id}
-  `;
-    // 这是修改后的关键行，直接返回空 204
-    return new NextResponse(null, { status: 204 });
-}
-
+/**
+ * PATCH /api/models
+ * 修改模型（使用 snake_case）
+ */
 export async function PATCH(req: NextRequest) {
-    const token = req.cookies.get('sessionToken')?.value;
-    if (!token) return NextResponse.json({ error: '未登录' }, { status: 401 });
+    const userId = req.headers.get('x-user-id');
+    if (!userId) {
+        return new NextResponse('Unauthorized', { status: 401 });
+    }
+    const {
+        id,
+        name,
+        model_type,
+        supports_image_input,
+        supports_video_input,
+        supports_audio_output,
+        supports_json_mode,
+        supports_tool,
+        supports_web_search,
+        supports_deep_thinking,
+    } = await req.json();
 
-    const userId = await getUserIdFromToken(token);
-    if (!userId) return NextResponse.json({ error: '无法获取用户信息' }, { status: 401 });
+    if (!id) {
+        return new NextResponse('Missing model id', { status: 400 });
+    }
 
-    const { id, name, url, apiKey, isDefault, supplier, modelType, notes, passedTest } =
-        await req.json();
-    if (!id) return NextResponse.json({ error: '缺少模型 ID' }, { status: 400 });
+    const updates = {
+        ...(name !== undefined && { name }),
+        ...(model_type !== undefined && { modelType: model_type }),
+        ...(supports_image_input !== undefined && { supportsImageInput: Boolean(supports_image_input) }),
+        ...(supports_video_input !== undefined && { supportsVideoInput: Boolean(supports_video_input) }),
+        ...(supports_audio_output !== undefined && { supportsAudioOutput: Boolean(supports_audio_output) }),
+        ...(supports_json_mode !== undefined && { supportsJsonMode: Boolean(supports_json_mode) }),
+        ...(supports_tool !== undefined && { supportsTool: Boolean(supports_tool) }),
+        ...(supports_web_search !== undefined && { supportsWebSearch: Boolean(supports_web_search) }),
+        ...(supports_deep_thinking !== undefined && { supportsDeepThinking: Boolean(supports_deep_thinking) }),
+    };
 
-    await sql`
-    UPDATE models SET
-      name        = ${name},
-      url         = ${url},
-      api_key     = ${apiKey},
-      is_default  = ${isDefault},
-      supplier    = ${supplier},
-      model_type  = ${modelType},
-      notes       = ${notes ?? null},
-      passed_test = ${passedTest}
-    WHERE user_id = ${userId} AND id = ${id}
-  `;
-    return NextResponse.json({}, { status: 200 });
+    try {
+        const model = await updateModel(id, updates);
+        return NextResponse.json(model);
+    } catch (err) {
+        console.error('updateModel error', err);
+        return new NextResponse('Failed to update model', { status: 500 });
+    }
 }

@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
-import UserInfoModal from './UserInfoModal';        // ← 路径改为新文件名
-import ModelManagementModal from './ModelManagementModal';
+import UserInfoModal from './UserInfoModal';          // 保持不变
+import SupplierModelManagement from './SupplierModelManagement'; // 新的管理组件
 
 interface MenuItem {
     title: string;
@@ -58,8 +58,7 @@ function HoverMenu({
                     className={`
             absolute ${ulPosition} ${ulWidth}
             bg-white border border-gray-200 shadow-lg rounded-md
-            py-1
-            z-[${zIndex}]
+            py-1 z-[${zIndex}]
           `}
                 >
                     {item.children.map((child) => (
@@ -81,7 +80,7 @@ export default function NavBar() {
     const [userData, setUserData] = useState<User | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showUserModal, setShowUserModal] = useState(false);
-    const [showModelModal, setShowModelModal] = useState(false);
+    const [showSupplierModal, setShowSupplierModal] = useState(false);
     const userTimer = useRef<number>();
 
     useEffect(() => {
@@ -159,10 +158,7 @@ export default function NavBar() {
                 { title: 'Real-Time', href: '/speech/real-time' },
             ],
         },
-        {
-            title: '图片',
-            children: [{ title: '图片生成', href: '/image/generate' }],
-        },
+        { title: '图片', children: [{ title: '图片生成', href: '/image/generate' }] },
         {
             title: '实用Agent',
             children: [
@@ -195,65 +191,62 @@ export default function NavBar() {
                         { title: '生成接口文档', href: '/agent/code/docs' },
                     ],
                 },
-                {
-                    title: '其它',
-                    children: [
-                        { title: '自定义测试', href: '/agent/other/custom-test' },
-                    ],
-                },
+                { title: '其它', children: [{ title: '自定义测试', href: '/agent/other/custom-test' }] },
             ],
         },
     ];
 
     return (
-        <nav className="flex items-center justify-between px-8 h-14 bg-white shadow-md relative z-50">
-            <div className="text-2xl font-semibold text-blue-600">AiTool</div>
+        <>
+            <nav className="flex items-center justify-between px-8 h-14 bg-white shadow-md relative z-50">
+                <div className="text-2xl font-semibold text-blue-600">AiTool</div>
 
-            <ul className="flex space-x-4">
-                {menuData.map((item) => (
-                    <HoverMenu key={item.title} item={item} />
-                ))}
-            </ul>
+                <ul className="flex space-x-4">
+                    {menuData.map((item) => (
+                        <HoverMenu key={item.title} item={item} />
+                    ))}
+                </ul>
 
-            {/* 用户头像与下拉 */}
-            <div
-                className="relative flex items-center"
-                onMouseEnter={onUserEnter}
-                onMouseLeave={onUserLeave}
-            >
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold cursor-pointer">
-                    {firstChar}
-                </div>
-
-                {dropdownOpen && (
-                    <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg">
-                        <div
-                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                            onClick={() => {
-                                setShowUserModal(true);
-                                setDropdownOpen(false);
-                            }}
-                        >
-                            个人信息
-                        </div>
-                        <div
-                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                            onClick={() => {
-                                setShowModelModal(true);
-                                setDropdownOpen(false);
-                            }}
-                        >
-                            模型管理
-                        </div>
-                        <div
-                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                            onClick={handleLogout}
-                        >
-                            注销登录
-                        </div>
+                {/* 用户头像与下拉 */}
+                <div
+                    className="relative flex items-center"
+                    onMouseEnter={onUserEnter}
+                    onMouseLeave={onUserLeave}
+                >
+                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold cursor-pointer">
+                        {firstChar}
                     </div>
-                )}
-            </div>
+
+                    {dropdownOpen && (
+                        <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg">
+                            <div
+                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => {
+                                    setShowUserModal(true);
+                                    setDropdownOpen(false);
+                                }}
+                            >
+                                个人信息
+                            </div>
+                            <div
+                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => {
+                                    setShowSupplierModal(true);
+                                    setDropdownOpen(false);
+                                }}
+                            >
+                                供应商＆模型管理
+                            </div>
+                            <div
+                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={handleLogout}
+                            >
+                                注销登录
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </nav>
 
             {/* 个人信息弹框 */}
             {showUserModal && (
@@ -263,30 +256,10 @@ export default function NavBar() {
                 />
             )}
 
-            {/* 模型管理弹框（保持原逻辑） */}
-            {showModelModal && (
-                <ModelManagementModal
-                    initialModels={userData?.models ?? []}
-                    onAdd={async (m) => {
-                        await fetch('/api/user/models', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(m),
-                        });
-                    }}
-                    onDelete={async (id) => {
-                        await fetch(`/api/user/models/${id}`, { method: 'DELETE' });
-                    }}
-                    onUpdate={async (id, upd) => {
-                        await fetch(`/api/user/models/${id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(upd),
-                        });
-                    }}
-                    onClose={() => setShowModelModal(false)}
-                />
+            {/* 新的供应商 & 模型管理弹框 */}
+            {showSupplierModal && (
+                <SupplierModelManagement onClose={() => setShowSupplierModal(false)} />
             )}
-        </nav>
+        </>
     );
 }
