@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS ai_suppliers (
     api_key       TEXT NOT NULL,
     api_url       TEXT NOT NULL,
     user_id       VARCHAR(50) NOT NULL REFERENCES user_info(user_id) ON DELETE CASCADE,
+    is_default    BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS models (
     supports_tool           BOOLEAN NOT NULL DEFAULT FALSE,
     supports_web_search     BOOLEAN NOT NULL DEFAULT FALSE,
     supports_deep_thinking  BOOLEAN NOT NULL DEFAULT FALSE,
+    is_default              BOOLEAN NOT NULL DEFAULT FALSE,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

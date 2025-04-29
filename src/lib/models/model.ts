@@ -6,6 +6,7 @@ export interface Supplier {
     abbreviation: string;
     apiKey: string;
     apiUrl: string;
+    isDefault: boolean;
 }
 
 export interface Model {
@@ -20,4 +21,5 @@ export interface Model {
     supportsTool: boolean;
     supportsWebSearch: boolean;
     supportsDeepThinking: boolean;
+    isDefault: boolean;
 }

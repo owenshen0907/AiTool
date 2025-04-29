@@ -1,52 +1,55 @@
 // app/api/suppliers/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getSuppliersByUser, createSupplier } from '@/lib/repositories/supplierRepository';
+import { withUser } from '@/lib/api/auth';
+import {
+    getSuppliersByUser,
+    createSupplier,
+    updateSupplier,
+} from '@/lib/repositories/supplierRepository';
 
-/**
- * GET /api/suppliers
- * 返回当前登录用户的 AI 供应商列表
- */
-export async function GET(req: NextRequest) {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+/** GET /api/suppliers */
+export const GET = withUser(async (req: NextRequest, userId: string) => {
+    const suppliers = await getSuppliersByUser(userId);
+    return NextResponse.json(suppliers);
+});
 
-    try {
-        const suppliers = await getSuppliersByUser(userId);
-        return NextResponse.json(suppliers);
-    } catch (err) {
-        console.error('getSuppliersByUser error', err);
-        return new NextResponse('Failed to fetch suppliers', { status: 500 });
-    }
-}
-
-/**
- * POST /api/suppliers
- * 新增 AI 供应商
- */
-export async function POST(req: NextRequest) {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const { name, abbreviation, api_key, api_url } = await req.json();
+/** POST /api/suppliers */
+export const POST = withUser(async (req: NextRequest, userId: string) => {
+    const { name, abbreviation, api_key, api_url, is_default } = await req.json();
     if (!name || !abbreviation || !api_key || !api_url) {
         return new NextResponse('Missing required fields', { status: 400 });
     }
+    const supplier = await createSupplier({
+        name,
+        abbreviation,
+        apiKey: api_key,
+        apiUrl: api_url,
+        userId,
+        isDefault: Boolean(is_default),
+    });
+    return NextResponse.json(supplier, { status: 201 });
+});
 
-    try {
-        const supplier = await createSupplier({
+/** PATCH /api/suppliers */
+export const PATCH = withUser(async (req: NextRequest, userId: string) => {
+    const body = await req.json();
+    const { id, name, abbreviation, api_key, api_url, is_default } = body;
+    if (!id) {
+        return new NextResponse('Missing supplier id', { status: 400 });
+    }
+    const updated = await updateSupplier(
+        id,
+        {
             name,
             abbreviation,
             apiKey: api_key,
             apiUrl: api_url,
-            userId
-        });
-        return NextResponse.json(supplier);
-    } catch (err) {
-        console.error('createSupplier error', err);
-        return new NextResponse('Failed to create supplier', { status: 500 });
+            isDefault: is_default === undefined ? undefined : Boolean(is_default),
+        },
+        userId
+    );
+    if (!updated) {
+        return new NextResponse('Not found or forbidden', { status: 404 });
     }
-}
+    return NextResponse.json(updated);
+});

@@ -4,21 +4,36 @@ import {
     getModelsBySupplier,
     createModel,
     updateModel,
+    clearDefaultModelForSupplier,
+    clearDefaultModelForSupplierByModel,
 } from '@/lib/repositories/modelRepository';
+import { withUser } from '@/lib/api/auth';
+
+interface ModelRequestBody {
+    supplier_id?: string;
+    id?: string;
+    name?: string;
+    model_type?: 'chat' | 'non-chat';
+    supports_image_input?: boolean;
+    supports_video_input?: boolean;
+    supports_audio_output?: boolean;
+    supports_json_mode?: boolean;
+    supports_tool?: boolean;
+    supports_web_search?: boolean;
+    supports_deep_thinking?: boolean;
+    is_default?: boolean;
+}
 
 /**
  * GET /api/models?supplier_id=...
- * 返回指定供应商下的模型
+ * 返回指定供应商下的模型列表
  */
-export async function GET(req: NextRequest) {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+export const GET = withUser(async (req: NextRequest, userId: string) => {
     const supplierId = req.nextUrl.searchParams.get('supplier_id');
     if (!supplierId) {
         return new NextResponse('Missing supplier_id', { status: 400 });
     }
+
     try {
         const models = await getModelsBySupplier(supplierId);
         return NextResponse.json(models);
@@ -26,17 +41,14 @@ export async function GET(req: NextRequest) {
         console.error('getModelsBySupplier error', err);
         return new NextResponse('Failed to fetch models', { status: 500 });
     }
-}
+});
 
 /**
  * POST /api/models
- * 新增模型（使用 snake_case）
+ * 新增模型
  */
-export async function POST(req: NextRequest) {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+export const POST = withUser(async (req: NextRequest, userId: string) => {
+    const body = (await req.json()) as ModelRequestBody;
     const {
         supplier_id,
         name,
@@ -48,41 +60,46 @@ export async function POST(req: NextRequest) {
         supports_tool,
         supports_web_search,
         supports_deep_thinking,
-    } = await req.json();
+        is_default,
+    } = body;
 
     if (!supplier_id || !name || !model_type) {
         return new NextResponse('Missing required fields', { status: 400 });
     }
 
     try {
+        // 如果设为默认，先清除该供应商下其他默认模型
+        if (is_default) {
+            await clearDefaultModelForSupplier(supplier_id);
+        }
+
         const model = await createModel({
-            supplierId:          supplier_id,
+            supplierId: supplier_id,
             name,
-            modelType:           model_type,
-            supportsImageInput:  Boolean(supports_image_input),
-            supportsVideoInput:  Boolean(supports_video_input),
-            supportsAudioOutput: Boolean(supports_audio_output),
-            supportsJsonMode:    Boolean(supports_json_mode),
-            supportsTool:        Boolean(supports_tool),
-            supportsWebSearch:   Boolean(supports_web_search),
-            supportsDeepThinking:Boolean(supports_deep_thinking),
+            modelType: model_type,
+            supportsImageInput: !!supports_image_input,
+            supportsVideoInput: !!supports_video_input,
+            supportsAudioOutput: !!supports_audio_output,
+            supportsJsonMode: !!supports_json_mode,
+            supportsTool: !!supports_tool,
+            supportsWebSearch: !!supports_web_search,
+            supportsDeepThinking: !!supports_deep_thinking,
+            isDefault: !!is_default,
         });
-        return NextResponse.json(model);
+
+        return NextResponse.json(model, { status: 201 });
     } catch (err) {
         console.error('createModel error', err);
         return new NextResponse('Failed to create model', { status: 500 });
     }
-}
+});
 
 /**
  * PATCH /api/models
- * 修改模型（使用 snake_case）
+ * 修改模型
  */
-export async function PATCH(req: NextRequest) {
-    const userId = req.headers.get('x-user-id');
-    if (!userId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+export const PATCH = withUser(async (req: NextRequest, userId: string) => {
+    const body = (await req.json()) as ModelRequestBody;
     const {
         id,
         name,
@@ -94,29 +111,35 @@ export async function PATCH(req: NextRequest) {
         supports_tool,
         supports_web_search,
         supports_deep_thinking,
-    } = await req.json();
+        is_default,
+    } = body;
 
     if (!id) {
         return new NextResponse('Missing model id', { status: 400 });
     }
 
-    const updates = {
-        ...(name !== undefined && { name }),
-        ...(model_type !== undefined && { modelType: model_type }),
-        ...(supports_image_input !== undefined && { supportsImageInput: Boolean(supports_image_input) }),
-        ...(supports_video_input !== undefined && { supportsVideoInput: Boolean(supports_video_input) }),
-        ...(supports_audio_output !== undefined && { supportsAudioOutput: Boolean(supports_audio_output) }),
-        ...(supports_json_mode !== undefined && { supportsJsonMode: Boolean(supports_json_mode) }),
-        ...(supports_tool !== undefined && { supportsTool: Boolean(supports_tool) }),
-        ...(supports_web_search !== undefined && { supportsWebSearch: Boolean(supports_web_search) }),
-        ...(supports_deep_thinking !== undefined && { supportsDeepThinking: Boolean(supports_deep_thinking) }),
-    };
-
     try {
+        // 如果要设为默认，则先根据 modelId 清除该供应商下的旧默认
+        if (is_default) {
+            await clearDefaultModelForSupplierByModel(id);
+        }
+
+        const updates: Record<string, any> = {};
+        if (name !== undefined) updates.name = name;
+        if (model_type !== undefined) updates.modelType = model_type;
+        if (supports_image_input !== undefined) updates.supportsImageInput = !!supports_image_input;
+        if (supports_video_input !== undefined) updates.supportsVideoInput = !!supports_video_input;
+        if (supports_audio_output !== undefined) updates.supportsAudioOutput = !!supports_audio_output;
+        if (supports_json_mode !== undefined) updates.supportsJsonMode = !!supports_json_mode;
+        if (supports_tool !== undefined) updates.supportsTool = !!supports_tool;
+        if (supports_web_search !== undefined) updates.supportsWebSearch = !!supports_web_search;
+        if (supports_deep_thinking !== undefined) updates.supportsDeepThinking = !!supports_deep_thinking;
+        if (is_default !== undefined) updates.isDefault = !!is_default;
+
         const model = await updateModel(id, updates);
         return NextResponse.json(model);
     } catch (err) {
         console.error('updateModel error', err);
         return new NextResponse('Failed to update model', { status: 500 });
     }
-}
+});

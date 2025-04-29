@@ -1,56 +1,61 @@
-// src/app/api/chat/route.ts
-import { NextResponse } from 'next/server';
-import configurations from '@/config';
+// app/api/chat/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupplierById } from '@/lib/repositories/supplierRepository';
+import { withUser } from '@/lib/api/auth';
 
-interface RequestBody {
-    message: Array<{ type: string; [key: string]: any }>;
-    configKey?: string;
+interface ChatRequest {
+    supplierId: string;
+    model: string;
+    messages: { role: string; content: string }[];
 }
 
-export async function POST(req: Request) {
+export const POST = withUser(async (req: NextRequest, userId: string) => {
+    let body: ChatRequest;
     try {
-        const { message, configKey } = (await req.json()) as RequestBody;
-
-        // 根据 configKey 取配置，默认为 STEP_FUN
-        const config = configurations[configKey || 'STUDY_ASSISTANT'];
-
-        const payload = {
-            model: config.model,
-            stream: true,
-            messages: [
-                {
-                    role: "system",
-                    content: config.systemMessage
-                },
-                {
-                    role: "user",
-                    content: message
-                }
-            ]
-        };
-
-        const response = await fetch(config.apiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${config.apiKey}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            return new Response("Error", { status: response.status });
-        }
-
-        return new Response(response.body, {
-            headers: {
-                "Content-Type": "text/event-stream",
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive"
-            }
-        });
-    } catch (error) {
-        console.error("API error:", error);
-        return new Response("Internal Server Error", { status: 500 });
+        body = await req.json();
+    } catch {
+        return new NextResponse('Invalid JSON', { status: 400 });
     }
-}
+    const { supplierId, model, messages } = body;
+    if (!supplierId || !model || !messages) {
+        return new NextResponse('Missing parameters', { status: 400 });
+    }
+
+    let supplier;
+    try {
+        supplier = await getSupplierById(supplierId);
+    } catch {
+        return new NextResponse('Supplier not found', { status: 404 });
+    }
+    if (supplier.userId !== userId) {
+        return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // **流式代理**：直接把 upstream.body 透传给前端
+    try {
+        const upstream = await fetch(
+            `${supplier.apiUrl}/chat/completions`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${supplier.apiKey}`,
+                },
+                body: JSON.stringify({ model, stream: true, messages }),
+            }
+        );
+        // 取 upstream 的流和 headers 转发
+        const headers: Record<string,string> = {};
+        upstream.headers.forEach((v,k) => { headers[k] = v; });
+        // 禁用缓存
+        headers['Cache-Control'] = 'no-cache';
+
+        return new NextResponse(upstream.body, {
+            status: upstream.status,
+            headers,
+        });
+    } catch (err) {
+        console.error('Error proxying chat request', err);
+        return new NextResponse('Proxy error', { status: 500 });
+    }
+});

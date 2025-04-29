@@ -1,19 +1,15 @@
+// app/components/ChatInput.tsx
 'use client';
-import React, { useState, useRef } from 'react';
-import { Mic, ImageIcon, Link2, Send, ChevronDown } from 'lucide-react';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Mic, ImageIcon, Send } from 'lucide-react';
+import type { Supplier, Model } from '@/lib/models/model';
 
 export interface ChatInputProps<CTX = any> {
-    /** 页面上下文，例如 promptId */
     context?: CTX;
-    /** 可用模型列表 */
-    models: string[];
-    /** 文本框占位符 */
     placeholder?: string;
-    /** 是否允许上传图片 */
     enableImage?: boolean;
-    /** 是否允许语音录入 */
     enableVoice?: boolean;
-    /** 点击发送时回调，携带所有输入 */
     onSend: (args: {
         text: string;
         images: File[];
@@ -21,28 +17,80 @@ export interface ChatInputProps<CTX = any> {
         voiceBlob?: Blob;
         model: string;
         context?: CTX;
+        supplier: Supplier;
     }) => void;
 }
 
 export default function ChatInput<CTX = any>({
                                                  context,
-                                                 models,
                                                  placeholder = '请输入内容…',
                                                  enableImage = true,
                                                  enableVoice = true,
                                                  onSend,
                                              }: ChatInputProps<CTX>) {
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
+    const [models, setModels] = useState<Model[]>([]);
+    const [model, setModel] = useState<string>('');
+
     const [text, setText] = useState('');
     const [images, setImages] = useState<File[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [voiceBlob, setVoiceBlob] = useState<Blob>();
     const [listening, setListening] = useState(false);
-    const [model, setModel] = useState(models[0] || '');
 
     const mediaRef = useRef<MediaRecorder>();
     const chunks: Blob[] = [];
 
-    // 录音逻辑
+    // 拉取供应商列表
+    useEffect(() => {
+        async function fetchSuppliers() {
+            try {
+                const res = await fetch('/api/suppliers');
+                if (res.ok) {
+                    let data: Supplier[] = await res.json();
+                    // 默认供应商排在最前
+                    data.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+                    setSuppliers(data);
+                    // 如果还未选择，自动选默认或首个
+                    if (!selectedSupplierId) {
+                        const def = data.find(s => s.isDefault) || data[0];
+                        if (def) setSelectedSupplierId(def.id);
+                    }
+                }
+            } catch (err) {
+                console.error('获取供应商失败', err);
+            }
+        }
+        fetchSuppliers();
+    }, []);
+
+    // 拉取模型列表
+    useEffect(() => {
+        async function fetchModels() {
+            if (!selectedSupplierId) {
+                setModels([]);
+                setModel('');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/models?supplier_id=${selectedSupplierId}`);
+                if (res.ok) {
+                    let data: Model[] = await res.json();
+                    // 默认模型排最前
+                    data.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+                    setModels(data);
+                    // 自动选默认或首个
+                    const defModel = data.find(m => m.isDefault) || data[0];
+                    setModel(defModel?.name || '');
+                }
+            } catch (err) {
+                console.error('获取模型失败', err);
+            }
+        }
+        fetchModels();
+    }, [selectedSupplierId]);
+
     const startRecording = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const recorder = new MediaRecorder(stream);
@@ -57,32 +105,43 @@ export default function ChatInput<CTX = any>({
         setListening(false);
     };
 
-    // 图片上传
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
-        if (!files) return;
-        setImages(prev => [...prev, ...Array.from(files)]);
+        if (files) setImages(prev => [...prev, ...Array.from(files)]);
     };
 
-    // 添加图片链接
     const onAddUrl = () => {
         const url = prompt('请输入图片 URL');
         if (url) setImageUrls(prev => [...prev, url]);
     };
 
-    // 发送
     const handleSend = () => {
+        if (!selectedSupplierId) {
+            alert('请先选择供应商');
+            return;
+        }
+        const supplier = suppliers.find(s => s.id === selectedSupplierId);
+        if (!supplier) {
+            alert('无效的供应商');
+            return;
+        }
+        if (!model) {
+            alert('请先选择模型');
+            return;
+        }
         if (!text.trim() && images.length + imageUrls.length === 0 && !voiceBlob) return;
-        onSend({ text, images, imageUrls, voiceBlob, model, context });
+
+        onSend({ text, images, imageUrls, voiceBlob, model, context, supplier });
         setText('');
         setImages([]);
         setImageUrls([]);
         setVoiceBlob(undefined);
     };
 
+    const sendDisabled = !selectedSupplierId || !model || (!text.trim() && images.length === 0 && imageUrls.length === 0 && !voiceBlob);
+
     return (
         <div className="p-4 bg-white rounded-lg shadow">
-            {/* 文本输入框 */}
             <textarea
                 value={text}
                 onChange={e => setText(e.target.value)}
@@ -90,8 +149,7 @@ export default function ChatInput<CTX = any>({
                 className="w-full h-24 p-2 border border-gray-300 rounded resize-none focus:outline-none focus:ring"
             />
 
-            {/* 底部操作: 左侧模型/上传/录音，右侧发送按钮 */}
-            <div className="mt-2 flex items-center justify-between">
+            <div className="mt-2 grid grid-cols-2 gap-4 items-center">
                 <div className="flex items-center space-x-4">
                     {enableImage && (
                         <label className="cursor-pointer hover:text-gray-800">
@@ -102,22 +160,40 @@ export default function ChatInput<CTX = any>({
                     {enableVoice && (
                         <button
                             onClick={listening ? stopRecording : startRecording}
-                            className={"hover:text-gray-800 " + (listening ? 'text-red-500' : '')}
+                            className={listening ? 'text-red-500 hover:text-red-700' : 'hover:text-gray-800'}
                         >
                             <Mic size={20} />
                         </button>
                     )}
-                    <button
-                        className="flex items-center space-x-1 px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
-                        onClick={() => {/* TODO: 打开模型选择弹窗，调用 setModel */}}
+
+                    <select
+                        value={selectedSupplierId}
+                        onChange={e => setSelectedSupplierId(e.target.value)}
+                        className="border rounded px-3 py-1"
                     >
-                        <span>{model}</span>
-                        <ChevronDown size={16} />
-                    </button>
+                        <option value="">选择供应商</option>
+                        {suppliers.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={model}
+                        onChange={e => setModel(e.target.value)}
+                        disabled={!selectedSupplierId}
+                        className="border rounded px-3 py-1 disabled:opacity-50"
+                    >
+                        <option value="">选择模型</option>
+                        {models.map(m => (
+                            <option key={m.id} value={m.name}>{m.name}</option>
+                        ))}
+                    </select>
                 </div>
+
                 <button
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     onClick={handleSend}
+                    disabled={sendDisabled}
+                    className="justify-self-end px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                     发送 <Send size={16} className="inline ml-1" />
                 </button>
