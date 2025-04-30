@@ -1,4 +1,3 @@
-// src/app/prompt/manage/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -10,7 +9,6 @@ import {
     fetchPrompts,
     fetchPromptById,
     createPrompt,
-    updatePrompt,
     deletePrompt as apiDeletePrompt,
 } from '@/lib/api/prompt';
 
@@ -51,9 +49,7 @@ export default function PromptManagePage() {
         if (node.type === 'dir') {
             try {
                 const children = await fetchPrompts(node.id);
-                setNodes(prev =>
-                    [...prev.filter(p => p.parentId !== node.id), ...children]
-                );
+                setNodes(prev => [...prev.filter(p => p.parentId !== node.id), ...children]);
                 setSelected(null);
             } catch (e) {
                 console.error(e);
@@ -69,43 +65,6 @@ export default function PromptManagePage() {
             }
         }
     }, []);
-
-    const handleSave = useCallback(async (content: string) => {
-        if (!selected) return;
-        try {
-            const updated = await updatePrompt({ id: selected.id, content });
-            setSelected(updated);
-        } catch (e) {
-            console.error(e);
-            setError('保存失败');
-        }
-    }, [selected]);
-
-    const handleSmartSave = useCallback(async (content: string, suggestion?: string) => {
-        if (!selected) return;
-        try {
-            const updated = await updatePrompt({
-                id: selected.id,
-                content,
-                comments: suggestion ? [suggestion] : [],
-            });
-            setSelected(updated);
-        } catch (e) {
-            console.error(e);
-            setError('智能保存失败');
-        }
-    }, [selected]);
-
-    const handleAdopt = useCallback(async (optimized: string) => {
-        if (!selected) return;
-        try {
-            const updated = await updatePrompt({ id: selected.id, content: optimized });
-            setSelected(updated);
-        } catch (e) {
-            console.error(e);
-            setError('采纳失败');
-        }
-    }, [selected]);
 
     const handleNewDir = useCallback(async (parent: PromptNode | null) => {
         const title = prompt('请输入新目录名称');
@@ -193,10 +152,6 @@ export default function PromptManagePage() {
                             initialPrompt={selected.content}
                             tags={selected.tags}
                             description={selected.description}
-                            onSave={handleSave}
-                            onSmartSave={handleSmartSave}
-                            onAdopt={handleAdopt}
-                            onExperienceRun={input => console.log('体验：', input)}
                         />
                     )}
                 </main>
