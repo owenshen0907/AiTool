@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Trash2, ArrowRightCircle, RefreshCcw, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, ArrowLeft, Check, RefreshCcw } from 'lucide-react';
 import { updatePrompt } from '@/lib/api/prompt';
 
 export interface OptimizePanelProps {
@@ -9,178 +9,372 @@ export interface OptimizePanelProps {
     initialPrompt: string;
 }
 
-interface Example {
+interface GoodCase {
+    user: string;
+    expected: string;
+}
+interface BadCase {
     user: string;
     bad: string;
-    good: string;
+    expected: string;
+}
+interface TestCase {
+    user: string;
+    oldOutput: string;
+    newOutput: string;
+    expected: string;
+    selected: boolean;
+    pass?: boolean;
 }
 
-interface TestResult {
-    user: string;
-    bad: string;
-    actual: string;
-    expected: string;
+enum Step {
+    Cases = 1,
+    Optimize,
+    Test,
 }
 
 export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanelProps) {
-    const [tab, setTab] = useState<'examples' | 'generate'>('examples');
+    const [step, setStep] = useState<Step>(Step.Cases);
 
-    // 示例对照
-    const [examples, setExamples] = useState<Example[]>([{ user: '', bad: '', good: '' }]);
-    const addExample = () => setExamples(prev => [...prev, { user: '', bad: '', good: '' }]);
-    const removeExample = (idx: number) => setExamples(prev => prev.filter((_, i) => i !== idx));
-    const updateExample = (idx: number, key: keyof Example, val: string) =>
-        setExamples(prev => prev.map((ex, i) => (i === idx ? { ...ex, [key]: val } : ex)));
+    // Step 1: 设置用例
+    const [goodCases, setGoodCases] = useState<GoodCase[]>([]);
+    const [badCases, setBadCases] = useState<BadCase[]>([]);
 
-    // 批量测试结果（示例）
-    const [testResults, setTestResults] = useState<TestResult[]>(
-        examples.map(ex => ({ user: ex.user, bad: ex.bad, actual: ex.bad, expected: ex.good }))
-    );
+    const addGood = () =>
+        setGoodCases(prev => [...prev, { user: '', expected: '' }]);
+    const updateGood = (i: number, key: keyof GoodCase, val: string) =>
+        setGoodCases(prev =>
+            prev.map((c, idx) => (idx === i ? { ...c, [key]: val } : c))
+        );
+    const removeGood = (i: number) =>
+        setGoodCases(prev => prev.filter((_, idx) => idx !== i));
 
-    // 生成与对比
-    const [prompt, setPrompt] = useState(initialPrompt);
+    const addBad = () =>
+        setBadCases(prev => [...prev, { user: '', bad: '', expected: '' }]);
+    const updateBad = (i: number, key: keyof BadCase, val: string) =>
+        setBadCases(prev =>
+            prev.map((c, idx) => (idx === i ? { ...c, [key]: val } : c))
+        );
+    const removeBad = (i: number) =>
+        setBadCases(prev => prev.filter((_, idx) => idx !== i));
+
+    // Step 2: 执行优化
     const [requirements, setRequirements] = useState('');
     const [optimizedPrompt, setOptimizedPrompt] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loadingOpt, setLoadingOpt] = useState(false);
 
-    const handleGenerate = async () => {
-        setLoading(true);
-        // TODO: 调用优化 API 传参
+    const handleOptimize = async () => {
+        if (
+            !requirements.trim() &&
+            goodCases.length === 0 &&
+            badCases.length === 0
+        ) {
+            alert('请至少填写示例或优化要求');
+            return;
+        }
+        setLoadingOpt(true);
+        // TODO: 调用后端优化 API
         await new Promise(r => setTimeout(r, 1000));
-        setOptimizedPrompt(`${prompt}\n\n// 要求：${requirements}\n\n// （优化后示例）`);
-        setLoading(false);
+        setOptimizedPrompt(`// 要求：${requirements}\n\n（优化后 Prompt 示例）`);
+        setLoadingOpt(false);
+    };
+
+    // Step 3: 验收测试
+    const [testCases, setTestCases] = useState<TestCase[]>([]);
+
+    useEffect(() => {
+        if (step === Step.Test) {
+            setTestCases(
+                badCases.map(b => ({
+                    user: b.user,
+                    oldOutput: b.bad,
+                    newOutput: '',
+                    expected: b.expected,
+                    selected: true,
+                }))
+            );
+        }
+    }, [step, badCases]);
+
+    const runTests = async () => {
+        const results: TestCase[] = [];
+        for (const tc of testCases) {
+            if (!tc.selected) {
+                results.push(tc);
+                continue;
+            }
+            // TODO: 调用模型接口，传入 optimizedPrompt
+            const actual = '模型新输出示例';
+            results.push({ ...tc, newOutput: actual });
+        }
+        setTestCases(results);
+    };
+
+    const evaluate = () => {
+        setTestCases(prev =>
+            prev.map(tc => ({
+                ...tc,
+                pass: tc.newOutput.trim() === tc.expected.trim(),
+            }))
+        );
     };
 
     const handleAdopt = async () => {
-        if (!optimizedPrompt) return;
         await updatePrompt({ id: promptId, content: optimizedPrompt });
-        alert('已采纳并保存');
+        alert('已采纳新 Prompt');
+        setStep(Step.Cases);
+        setOptimizedPrompt('');
+        setGoodCases([]);
+        setBadCases([]);
     };
 
     return (
-        <div className="flex flex-col h-full bg-white rounded-lg shadow">
-            {/* Tabs */}
-            <div className="flex border-b">
-                <button
-                    className={`flex-1 py-2 text-center ${tab === 'examples' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-600'}`}
-                    onClick={() => setTab('examples')}
-                >
-                    示例对照 / 测试
-                </button>
-                <button
-                    className={`flex-1 py-2 text-center ${tab === 'generate' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-600'}`}
-                    onClick={() => setTab('generate')}
-                >
-                    生成优化
-                </button>
+        <div className="flex flex-col h-full bg-white p-4 space-y-6">
+            {/* 步骤导航 */}
+            <div className="flex justify-center space-x-4">
+                {['1. 设置用例', '2. 执行优化', '3. 验收测试'].map((label, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => setStep((idx + 1) as Step)}
+                        className={`px-3 py-1 rounded-full ${
+                            step === idx + 1
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-gray-200 text-gray-600'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
             </div>
 
-            <div className="flex-1 overflow-auto p-4 space-y-6">
-                {tab === 'examples' ? (
-                    <>
-                        {/* 示例对照 */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="font-medium">示例对照（三列）</span>
-                                <button onClick={addExample} className="flex items-center text-blue-600">
-                                    <Plus size={16} /> <span className="ml-1">添加示例</span>
-                                </button>
-                            </div>
-                            {examples.map((ex, i) => (
-                                <div key={i} className="grid grid-cols-3 gap-4 mb-2 relative">
-                  <textarea
-                      className="w-full h-16 p-2 border rounded resize-none"
-                      placeholder="用户输入"
-                      value={ex.user}
-                      onChange={e => updateExample(i, 'user', e.target.value)}
-                  />
-                                    <textarea
-                                        className="w-full h-16 p-2 border rounded resize-none"
-                                        placeholder="模型不佳输出"
-                                        value={ex.bad}
-                                        onChange={e => updateExample(i, 'bad', e.target.value)}
-                                    />
-                                    <textarea
-                                        className="w-full h-16 p-2 border rounded resize-none"
-                                        placeholder="期望输出"
-                                        value={ex.good}
-                                        onChange={e => updateExample(i, 'good', e.target.value)}
-                                    />
-                                    <button
-                                        className="absolute top-0 right-0 text-red-600"
-                                        onClick={() => removeExample(i)}
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* 测试结果 */}
-                        <div className="space-y-2">
-                            <h4 className="font-medium">测试结果</h4>
-                            <div className="space-y-2">
-                                {testResults.map((res, i) => (
-                                    <div key={i} className="border rounded p-2 space-y-1">
-                                        <div className="text-sm">输入：<span className="font-medium">{res.user}</span></div>
-                                        <div className="text-sm text-red-600">旧输出：{res.bad}</div>
-                                        <div className="text-sm text-gray-800">实际输出：{res.actual}</div>
-                                        <div className="text-sm text-green-600">期望输出：{res.expected}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        {/* 生成优化 */}
-                        <div>
-                            <label className="block mb-1 font-medium">原始 Prompt</label>
-                            <textarea
-                                className="w-full h-32 p-2 border rounded resize-none"
-                                value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label className="block mb-1 font-medium">额外要求</label>
-                            <textarea
-                                className="w-full h-16 p-2 border rounded resize-none"
-                                value={requirements}
-                                onChange={e => setRequirements(e.target.value)}
-                                placeholder="补充对优化的额外要求"
-                            />
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <button
-                                className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-                                onClick={handleGenerate}
-                                disabled={loading}
-                            >
-                                {loading ? <RefreshCcw className="animate-spin" size={16} /> : <ArrowRightCircle size={16} />}<span className="ml-1">生成优化 Prompt</span>
+            {/* Step 1: 设置用例 */}
+            {step === Step.Cases && (
+                <div className="overflow-auto space-y-6">
+                    {/* Good Cases */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-medium">好例 (Good Cases)</h4>
+                            <button onClick={addGood} className="text-blue-600">
+                                + 添加
                             </button>
-                            {optimizedPrompt && (
-                                <button
-                                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                    onClick={handleAdopt}
-                                >
-                                    <Check size={16} /> <span className="ml-1">采纳并保存</span>
-                                </button>
-                            )}
                         </div>
-
-                        {optimizedPrompt && (
-                            <div className="mt-4 space-y-2">
-                                <h4 className="font-medium">优化前后对比</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-2 border rounded bg-gray-50 whitespace-pre-wrap">{prompt}</div>
-                                    <div className="p-2 border rounded bg-gray-50 whitespace-pre-wrap">{optimizedPrompt}</div>
-                                </div>
+                        {goodCases.map((c, i) => (
+                            <div key={i} className="flex items-center space-x-2 mb-2">
+                                <input
+                                    className="flex-1 border p-2 rounded resize-x"
+                                    placeholder="用户输入"
+                                    value={c.user}
+                                    onChange={e => updateGood(i, 'user', e.target.value)}
+                                />
+                                <input
+                                    className="flex-1 border p-2 rounded resize-x"
+                                    placeholder="期望输出"
+                                    value={c.expected}
+                                    onChange={e => updateGood(i, 'expected', e.target.value)}
+                                />
+                                <button
+                                    onClick={() => removeGood(i)}
+                                    className="text-red-600 px-2"
+                                >
+                                    ×
+                                </button>
                             </div>
+                        ))}
+                    </div>
+                    {/* Bad Cases */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-medium">坏例 (Bad Cases)</h4>
+                            <button onClick={addBad} className="text-blue-600">
+                                + 添加
+                            </button>
+                        </div>
+                        {badCases.map((c, i) => (
+                            <div key={i} className="flex items-center space-x-2 mb-2">
+                                <input
+                                    className="flex-1 border p-2 rounded resize-x"
+                                    placeholder="用户输入"
+                                    value={c.user}
+                                    onChange={e => updateBad(i, 'user', e.target.value)}
+                                />
+                                <input
+                                    className="flex-1 border p-2 rounded resize-x"
+                                    placeholder="模型不佳输出"
+                                    value={c.bad}
+                                    onChange={e => updateBad(i, 'bad', e.target.value)}
+                                />
+                                <input
+                                    className="flex-1 border p-2 rounded resize-x"
+                                    placeholder="期望输出"
+                                    value={c.expected}
+                                    onChange={e => updateBad(i, 'expected', e.target.value)}
+                                />
+                                <button
+                                    onClick={() => removeBad(i)}
+                                    className="text-red-600 px-2"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex justify-end">
+                        <button
+                            onClick={() => setStep(Step.Optimize)}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center"
+                        >
+                            下一步 <ArrowRight className="ml-1" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 2: 执行优化 */}
+            {step === Step.Optimize && (
+                <div className="overflow-auto space-y-6">
+                    <div>
+                        <label className="block font-medium mb-1">
+                            优化要求 (可选)
+                        </label>
+                        <textarea
+                            className="w-full h-24 border p-2 rounded resize-none"
+                            value={requirements}
+                            onChange={e => setRequirements(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex space-x-4">
+                        <button
+                            onClick={() => setStep(Step.Cases)}
+                            className="px-4 py-2 bg-gray-200 rounded flex items-center"
+                        >
+                            <ArrowLeft className="mr-1" /> 返回
+                        </button>
+                        <button
+                            onClick={handleOptimize}
+                            disabled={loadingOpt}
+                            className="px-4 py-2 bg-green-600 text-white rounded flex items-center"
+                        >
+                            {loadingOpt ? (
+                                <RefreshCcw className="animate-spin mr-1" size={16} />
+                            ) : (
+                                <Check className="mr-1" />
+                            )}
+                            开始优化
+                        </button>
+                        {optimizedPrompt && (
+                            <button
+                                onClick={() => setStep(Step.Test)}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center"
+                            >
+                                下一步 <ArrowRight className="ml-1" />
+                            </button>
                         )}
-                    </>
-                )}
-            </div>
+                    </div>
+                    <div className="flex space-x-4">
+                        <div className="flex-1">
+                            <h4 className="font-medium mb-1">原始 Prompt</h4>
+                            <pre className="border p-2 rounded bg-gray-50 whitespace-pre-wrap">
+                {initialPrompt}
+              </pre>
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="font-medium mb-1">优化后 Prompt</h4>
+                            <pre className="border p-2 rounded bg-gray-50 whitespace-pre-wrap min-h-[120px]">
+                {optimizedPrompt || <span className="text-gray-400">(尚无内容)</span>}
+              </pre>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 3: 验收测试 */}
+            {step === Step.Test && (
+                <div className="overflow-auto space-y-4">
+                    <div className="flex space-x-4">
+                        <button
+                            onClick={() => setStep(Step.Optimize)}
+                            className="px-4 py-2 bg-gray-200 rounded flex items-center"
+                        >
+                            <ArrowLeft className="mr-1" /> 返回优化
+                        </button>
+                        <button
+                            onClick={runTests}
+                            className="px-4 py-2 bg-blue-600 text-white rounded"
+                        >
+                            批量测试
+                        </button>
+                        <button
+                            onClick={evaluate}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded"
+                        >
+                            一键评估
+                        </button>
+                        <button
+                            onClick={handleAdopt}
+                            className="px-4 py-2 bg-green-600 text-white rounded"
+                        >
+                            采纳Prompt
+                        </button>
+                    </div>
+                    {/* 表头 */}
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                        <tr>
+                            <th className="w-12 p-2" />
+                            <th className="p-2 text-left">输入</th>
+                            <th className="p-2 text-left">旧输出</th>
+                            <th className="p-2 text-left">新输出</th>
+                            <th className="p-2 text-left">期望</th>
+                            <th className="w-24 p-2 text-center">状态</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                        {testCases.map((tc, i) => (
+                            <tr key={i}>
+                                <td className="p-2 text-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={tc.selected}
+                                        onChange={e =>
+                                            setTestCases(prev =>
+                                                prev.map((x, idx) =>
+                                                    idx === i ? { ...x, selected: e.target.checked } : x
+                                                )
+                                            )
+                                        }
+                                    />
+                                </td>
+                                <td className="p-2 max-w-xs truncate">{tc.user}</td>
+                                <td className="p-2">
+                    <textarea
+                        readOnly
+                        className="w-full resize-y border-none bg-transparent"
+                        value={tc.oldOutput}
+                    />
+                                </td>
+                                <td className="p-2">
+                    <textarea
+                        readOnly
+                        className="w-full resize-y border-none bg-transparent"
+                        value={tc.newOutput}
+                    />
+                                </td>
+                                <td className="p-2">
+                    <textarea
+                        readOnly
+                        className="w-full resize-y border-none bg-transparent"
+                        value={tc.expected}
+                    />
+                                </td>
+                                <td className="p-2 text-center font-medium">
+                                    {tc.pass === undefined ? '—' : tc.pass ? '合格' : '不合格'}
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 }
