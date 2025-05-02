@@ -77,6 +77,68 @@ CREATE TABLE IF NOT EXISTS prompts (
 );
 CREATE INDEX IF NOT EXISTS idx_prompts_parent_id  ON prompts(parent_id);
 CREATE INDEX IF NOT EXISTS idx_prompts_created_by ON prompts(created_by);
+
+-- Table: prompt_good_cases
+CREATE TABLE IF NOT EXISTS prompt_good_cases (
+  id           UUID              PRIMARY KEY DEFAULT gen_random_uuid(),
+  prompt_id    UUID              NOT NULL REFERENCES prompts(id),
+  user_input   TEXT              NOT NULL,
+  expected     TEXT              NOT NULL,
+  images       TEXT[]            DEFAULT '{}' ,
+  audios       TEXT[]            DEFAULT '{}',
+  videos       TEXT[]            DEFAULT '{}',
+  position     INT               NOT NULL DEFAULT 0,
+  notes        TEXT,
+  created_at   TIMESTAMPTZ       NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ       NOT NULL DEFAULT now()
+);
+
+-- Table: prompt_bad_cases
+CREATE TABLE IF NOT EXISTS prompt_bad_cases (
+  id           UUID              PRIMARY KEY DEFAULT gen_random_uuid(),
+  prompt_id    UUID              NOT NULL REFERENCES prompts(id),
+  user_input   TEXT              NOT NULL,
+  bad_output   TEXT              NOT NULL,
+  expected     TEXT              NOT NULL,
+  images       TEXT[]            DEFAULT '{}',
+  audios       TEXT[]            DEFAULT '{}',
+  videos       TEXT[]            DEFAULT '{}',
+  position     INT               NOT NULL DEFAULT 0,
+  error_type   VARCHAR(50),
+  notes        TEXT,
+  created_at   TIMESTAMPTZ       NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ       NOT NULL DEFAULT now()
+);
+
+-- Indexes for prompt_good_cases
+CREATE INDEX IF NOT EXISTS idx_good_cases_prompt_id
+  ON prompt_good_cases(prompt_id);
+CREATE INDEX IF NOT EXISTS idx_good_cases_created_at
+  ON prompt_good_cases(created_at);
+CREATE INDEX IF NOT EXISTS idx_good_cases_position
+  ON prompt_good_cases(position);
+-- GIN index for array searches
+CREATE INDEX IF NOT EXISTS idx_good_cases_images_gin
+  ON prompt_good_cases USING GIN (images);
+CREATE INDEX IF NOT EXISTS idx_good_cases_audios_gin
+  ON prompt_good_cases USING GIN (audios);
+CREATE INDEX IF NOT EXISTS idx_good_cases_videos_gin
+  ON prompt_good_cases USING GIN (videos);
+
+-- Indexes for prompt_bad_cases
+CREATE INDEX IF NOT EXISTS idx_bad_cases_prompt_id
+  ON prompt_bad_cases(prompt_id);
+CREATE INDEX IF NOT EXISTS idx_bad_cases_created_at
+  ON prompt_bad_cases(created_at);
+CREATE INDEX IF NOT EXISTS idx_bad_cases_position
+  ON prompt_bad_cases(position);
+-- GIN index for array searches
+CREATE INDEX IF NOT EXISTS idx_bad_cases_images_gin
+  ON prompt_bad_cases USING GIN (images);
+CREATE INDEX IF NOT EXISTS idx_bad_cases_audios_gin
+  ON prompt_bad_cases USING GIN (audios);
+CREATE INDEX IF NOT EXISTS idx_bad_cases_videos_gin
+  ON prompt_bad_cases USING GIN (videos);
         `);
         console.log('Database initialized successfully.');
     } catch (err) {

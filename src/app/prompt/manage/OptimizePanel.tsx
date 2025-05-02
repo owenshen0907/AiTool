@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowRight, ArrowLeft, Check, RefreshCcw } from 'lucide-react';
+import { parseSSEStream } from '@/lib/utils/sse';
 import { updatePrompt } from '@/lib/api/prompt';
+import CasesSetupPanel from '@/app/prompt/manage/CasesSetupPanel';
+import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt';
 
 export interface OptimizePanelProps {
     promptId: string;
     initialPrompt: string;
 }
 
-interface GoodCase {
-    user: string;
-    expected: string;
-}
-interface BadCase {
-    user: string;
-    bad: string;
-    expected: string;
-}
 interface TestCase {
     user: string;
     oldOutput: string;
@@ -33,37 +27,22 @@ enum Step {
     Test,
 }
 
-export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanelProps) {
+export default function OptimizePanel({
+                                          promptId,
+                                          initialPrompt,
+                                      }: OptimizePanelProps) {
     const [step, setStep] = useState<Step>(Step.Cases);
 
-    // Step 1: 设置用例
-    const [goodCases, setGoodCases] = useState<GoodCase[]>([]);
-    const [badCases, setBadCases] = useState<BadCase[]>([]);
+    // Use case data lifted from CasesSetupPanel
+    const [goodCases, setGoodCases] = useState<GoodCaseItem[]>([]);
+    const [badCases, setBadCases] = useState<BadCaseItem[]>([]);
 
-    const addGood = () =>
-        setGoodCases(prev => [...prev, { user: '', expected: '' }]);
-    const updateGood = (i: number, key: keyof GoodCase, val: string) =>
-        setGoodCases(prev =>
-            prev.map((c, idx) => (idx === i ? { ...c, [key]: val } : c))
-        );
-    const removeGood = (i: number) =>
-        setGoodCases(prev => prev.filter((_, idx) => idx !== i));
-
-    const addBad = () =>
-        setBadCases(prev => [...prev, { user: '', bad: '', expected: '' }]);
-    const updateBad = (i: number, key: keyof BadCase, val: string) =>
-        setBadCases(prev =>
-            prev.map((c, idx) => (idx === i ? { ...c, [key]: val } : c))
-        );
-    const removeBad = (i: number) =>
-        setBadCases(prev => prev.filter((_, idx) => idx !== i));
-
-    // Step 2: 执行优化
+    // Step 2: optimization state
     const [requirements, setRequirements] = useState('');
     const [optimizedPrompt, setOptimizedPrompt] = useState('');
     const [loadingOpt, setLoadingOpt] = useState(false);
 
-    const handleOptimize = async () => {
+    const handleOptimize = useCallback(async () => {
         if (
             !requirements.trim() &&
             goodCases.length === 0 &&
@@ -73,21 +52,62 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
             return;
         }
         setLoadingOpt(true);
-        // TODO: 调用后端优化 API
-        await new Promise(r => setTimeout(r, 1000));
-        setOptimizedPrompt(`// 要求：${requirements}\n\n（优化后 Prompt 示例）`);
+
+        const goodText = goodCases
+            .map(
+                (c, i) =>
+                    `好例${i + 1}:\n  输入: ${c.user_input}\n  期望: ${c.expected}`
+            )
+            .join('\n\n');
+        const badText = badCases
+            .map(
+                (c, i) =>
+                    `坏例${i + 1}:\n  输入: ${c.user_input}\n  模型不佳输出: ${c.bad_output}\n  期望: ${c.expected}`
+            )
+            .join('\n\n');
+        const userContent = [
+            `原始 Prompt：\n${initialPrompt}`,
+            goodText && `=== 好例 ===\n${goodText}`,
+            badText && `=== 坏例 ===\n${badText}`,
+            requirements && `=== 优化要求 ===\n${requirements}`,
+        ]
+            .filter(Boolean)
+            .join('\n\n');
+
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                scene: 'PROMPT_OPT',
+                messages: [{ role: 'user', content: userContent }],
+            }),
+        });
+
+        if (res.body) {
+            let reply = '';
+            await parseSSEStream(res.body, (evt: any) => {
+                const chunk = evt.choices?.[0]?.delta?.content;
+                if (chunk) {
+                    reply += chunk;
+                    setOptimizedPrompt(reply);
+                }
+            });
+        } else {
+            const data = await res.json();
+            setOptimizedPrompt(data.choices?.[0]?.message?.content ?? '');
+        }
+
         setLoadingOpt(false);
-    };
+    }, [initialPrompt, goodCases, badCases, requirements]);
 
-    // Step 3: 验收测试
+    // Step 3: test/acceptance
     const [testCases, setTestCases] = useState<TestCase[]>([]);
-
     useEffect(() => {
         if (step === Step.Test) {
             setTestCases(
                 badCases.map(b => ({
-                    user: b.user,
-                    oldOutput: b.bad,
+                    user: b.user_input,
+                    oldOutput: b.bad_output,
                     newOutput: '',
                     expected: b.expected,
                     selected: true,
@@ -103,7 +123,7 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
                 results.push(tc);
                 continue;
             }
-            // TODO: 调用模型接口，传入 optimizedPrompt
+            // TODO: real model call
             const actual = '模型新输出示例';
             results.push({ ...tc, newOutput: actual });
         }
@@ -124,13 +144,11 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
         alert('已采纳新 Prompt');
         setStep(Step.Cases);
         setOptimizedPrompt('');
-        setGoodCases([]);
-        setBadCases([]);
     };
 
     return (
         <div className="flex flex-col h-full bg-white p-4 space-y-6">
-            {/* 步骤导航 */}
+            {/* Step Navigation */}
             <div className="flex justify-center space-x-4">
                 {['1. 设置用例', '2. 执行优化', '3. 验收测试'].map((label, idx) => (
                     <button
@@ -147,91 +165,22 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
                 ))}
             </div>
 
-            {/* Step 1: 设置用例 */}
+            {/* Step 1: Case setup */}
             {step === Step.Cases && (
-                <div className="overflow-auto space-y-6">
-                    {/* Good Cases */}
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-medium">好例 (Good Cases)</h4>
-                            <button onClick={addGood} className="text-blue-600">
-                                + 添加
-                            </button>
-                        </div>
-                        {goodCases.map((c, i) => (
-                            <div key={i} className="flex items-center space-x-2 mb-2">
-                                <input
-                                    className="flex-1 border p-2 rounded resize-x"
-                                    placeholder="用户输入"
-                                    value={c.user}
-                                    onChange={e => updateGood(i, 'user', e.target.value)}
-                                />
-                                <input
-                                    className="flex-1 border p-2 rounded resize-x"
-                                    placeholder="期望输出"
-                                    value={c.expected}
-                                    onChange={e => updateGood(i, 'expected', e.target.value)}
-                                />
-                                <button
-                                    onClick={() => removeGood(i)}
-                                    className="text-red-600 px-2"
-                                >
-                                    ×
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                    {/* Bad Cases */}
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-medium">坏例 (Bad Cases)</h4>
-                            <button onClick={addBad} className="text-blue-600">
-                                + 添加
-                            </button>
-                        </div>
-                        {badCases.map((c, i) => (
-                            <div key={i} className="flex items-center space-x-2 mb-2">
-                                <input
-                                    className="flex-1 border p-2 rounded resize-x"
-                                    placeholder="用户输入"
-                                    value={c.user}
-                                    onChange={e => updateBad(i, 'user', e.target.value)}
-                                />
-                                <input
-                                    className="flex-1 border p-2 rounded resize-x"
-                                    placeholder="模型不佳输出"
-                                    value={c.bad}
-                                    onChange={e => updateBad(i, 'bad', e.target.value)}
-                                />
-                                <input
-                                    className="flex-1 border p-2 rounded resize-x"
-                                    placeholder="期望输出"
-                                    value={c.expected}
-                                    onChange={e => updateBad(i, 'expected', e.target.value)}
-                                />
-                                <button
-                                    onClick={() => removeBad(i)}
-                                    className="text-red-600 px-2"
-                                >
-                                    ×
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="flex justify-end">
-                        <button
-                            onClick={() => setStep(Step.Optimize)}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded flex items-center"
-                        >
-                            下一步 <ArrowRight className="ml-1" />
-                        </button>
-                    </div>
+                <div className="overflow-auto">
+                    <CasesSetupPanel
+                        promptId={promptId}
+                        goodCases={goodCases}
+                        badCases={badCases}
+                        onChangeGood={setGoodCases}
+                        onChangeBad={setBadCases}
+                    />
                 </div>
             )}
 
-            {/* Step 2: 执行优化 */}
+            {/* Step 2: Optimize */}
             {step === Step.Optimize && (
-                <div className="overflow-auto space-y-6">
+                <div className="space-y-6 overflow-auto">
                     <div>
                         <label className="block font-medium mb-1">
                             优化要求 (可选)
@@ -255,7 +204,7 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
                             className="px-4 py-2 bg-green-600 text-white rounded flex items-center"
                         >
                             {loadingOpt ? (
-                                <RefreshCcw className="animate-spin mr-1" size={16} />
+                                <RefreshCcw className="animate-spin mr-1" />
                             ) : (
                                 <Check className="mr-1" />
                             )}
@@ -280,16 +229,18 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
                         <div className="flex-1">
                             <h4 className="font-medium mb-1">优化后 Prompt</h4>
                             <pre className="border p-2 rounded bg-gray-50 whitespace-pre-wrap min-h-[120px]">
-                {optimizedPrompt || <span className="text-gray-400">(尚无内容)</span>}
+                {optimizedPrompt || (
+                    <span className="text-gray-400">(尚无内容)</span>
+                )}
               </pre>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Step 3: 验收测试 */}
+            {/* Step 3: Test & Accept */}
             {step === Step.Test && (
-                <div className="overflow-auto space-y-4">
+                <div className="space-y-4 overflow-auto">
                     <div className="flex space-x-4">
                         <button
                             onClick={() => setStep(Step.Optimize)}
@@ -313,10 +264,9 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
                             onClick={handleAdopt}
                             className="px-4 py-2 bg-green-600 text-white rounded"
                         >
-                            采纳Prompt
+                            采纳 Prompt
                         </button>
                     </div>
-                    {/* 表头 */}
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                         <tr>
@@ -338,7 +288,9 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
                                         onChange={e =>
                                             setTestCases(prev =>
                                                 prev.map((x, idx) =>
-                                                    idx === i ? { ...x, selected: e.target.checked } : x
+                                                    idx === i
+                                                        ? { ...x, selected: e.target.checked }
+                                                        : x
                                                 )
                                             )
                                         }
@@ -367,7 +319,7 @@ export default function OptimizePanel({ promptId, initialPrompt }: OptimizePanel
                     />
                                 </td>
                                 <td className="p-2 text-center font-medium">
-                                    {tc.pass === undefined ? '—' : tc.pass ? '合格' : '不合格'}
+                                    {tc.pass == null ? '—' : tc.pass ? '合格' : '不合格'}
                                 </td>
                             </tr>
                         ))}
