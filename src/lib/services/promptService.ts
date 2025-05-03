@@ -1,3 +1,4 @@
+// src/lib/services/romptServices.ts
 import { v4 as uuidv4 } from 'uuid';
 import * as repo from '@/lib/repositories/promptRepository';
 import { Prompt, AttributeItem, UpdateLog } from '@/lib/models/prompt';
@@ -40,6 +41,8 @@ export async function createPrompt(
 ): Promise<Prompt> {
     const id = uuidv4();
     const now = new Date().toISOString();
+    const nextPos = await repo.getNextPosition(payload.parent_id);
+
 
     const newPrompt: Prompt = {
         id,
@@ -56,6 +59,7 @@ export async function createPrompt(
         created_at: now,
         updated_at: now,
         update_log: [],
+        position: nextPos,
     };
 
     return await repo.insertPrompt(newPrompt);
@@ -102,4 +106,20 @@ export async function deletePromptService(
     if (!existing) return false;
     await repo.deletePrompt(id);
     return true;
+}
+export async function reorderPrompts(
+    userId: string,
+    parentId: string | null,
+    orderedIds: string[]
+): Promise<void> {
+    // 可选：在此插入一条 update_log 记录
+    for (let idx = 0; idx < orderedIds.length; idx++) {
+        const id = orderedIds[idx];
+        await repo.updatePrompt(id, { position: idx });
+    }
+}
+
+/** 按关键词搜索，并带上祖先目录 */
+export async function searchPrompts(term: string): Promise<Prompt[]> {
+    return await repo.searchPromptsWithAncestors(term);
 }

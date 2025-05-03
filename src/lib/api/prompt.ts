@@ -16,6 +16,7 @@ interface RawPrompt {
     description?: string;
     tags?: string[];
     attributes?: AttributeItem[];
+    position?: number;
 }
 
 // helper to map raw DB shape into PromptItem
@@ -28,7 +29,8 @@ function mapRaw(raw: RawPrompt): PromptItem {
         content: raw.content ?? '',
         description: raw.description ?? '',
         tags: raw.tags ?? [],
-        attributes: raw.attributes ?? []
+        attributes: raw.attributes ?? [],
+        position: raw.position ?? 0,
     };
 }
 
@@ -197,4 +199,24 @@ export async function deleteBadCases(ids: string[]): Promise<{ success: boolean 
     });
     if (!res.ok) throw new Error(`deleteBadCases failed: ${res.status}`);
     return res.json();
+}
+/** 按 title 模糊搜索，返回 PromptNode[] */
+export async function searchPromptsByTitle(term: string): Promise<PromptNode[]> {
+    const res = await fetch(`/api/prompt?term=${encodeURIComponent(term)}`);
+    if (!res.ok) throw new Error(`searchPromptsByTitle failed: ${res.status}`);
+    const raws: RawPrompt[] = await res.json();
+    return raws.map(mapRaw);
+}
+
+/** 重排子节点顺序 */
+export async function reorderPrompts(
+    parent_id: string | null,
+    ordered_ids: string[]
+): Promise<void> {
+    const res = await fetch('/api/prompt', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parent_id, ordered_ids }),
+    });
+    if (!res.ok) throw new Error(`reorderPrompts failed: ${res.status}`);
 }

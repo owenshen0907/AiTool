@@ -1,4 +1,4 @@
-// src/app/prompt/manage/ExperiencePanel.tsx
+// File: src/app/prompt/manage/ExperiencePanel.tsx
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -12,6 +12,8 @@ import { Copy, Trash2 } from 'lucide-react';
 interface ExperiencePanelProps {
     promptId: string;
     initialPrompt: string;
+    /** 当用户立即保存后，通知上层重新加载最新 prompt */
+    onPromptUpdated: () => void;
 }
 
 type Message = { role: 'system' | 'user' | 'assistant'; content: string };
@@ -19,26 +21,26 @@ type Message = { role: 'system' | 'user' | 'assistant'; content: string };
 export default function ExperiencePanel({
                                             promptId,
                                             initialPrompt,
+                                            onPromptUpdated,
                                         }: ExperiencePanelProps) {
     const [systemPrompt, setSystemPrompt] = useState(initialPrompt);
     const [messages, setMessages] = useState<Message[]>([
-        { role: 'system' as const, content: initialPrompt },
+        { role: 'system', content: initialPrompt },
     ]);
-    const messagesRef = useRef<Message[]>(messages);
-
+    const messagesRef = useRef(messages);
     useEffect(() => {
         messagesRef.current = messages;
     }, [messages]);
 
-    // 当 initialPrompt 变更，重置系统提示和会话
+    // 当 initialPrompt 变更，重置编辑区和对话
     useEffect(() => {
         setSystemPrompt(initialPrompt);
-        const init: Message[] = [{ role: 'system' as const, content: initialPrompt }];
+        const init: Message[] = [{ role: 'system', content: initialPrompt }];
         setMessages(init);
         messagesRef.current = init;
     }, [initialPrompt]);
 
-    // 保存 System Prompt 到后端
+    /** 立即保存 System Prompt，并触发上层 onPromptUpdated */
     const handleSave = useCallback(async () => {
         try {
             const res = await fetch('/api/prompt', {
@@ -47,17 +49,18 @@ export default function ExperiencePanel({
                 body: JSON.stringify({ id: promptId, content: systemPrompt }),
             });
             if (!res.ok) throw new Error(await res.text());
-            // 可替换为更友好的 UI 通知
+            // 刷新上层 prompt 数据
+            onPromptUpdated();
             alert('Prompt 已保存');
         } catch (err: any) {
             console.error('保存失败', err);
             alert('保存失败：' + err.message);
         }
-    }, [promptId, systemPrompt]);
+    }, [promptId, systemPrompt, onPromptUpdated]);
 
     // 清空会话
     const handleClear = useCallback(() => {
-        const init: Message[] = [{ role: 'system' as const, content: systemPrompt }];
+        const init: Message[] = [{ role: 'system', content: systemPrompt }];
         setMessages(init);
         messagesRef.current = init;
     }, [systemPrompt]);
@@ -78,12 +81,12 @@ export default function ExperiencePanel({
             model: string;
             supplier: Supplier;
         }) => {
-            // 1. 追加用户和占位助手
-            setMessages(prev => {
+            // 1. 追加用户和空助手
+            setMessages((prev) => {
                 const next: Message[] = [
                     ...prev,
-                    { role: 'user' as const, content: text },
-                    { role: 'assistant' as const, content: '' },
+                    { role: 'user', content: text },
+                    { role: 'assistant', content: '' },
                 ];
                 messagesRef.current = next;
                 return next;
@@ -100,28 +103,28 @@ export default function ExperiencePanel({
                 }),
             });
 
-            // 3. 降级到 JSON（无 body 流）
+            // 3. 没有流式返回，则降级
             if (!res.body) {
                 const data = await res.json();
                 const reply = data.choices?.[0]?.message?.content ?? '';
-                setMessages(prev => {
+                setMessages((prev) => {
                     const next = [...prev];
-                    next[next.length - 1] = { role: 'assistant' as const, content: reply };
+                    next[next.length - 1] = { role: 'assistant', content: reply };
                     messagesRef.current = next;
                     return next;
                 });
                 return;
             }
 
-            // 4. 流式解析
+            // 4. 流式更新
             await parseSSEStream(res.body, (evt: any) => {
                 const chunk = evt.choices?.[0]?.delta?.content;
                 if (chunk) {
-                    setMessages(prev => {
+                    setMessages((prev) => {
                         const next = [...prev];
                         const idx = next.length - 1;
                         next[idx] = {
-                            role: 'assistant' as const,
+                            role: 'assistant',
                             content: next[idx].content + chunk,
                         };
                         messagesRef.current = next;
@@ -143,13 +146,13 @@ export default function ExperiencePanel({
                         onClick={handleSave}
                         className="ml-auto px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                     >
-                        保存
+                        立即保存
                     </button>
                 </div>
                 <textarea
                     className="flex-1 w-full p-2 border rounded resize-none focus:outline-none"
                     value={systemPrompt}
-                    onChange={e => setSystemPrompt(e.target.value)}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
                 />
             </div>
 

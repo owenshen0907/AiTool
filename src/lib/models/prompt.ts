@@ -57,6 +57,7 @@ export interface Prompt {
     created_at: string;
     updated_at: string;
     update_log?: UpdateLog[];
+    position: number;
     good_cases?: GoodCaseItem[];
     bad_cases?: BadCaseItem[];
 }
@@ -68,6 +69,7 @@ export interface PromptNode {
     title: string;
     type: 'dir' | 'prompt';
     children?: PromptNode[];
+    position: number;
 }
 
 /** 右侧面板用的“Prompt 详情” */

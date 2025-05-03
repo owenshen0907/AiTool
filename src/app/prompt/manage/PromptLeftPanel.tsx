@@ -1,6 +1,6 @@
-// app/prompt/manage/PromptLeftPanel.tsx
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
     ChevronRight,
     ChevronDown,
@@ -13,149 +13,246 @@ import type { PromptNode } from '@/lib/models/prompt';
 interface Props {
     nodes: PromptNode[];
     selectedId: string | null;
+    collapsed: boolean;
     onSelect: (node: PromptNode) => void;
-    onEdit: (node: PromptNode) => void;
+    onRenameDir: (id: string, newTitle: string) => void;
     onCreatePrompt: (parent: PromptNode | null) => void;
     onNewDir: (parent: PromptNode | null) => void;
     onDelete: (node: PromptNode) => void;
     onReorder: (srcId: string, dstId: string) => void;
+    onMove: (srcId: string, newParentId: string) => void;
+    searchResults: PromptNode[] | null;
+    onSearch: (term: string) => void;
 }
 
-const buildTree = (nodes: PromptNode[]): PromptNode[] => {
-    const map: Record<string, PromptNode> = {};
+// 确保 children 永不为 undefined
+type TreeNode = Omit<PromptNode, 'children'> & { children: TreeNode[] };
+
+function buildTree(nodes: PromptNode[]): TreeNode[] {
+    const map: Record<string, TreeNode> = {};
     nodes.forEach(n => (map[n.id] = { ...n, children: [] }));
-    const roots: PromptNode[] = [];
+    const roots: TreeNode[] = [];
     Object.values(map).forEach(node => {
         if (node.parentId && map[node.parentId]) {
-            map[node.parentId].children!.push(node);
+            map[node.parentId].children.push(node);
         } else {
             roots.push(node);
         }
     });
     return roots;
-};
+}
 
 export default function PromptLeftPanel({
                                             nodes,
                                             selectedId,
+                                            collapsed,
                                             onSelect,
-                                            onEdit,
+                                            onRenameDir,
                                             onCreatePrompt,
                                             onNewDir,
                                             onDelete,
                                             onReorder,
+                                            onMove,
+                                            searchResults,
+                                            onSearch,
                                         }: Props) {
-    const tree = buildTree(nodes);
+    // 构建整棵树并缓存
+    const fullTree = useMemo(() => buildTree(nodes), [nodes]);
+
+    // 仅用于输入框的本地状态，不再用于过滤
+    const [search, setSearch] = useState('');
+
+    // 哪些节点要展开（空集 or 根据 searchResults 自动展开）
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    useEffect(() => {
+        if (!searchResults) return;
+        const toOpen = new Set<string>();
+        const matched = new Set(searchResults.map(n => n.id));
+        const parentMap = new Map(nodes.map(n => [n.id, n.parentId]));
+        matched.forEach(id => {
+            let p = parentMap.get(id) ?? null;
+            while (p) {
+                toOpen.add(p);
+                p = parentMap.get(p) ?? null;
+            }
+            toOpen.add(id);
+        });
+        setExpanded(toOpen);
+    }, [searchResults, nodes]);
+
+    // 菜单状态
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
     const hideTimer = useRef<NodeJS.Timeout>();
-
-    // 清理定时器
     useEffect(() => () => hideTimer.current && clearTimeout(hideTimer.current), []);
 
-    const toggle = (id: string) => {
+    const toggleNode = (id: string) => {
         setExpanded(s => {
-            const next = new Set(s);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
+            const nxt = new Set(s);
+            nxt.has(id) ? nxt.delete(id) : nxt.add(id);
+            return nxt;
         });
     };
 
-    const onNodeClick = (node: PromptNode) => {
-        onSelect(node);
-        if (node.type === 'dir') {
-            toggle(node.id);
-        }
-    };
-
-    const renderNode = (node: PromptNode, level = 0): JSX.Element => {
+    // 渲染单个节点
+    const renderNode = (node: TreeNode, level = 0): JSX.Element => {
         const isDir = node.type === 'dir';
         const isExpanded = expanded.has(node.id);
-        const hasChildren = isDir && node.children && node.children.length > 0;
-        const isSelected = node.id === selectedId;
+        const hasChildren = node.children.length > 0;
+        const isSel = node.id === selectedId;
 
         return (
             <li key={node.id}>
                 <div
-                    className={
-                        `group flex items-center justify-between p-2 cursor-pointer select-none transition-colors ` +
-                        (isSelected ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100')
-                    }
+                    className={`group flex items-center justify-between p-2 cursor-pointer transition-colors ${
+                        isSel ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                    }`}
                     style={{ paddingLeft: `${0.5 + level * 1.5}rem` }}
-                    onClick={() => onNodeClick(node)}
                     draggable
+                    onClick={() => {
+                        onSelect(node);
+                        if (isDir) toggleNode(node.id);
+                    }}
                     onDragStart={e => e.dataTransfer.setData('text/plain', node.id)}
                     onDragOver={e => e.preventDefault()}
-                    onDrop={e => onReorder(e.dataTransfer.getData('text/plain'), node.id)}
+                    onDrop={e => {
+                        const srcId = e.dataTransfer.getData('text/plain');
+                        if (isDir) {
+                            onMove(srcId, node.id);
+                        } else {
+                            onReorder(srcId, node.id);
+                        }
+                    }}
                 >
-                    <div className="flex items-center space-x-2">
+                    {/* 图标 + 标题 */}
+                    <div className="flex items-center space-x-2 flex-1 min-w-0">
                         {isDir ? (
                             <button
-                                className="w-4 h-4 flex items-center justify-center focus:outline-none"
-                                onClick={e => { e.stopPropagation(); toggle(node.id); }}
+                                className="w-4 h-4 flex-shrink-0"
+                                onClick={e => {
+                                    e.stopPropagation();
+                                    toggleNode(node.id);
+                                }}
                             >
-                                {isExpanded ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+                                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                             </button>
                         ) : (
-                            <span className="w-4 h-4" />
+                            <span className="w-4 h-4 flex-shrink-0" />
                         )}
-
-                        <span className="w-4 h-4 flex items-center justify-center text-gray-500">
-              {isDir ? <Folder size={16}/> : <FileText size={16}/>}
+                        <span className="w-4 h-4 flex-shrink-0 flex items-center justify-center text-gray-500">
+              {isDir ? <Folder size={16} /> : <FileText size={16} />}
             </span>
-                        <span className="truncate font-medium">{node.title}</span>
+                        <div className="truncate">{node.title}</div>
                     </div>
 
-                    <div className="relative">
+                    {/* 菜单 */}
+                    <div className="relative flex-shrink-0">
                         <button
                             className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={e => { e.stopPropagation(); setActiveMenu(id => id === node.id ? null : node.id); }}
+                            onClick={e => {
+                                e.stopPropagation();
+                                setActiveMenu(id => (id === node.id ? null : node.id));
+                            }}
                         >
-                            <MoreVertical size={16}/>
+                            <MoreVertical size={16} />
                         </button>
                         {activeMenu === node.id && (
                             <div
                                 className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 shadow-lg rounded z-10"
-                                onMouseEnter={() => { hideTimer.current && clearTimeout(hideTimer.current); }}
+                                onMouseEnter={() => hideTimer.current && clearTimeout(hideTimer.current)}
                                 onMouseLeave={() => {
                                     hideTimer.current = setTimeout(() => setActiveMenu(null), 300);
                                 }}
                             >
-                                <div className="px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer" onClick={() => onEdit(node)}>编辑</div>
-                                <div className="px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer" onClick={() => onCreatePrompt(node)}>创建 Prompt</div>
-                                <div className="px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer" onClick={() => onNewDir(node)}>新增子目录</div>
-                                <div className="px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer text-red-600" onClick={() => onDelete(node)}>删除</div>
+                                {isDir && (
+                                    <div
+                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => {
+                                            setActiveMenu(null);
+                                            const nt = prompt('重命名目录', node.title);
+                                            nt?.trim() && onRenameDir(node.id, nt.trim());
+                                        }}
+                                    >
+                                        重命名目录
+                                    </div>
+                                )}
+                                {isDir && (
+                                    <div
+                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => {
+                                            setActiveMenu(null);
+                                            onCreatePrompt(node);
+                                        }}
+                                    >
+                                        创建 Prompt
+                                    </div>
+                                )}
+                                {isDir && (
+                                    <div
+                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => {
+                                            setActiveMenu(null);
+                                            if (level >= 2) {
+                                                alert('最多三层目录');
+                                                return;
+                                            }
+                                            onNewDir(node);
+                                        }}
+                                    >
+                                        新增子目录
+                                    </div>
+                                )}
+                                <div
+                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
+                                    onClick={() => {
+                                        setActiveMenu(null);
+                                        if (isDir && hasChildren) {
+                                            alert('目录非空，无法删除，请先删除子项。');
+                                        } else {
+                                            onDelete(node);
+                                        }
+                                    }}
+                                >
+                                    删除
+                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {hasChildren && isExpanded && (
-                    <ul>
-                        {node.children!.map(child => renderNode(child, level + 1))}
-                    </ul>
+                    <ul>{node.children.map(c => renderNode(c, level + 1))}</ul>
                 )}
             </li>
         );
     };
 
     return (
-        <div className="flex flex-col h-full bg-white">
-            <div className="flex items-center px-2 py-1 border-b border-gray-200 space-x-2">
-                <input
-                    type="text"
-                    placeholder="搜索目录..."
-                    className="flex-1 px-2 py-1 border rounded focus:outline-none focus:ring focus:border-blue-300"
-                />
-                <button
-                    className="flex items-center space-x-1 px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                    onClick={() => onNewDir(null)}
-                >
-                    <span>＋</span><span>新建目录</span>
-                </button>
-            </div>
-            <ul className="flex-1 overflow-auto px-1 pt-1">
-                {tree.map(n => renderNode(n))}
+        <div className="h-full overflow-auto bg-white">
+            {!collapsed && (
+                <div className="flex items-center space-x-2 px-2 py-1 border-b border-gray-200">
+                    <input
+                        type="text"
+                        placeholder="搜索目录，回车查询"
+                        className="flex-1 px-2 py-1 border rounded focus:outline-none"
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                onSearch(search);
+                            }
+                        }}
+                    />
+                    <button
+                        className="flex items-center px-2 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                        onClick={() => onNewDir(null)}
+                    >
+                        ＋ 新建目录
+                    </button>
+                </div>
+            )}
+            <ul className="px-1 pt-1">
+                {fullTree.map(n => renderNode(n))}
             </ul>
         </div>
     );

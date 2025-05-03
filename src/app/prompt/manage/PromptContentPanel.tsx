@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import ExperiencePanel from './ExperiencePanel';
-import OptimizePanel from './OptimizePanel';
-import PromptMetaEditor from './PromptMetaEditor';
+import ExperiencePanel from './PromptContent/ExperiencePanel';
+import OptimizePanel from './PromptContent/Optimize/OptimizePanel';
+import PromptMetaEditor from './PromptContent/PromptMetaEditor';
 import { updatePrompt } from '@/lib/api/prompt';
 import { MoreVertical } from 'lucide-react';
 
@@ -20,6 +20,7 @@ export interface PromptContentPanelProps {
     tags: string[];
     /** 初始描述 */
     description: string;
+    onPromptUpdated: () => void;
 }
 
 export default function PromptContentPanel({
@@ -29,6 +30,7 @@ export default function PromptContentPanel({
                                                initialPrompt,
                                                tags: initialTags,
                                                description: initialDesc,
+                                               onPromptUpdated
                                            }: PromptContentPanelProps) {
     const [mode, setMode] = useState<'exp' | 'opt'>('exp');
 
@@ -112,9 +114,17 @@ export default function PromptContentPanel({
             {/* 内容面板 */}
             <div className="flex-1 overflow-auto">
                 {mode === 'exp' ? (
-                    <ExperiencePanel promptId={promptId} initialPrompt={initialPrompt} />
+                    <ExperiencePanel
+                        promptId={promptId}
+                        initialPrompt={initialPrompt}
+                        onPromptUpdated={onPromptUpdated}
+                    />
                 ) : (
-                    <OptimizePanel promptId={promptId} initialPrompt={initialPrompt} />
+                    <OptimizePanel
+                        promptId={promptId}
+                        initialPrompt={initialPrompt}
+                        onPromptUpdated={onPromptUpdated}
+                    />
                 )}
             </div>
         </div>

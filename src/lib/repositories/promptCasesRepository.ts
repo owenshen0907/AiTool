@@ -1,4 +1,3 @@
-// src/lib/repositories/promptCasesRepository.ts
 import { pool } from '@/lib/db/client';
 import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt';
 
@@ -19,7 +18,6 @@ export async function insertGoodCases(
 ): Promise<GoodCaseItem[]> {
     const created: GoodCaseItem[] = [];
     for (const it of items) {
-        // 强制解构必填字段，其余使用默认值
         const {
             user_input = '',
             expected = '',
@@ -30,12 +28,23 @@ export async function insertGoodCases(
             notes = null,
         } = it;
         const res = await pool.query<GoodCaseItem>(
-            `INSERT INTO prompt_good_cases
-        (prompt_id, user_input, expected, images, audios, videos, position, notes, created_at, updated_at)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-      RETURNING *`,
-            [promptId, user_input, expected, images, audios, videos, position, notes]
+            `
+                INSERT INTO prompt_good_cases
+                (prompt_id, user_input, expected, images, audios, videos, position, notes, created_at, updated_at)
+                VALUES
+                    ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+                    RETURNING *
+            `,
+            [
+                promptId,
+                user_input,
+                expected,
+                images,
+                audios,
+                videos,
+                position,
+                notes,
+            ]
         );
         created.push(res.rows[0]);
     }
@@ -50,23 +59,26 @@ export async function updateGoodCases(
     for (const it of items) {
         const { id, ...rest } = it;
         if (!id) continue;
-        // 构建 SET 语句和参数列表
         const sets: string[] = [];
         const vals: any[] = [];
         let idx = 1;
         for (const [key, val] of Object.entries(rest)) {
+            // skip metadata fields
+            if (['created_at', 'updated_at', 'created_by'].includes(key)) {
+                continue;
+            }
             if (val !== undefined) {
                 sets.push(`${key} = $${idx}`);
                 vals.push(val);
                 idx++;
             }
         }
-        // 始终更新 updated_at
+        // always update updated_at
         sets.push('updated_at = NOW()');
         vals.push(id);
         const sql = `UPDATE prompt_good_cases SET ${sets.join(', ')} WHERE id = $${idx}`;
         await pool.query(sql, vals);
-        // 查询最新行
+
         const res = await pool.query<GoodCaseItem>(
             'SELECT * FROM prompt_good_cases WHERE id = $1',
             [id]
@@ -82,7 +94,6 @@ export async function deleteGoodCases(ids: string[]): Promise<void> {
         [ids]
     );
 }
-
 
 // -------- Bad Cases --------
 
@@ -113,13 +124,15 @@ export async function insertBadCases(
             notes = null,
         } = it;
         const res = await pool.query<BadCaseItem>(
-            `INSERT INTO prompt_bad_cases
-        (prompt_id, user_input, bad_output, expected,
-         images, audios, videos, position, error_type, notes,
-         created_at, updated_at)
-      VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-      RETURNING *`,
+            `
+                INSERT INTO prompt_bad_cases
+                (prompt_id, user_input, bad_output, expected,
+                 images, audios, videos, position, error_type, notes,
+                 created_at, updated_at)
+                VALUES
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+                    RETURNING *
+            `,
             [
                 promptId,
                 user_input,
@@ -150,6 +163,9 @@ export async function updateBadCases(
         const vals: any[] = [];
         let idx = 1;
         for (const [key, val] of Object.entries(rest)) {
+            if (['created_at', 'updated_at', 'created_by'].includes(key)) {
+                continue;
+            }
             if (val !== undefined) {
                 sets.push(`${key} = $${idx}`);
                 vals.push(val);
@@ -160,6 +176,7 @@ export async function updateBadCases(
         vals.push(id);
         const sql = `UPDATE prompt_bad_cases SET ${sets.join(', ')} WHERE id = $${idx}`;
         await pool.query(sql, vals);
+
         const res = await pool.query<BadCaseItem>(
             'SELECT * FROM prompt_bad_cases WHERE id = $1',
             [id]

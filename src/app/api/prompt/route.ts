@@ -9,13 +9,25 @@ import * as service from '@/lib/services/promptService';
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
 
+    // —— 0. 如果有 search 参数，走全文搜索 ——
+    const q = searchParams.get('search');
+    if (q) {
+        const list = await service.searchPrompts(q);
+        return NextResponse.json(list);
+    }
+    // 如果有 term，就走搜索逻辑
+    const term = searchParams.get('term');
+    if (term !== null) {
+        const all = await service.searchPrompts(term);
+        // 只返回必要的字段给前端（可用 mapRaw 做类型转换）
+        return NextResponse.json(all);
+    }
+
     // —— 1. 如果 URL 上带了 id，就取单条 ——
     const id = searchParams.get('id');
     if (id) {
         const item = await service.getPromptById(id);
-        if (!item) {
-            return NextResponse.json({ error: 'Not found' }, { status: 404 });
-        }
+        if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
         return NextResponse.json(item);
     }
 
@@ -65,5 +77,19 @@ export async function DELETE(req: NextRequest) {
     if (!deleted) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
+    return NextResponse.json({ success: true });
+}
+
+/**
+ * 新增 PATCH 方法，用于子节点排序（reorder）。
+ * 前端调用 `fetch('/api/prompt', { method: 'PATCH', body: {...} })` 即可。
+ */
+export async function PATCH(req: NextRequest) {
+    const { parent_id, ordered_ids }: { parent_id: string | null; ordered_ids: string[] } =
+        await req.json();
+
+    const userId = req.headers.get('x-user-id') || 'anonymous';
+    await service.reorderPrompts(userId, parent_id, ordered_ids);
+
     return NextResponse.json({ success: true });
 }

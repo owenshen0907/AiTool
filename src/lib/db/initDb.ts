@@ -73,10 +73,12 @@ CREATE TABLE IF NOT EXISTS prompts (
     created_by   VARCHAR(50) NOT NULL REFERENCES user_info(user_id),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_log   JSONB NULL
+    update_log   JSONB NULL,
+    position     INT NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_prompts_parent_id  ON prompts(parent_id);
 CREATE INDEX IF NOT EXISTS idx_prompts_created_by ON prompts(created_by);
+CREATE INDEX IF NOT EXISTS idx_prompts_parent_pos ON prompts(parent_id, position);
 
 -- Table: prompt_good_cases
 CREATE TABLE IF NOT EXISTS prompt_good_cases (
