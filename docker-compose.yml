@@ -9,5 +9,6 @@ services:
     volumes:
       - ./.env.local:/app/.env.local:ro
       - ./src:/app/src
+      - ./public/upload:/app/public/upload
     working_dir: /app
     command: npm run start
