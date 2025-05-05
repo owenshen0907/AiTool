@@ -14,7 +14,7 @@ export async function listGoodCases(promptId: string): Promise<GoodCaseItem[]> {
 export async function insertGoodCases(
     promptId: string,
     items: Partial<GoodCaseItem>[],
-    userId: string
+    // userId: string
 ): Promise<GoodCaseItem[]> {
     const created: GoodCaseItem[] = [];
     for (const it of items) {
@@ -53,7 +53,7 @@ export async function insertGoodCases(
 
 export async function updateGoodCases(
     items: Partial<GoodCaseItem>[],
-    userId: string
+    // userId: string
 ): Promise<GoodCaseItem[]> {
     const updated: GoodCaseItem[] = [];
     for (const it of items) {
@@ -108,7 +108,7 @@ export async function listBadCases(promptId: string): Promise<BadCaseItem[]> {
 export async function insertBadCases(
     promptId: string,
     items: Partial<BadCaseItem>[],
-    userId: string
+    // userId: string
 ): Promise<BadCaseItem[]> {
     const created: BadCaseItem[] = [];
     for (const it of items) {
@@ -153,7 +153,7 @@ export async function insertBadCases(
 
 export async function updateBadCases(
     items: Partial<BadCaseItem>[],
-    userId: string
+    // userId: string
 ): Promise<BadCaseItem[]> {
     const updated: BadCaseItem[] = [];
     for (const it of items) {
