@@ -1,3 +1,4 @@
+// lib/api/auth.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 /**

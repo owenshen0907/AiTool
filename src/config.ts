@@ -11,6 +11,25 @@ export const CASDOOR_CONFIG = {
 
 
 export const configurations: Record<string, { apiUrl: string, apiKey: string, model: string, systemMessage?: string }> = {
+    PROMPT_MATE_GEN: {
+        apiUrl: process.env.STEP_API_URL || "https://api.stepfun.com/v1",
+        apiKey: process.env.STEP_API_KEY || "【可以设置固定值】还可以设置STEP_API_KEY/X_API_KEY",
+        model: "step-r1-v-mini",
+        systemMessage:"你是一名「Prompt架构师」，专门为大语言模型撰写SystemPrompt。\n" +
+            "请基于下列参数，产出最终的SystemPrompt（仅输出Prompt本身，不要解释）。\n" +
+            "参数 \n" +
+            "1）输入形式: {{INPUT_TYPE}} （有纯文本，图文混合，视频+文本，音频+文本。总共四种形式。） \n" +
+            "2）目标意图: {{INTENT_CODE}} （描述了希望生成的prompt具体的推理意图是什么。）  \n" +
+            "3）输出格式: {{OUTPUT_FMT}}    \n" +
+            "4）JSON Schema: {{SCHEMA_JSON}}  \n" +
+            "生成要求 \n" +
+            "- **第一段**：「角色：…」：一句话设定模型身份，例如 “你是一位 XXX（根据目标意图以及用户输入的相关信息来设定一个专家角色）专家”。  \n" +
+            "- **第二段**：「任务说明：…」清晰描述 达成目标意图的任务，需要执行任务步骤，越详细越好。  \n" +
+            "- **第三段**：「输出格式：…」  \n" +
+            "    - 说明必须输出格式 （有纯文本，Markdown，JSON。总共三种。纯文本表示对输出的内容格式没有特殊要求。Markdown表示希望输出的内容严格遵守markdown格式，JSON则表示输出要按照JSON的格式要求，需要确保JSON格式完整可以解析。）\n" +
+            "    - 若是JSON，则再判断有没有完整的Schema：（如果通过参数JSON Schema对输出的字段进行了控制，则需要限定输出的格式和字段，请勿随意更改格式和增减字段。如果没有设置则则按照你的理解总结一个Schema）  \n" +
+            "- 用条目或短句，避免冗余；输出的prompt已markdown的形式输出。"
+    },
     PROMPT_OPT: {
         apiUrl: process.env.STEP_API_URL || "https://api.stepfun.com/v1",
         apiKey: process.env.STEP_API_KEY || "【可以设置固定值】还可以设置STEP_API_KEY/X_API_KEY",

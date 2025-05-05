@@ -11,6 +11,7 @@
     "init-db": "DB_INIT=true node --loader ts-node/esm src/lib/db/initDb.ts"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.2",
     "casdoor-js-sdk": "^0.16.0",
     "dotenv": "^16.4.7",
     "file-saver": "^2.0.5",

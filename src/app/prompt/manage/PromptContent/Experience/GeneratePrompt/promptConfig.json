@@ -1,0 +1,36 @@
+{
+  "inputOptions": [
+    { "code": "TEXT", "label": "纯文本", "note": "聊天记录、文档段落" },
+    { "code": "IMG_TEXT", "label": "图文混合", "note": "商品图+配文、海报+介绍" },
+    { "code": "VIDEO_TEXT", "label": "视频+文本", "note": "短视频+脚本/字幕" },
+    { "code": "AUDIO_TEXT", "label": "音频+文本", "note": "音频录制+备注说明" }
+  ],
+  "intentOptions": [
+    { "code": "TLDR", "label": "一句话总结", "category": "总结类", "description": "将长文本压缩为一句话的简洁总结" },
+    { "code": "ABSTRACT", "label": "段落摘要", "category": "总结类", "description": "提取段落或文章的主要信息，生成摘要" },
+    { "code": "BULLET", "label": "要点罗列", "category": "总结类", "description": "将内容拆解为关键要点列表" },
+
+    { "code": "ENTITIES", "label": "实体抽取", "category": "信息提取", "description": "从文本中提取出命名实体，如人名、地点、机构等" },
+    { "code": "KV", "label": "键值对", "category": "信息提取", "description": "将文本中的信息结构化为键值对格式" },
+    { "code": "TABLE", "label": "表格化", "category": "信息提取", "description": "将数据或信息以表格形式展现" },
+
+    { "code": "PARAPHRASE", "label": "同义改写", "category": "重写与润色", "description": "对文本进行同义词或句式的改写，保持原意" },
+    { "code": "FORMALIZE", "label": "提升正式度", "category": "重写与润色", "description": "将文本转化为更正式、规范的语言风格" },
+    { "code": "SIMPLIFY", "label": "简化易懂", "category": "重写与润色", "description": "将复杂专业内容转化为简单易懂的表达" },
+
+    { "code": "SENTIMENT", "label": "情感/倾向", "category": "分析与洞察", "description": "分析文本的情感倾向，如正面、负面或中性" },
+    { "code": "KEYPOINT", "label": "观点归纳", "category": "分析与洞察", "description": "从文本中提炼核心观点或结论" },
+    { "code": "TREND", "label": "发展趋势", "category": "分析与洞察", "description": "分析数据或文本内容的变化趋势和未来走向" },
+
+    { "code": "TRANSLATE_XX", "label": "多语言翻译", "category": "转换类", "description": "将文本翻译为指定语言" },
+    { "code": "FORMAT", "label": "格式转换", "category": "转换类", "description": "将内容从一种格式转换为另一种格式，如 JSON、CSV" },
+
+    { "code": "QA", "label": "基于内容问答", "category": "生成类", "description": "根据给定内容回答相关问题" },
+    { "code": "IDEA", "label": "头脑风暴", "category": "生成类", "description": "针对主题或问题生成创意想法" }
+  ],
+  "outputFormats": [
+    { "code": "PLAIN", "label": "纯文本", "example": "这是一段纯文本输出示例。" },
+    { "code": "MARKDOWN", "label": "Markdown", "example": "**这是一段 Markdown 输出示例。**" },
+    { "code": "JSON", "label": "JSON", "example": "{ \"key\": \"value\" }" }
+  ]
+}

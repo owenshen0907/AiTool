@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   nihongo:
-    image: nihongo-runtime
-    container_name: nihongo
+    image: aitool-runtime
+    container_name: aitool
     ports:
-      - "3000:3000"
+      - "3000:3001"
     volumes:
       - ./.env.local:/app/.env.local:ro
       - ./src:/app/src

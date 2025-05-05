@@ -4,7 +4,8 @@ import type {
     PromptItem,
     AttributeItem,
     GoodCaseItem,
-    BadCaseItem
+    BadCaseItem,
+    PromptGenerationInputData
 } from '@/lib/models/prompt';
 
 interface RawPrompt {
@@ -219,4 +220,70 @@ export async function reorderPrompts(
         body: JSON.stringify({ parent_id, ordered_ids }),
     });
     if (!res.ok) throw new Error(`reorderPrompts failed: ${res.status}`);
+}
+
+
+// -------- Prompt Generation Input Data API --------
+
+/** 查询某个 prompt 的所有生成输入数据 */
+export async function fetchPromptInputData(
+    promptId: string
+): Promise<PromptGenerationInputData[]> {
+    const res = await fetch(
+        `/api/prompt/input_data?prompt_id=${encodeURIComponent(promptId)}`
+    );
+    if (!res.ok) throw new Error(`fetchPromptInputData failed: ${res.status}`);
+    return res.json();
+}
+
+/** 批量创建生成输入数据 */
+export async function createPromptInputData(
+    promptId: string,
+    items: Omit<PromptGenerationInputData, 'id' | 'created_at'>[]
+): Promise<PromptGenerationInputData[]> {
+    const res = await fetch('/api/prompt/input_data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt_id: promptId, items }),
+    });
+    if (!res.ok) throw new Error(`createPromptInputData failed: ${res.status}`);
+    return res.json();
+}
+
+/** 批量更新生成输入数据 */
+export async function updatePromptInputData(
+    items: Partial<Omit<PromptGenerationInputData, 'created_at'>>[]
+): Promise<PromptGenerationInputData[]> {
+    const res = await fetch('/api/prompt/input_data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+    });
+    if (!res.ok) throw new Error(`updatePromptInputData failed: ${res.status}`);
+    return res.json();
+}
+
+/** 删除指定 prompt_id 下的所有生成输入数据 */
+export async function deletePromptInputDataByPrompt(
+    promptId: string
+): Promise<{ success: boolean }> {
+    const res = await fetch(
+        `/api/prompt/input_data?prompt_id=${encodeURIComponent(promptId)}`,
+        { method: 'DELETE' }
+    );
+    if (!res.ok) throw new Error(`deletePromptInputDataByPrompt failed: ${res.status}`);
+    return res.json();
+}
+
+/** 删除指定的生成输入数据 */
+export async function deletePromptInputData(
+    ids: string[]
+): Promise<{ success: boolean }> {
+    const res = await fetch('/api/prompt/input_data', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) throw new Error(`deletePromptInputData failed: ${res.status}`);
+    return res.json();
 }

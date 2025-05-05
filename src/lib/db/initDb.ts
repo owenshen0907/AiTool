@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS models (
 CREATE INDEX IF NOT EXISTS idx_models_supplier_id ON models(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_models_model_type   ON models(model_type);
 
--- prompts 表（保持不变）
+-- prompts 表
 CREATE TABLE IF NOT EXISTS prompts (
     id           UUID PRIMARY KEY,
     parent_id    UUID NULL,
@@ -80,6 +80,25 @@ CREATE INDEX IF NOT EXISTS idx_prompts_parent_id  ON prompts(parent_id);
 CREATE INDEX IF NOT EXISTS idx_prompts_created_by ON prompts(created_by);
 CREATE INDEX IF NOT EXISTS idx_prompts_parent_pos ON prompts(parent_id, position);
 
+
+-- 存储某个 Prompt 在生成时，所用到的原始输入数据
+CREATE TABLE IF NOT EXISTS prompt_generation_input_data (
+    id           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    prompt_id    UUID         NOT NULL REFERENCES prompts(id) ON DELETE CASCADE,
+    part_index   INT          NOT NULL,               -- 输入片段的顺序
+    part_type    VARCHAR(20)  NOT NULL,               -- 'text' | 'image_url' | 'video_url' | 'input_audio'
+    content      JSONB        NOT NULL,               -- 根据 part_type 存放对应 JSON
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- 按 prompt 快速查询
+CREATE INDEX IF NOT EXISTS idx_gen_input_data_prompt 
+  ON prompt_generation_input_data(prompt_id);
+
+-- 保证同一 prompt 下 part_index 唯一
+CREATE UNIQUE INDEX IF NOT EXISTS idx_gen_input_data_order 
+  ON prompt_generation_input_data(prompt_id, part_index);
+  
 -- Table: prompt_good_cases
 CREATE TABLE IF NOT EXISTS prompt_good_cases (
   id           UUID              PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -2,8 +2,8 @@
 
 set -e
 
-PROJECT_NAME="nihongo"
-IMAGE_NAME="nihongo-runtime"
+PROJECT_NAME="aitool"
+IMAGE_NAME="aitool-runtime"
 
 echo "🛑 停止旧容器..."
 docker stop $PROJECT_NAME || true

@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
         path === '/' ||
         path.startsWith('/_next') ||
         path.startsWith('/favicon.ico') ||
-        path.startsWith('/static') ||
+        path.startsWith('/public') ||
         path.startsWith('/api/auth/callback')
     ) {
         return NextResponse.next();

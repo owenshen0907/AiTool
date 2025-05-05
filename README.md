@@ -130,7 +130,7 @@ AiTool/
 │   │   │   └── userRepository.ts
 │   │   ├── services/                 # 业务逻辑层（promptService 等）
 │   │   │   └── promptService.ts
-│   │   └── utils/                    # 通用工具（indexedDb、validators 等）
+│   │   └── utils/                    # 通用工具（validators 等）
 │   │       ├── indexedDb.ts
 │   │       └── validators.ts
 │   ├── config.ts                     # 全局配置

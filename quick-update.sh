@@ -2,7 +2,7 @@
 
 set -e
 
-PROJECT_NAME="nihongo"
+PROJECT_NAME="aitool"
 
 echo "🛑 停止容器..."
 docker stop $PROJECT_NAME || true

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import ExperiencePanel from './PromptContent/ExperiencePanel';
+import ExperiencePanel from './PromptContent/Experience/ExperiencePanel';
 import OptimizePanel from './PromptContent/Optimize/OptimizePanel';
 import PromptMetaEditor from './PromptContent/PromptMetaEditor';
 import { updatePrompt } from '@/lib/api/prompt';
