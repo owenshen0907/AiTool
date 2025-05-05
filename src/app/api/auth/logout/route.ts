@@ -1,24 +1,25 @@
-// src/app/api/auth/logout/route.ts
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+// File: src/app/api/auth/logout/route.ts
+
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-    // 构造指向首页的绝对 URL
-    const homeUrl = new URL('/', request.url);
+    // 直接用相对根路径，不再构造绝对 URL
+    const res = NextResponse.redirect('/')
 
-    // 清除 Cookie，并重定向到首页
-    const res = NextResponse.redirect(homeUrl);
+    // 清除 Cookie
     res.cookies.set('sessionToken', '', {
         httpOnly: true,
         secure:   true,
         path:     '/',
         maxAge:   0,
-    });
+    })
     res.cookies.set('userId', '', {
         httpOnly: true,
         secure:   true,
         path:     '/',
         maxAge:   0,
-    });
-    return res;
+    })
+
+    return res
 }
