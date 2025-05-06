@@ -7,7 +7,9 @@ import FileUploader, { UploadedFile } from '@/lib/utils/FileUploader';
 
 type ScenarioCode = typeof promptConfig.inputOptions[number]['code'];
 const toPreview = (p: string) =>
-    p.startsWith('http') ? p : `${process.env.NEXT_PUBLIC_SITE_ORIGIN ?? ''}/${p}`;
+    p.startsWith('http')
+        ? p
+        : `${process.env.NEXT_PUBLIC_SITE_ORIGIN?.replace(/\/$/, '') || ''}/${p.replace(/^\//, '')}`;
 
 interface Props {
     scenario: ScenarioCode;
@@ -24,39 +26,43 @@ interface Props {
 }
 
 export default function Step1InputExample({
-                                              scenario, text, onText,
-                                              onPaths, paths = [],
-                                              desc, onDesc,
+                                              scenario,
+                                              text,
+                                              onText,
+                                              onPaths,
+                                              paths = [],
+                                              desc,
+                                              onDesc,
                                           }: Props) {
-    // 新上传的 URL
+    // 新上传的 URL 列表
     const [newPreviews, setNewPreviews] = useState<string[]>([]);
 
-    // 合并历史 + 新，并且去重
+    // 合并历史 + 新，并去重
     const thumbs = useMemo(() => {
         const all = [...newPreviews, ...paths.map(toPreview)];
-        // 利用 Set 去重
         return Array.from(new Set(all));
     }, [newPreviews, paths]);
 
+    // 删除第 idx 个缩略图
     const remove = (idx: number) => {
         const src = thumbs[idx];
-        // 如果在 newPreviews 中，就删 newPreviews
+        // 1) 如果在 newPreviews 中，删它
         if (newPreviews.includes(src)) {
             setNewPreviews(prev => prev.filter(u => u !== src));
         }
-        // 同时也从 paths 中删掉对应的 item
-        const rel = src.replace(
-            process.env.NEXT_PUBLIC_SITE_ORIGIN ?? '',
-            ''
-        ).replace(/^\//, '');
-        onPaths(paths.filter(p => toPreview(p) !== src));
+        // 2) 同时，如果是历史 paths，也删掉它对应的相对路径
+        //    先把 preview URL 转回相对路径
+        const rel = src
+            .replace(process.env.NEXT_PUBLIC_SITE_ORIGIN?.replace(/\/$/, '') || '', '')
+            .replace(/^\//, '');
+        onPaths(paths.filter(p => p !== rel));
     };
 
     return (
         <div className="space-y-4">
             <p className="text-gray-500">说明：在此处输入示例内容，供大模型处理。</p>
 
-            {/* TEXT */}
+            {/* -------- TEXT -------- */}
             {scenario === 'TEXT' && (
                 <textarea
                     value={text}
@@ -66,23 +72,27 @@ export default function Step1InputExample({
                 />
             )}
 
-            {/* IMG + TEXT */}
+            {/* -------- IMG + TEXT -------- */}
             {scenario === 'IMG_TEXT' && (
                 <>
                     <FileUploader
                         accept="image/*"
                         multiple
                         label="点击或拖拽上传图片（最多 50 张）"
-                        onUploaded={(files, errors) => {
-                            if (errors.length) {
+                        onUploaded={(
+                            files: UploadedFile[],
+                            errors: Error[] = []   // <- 给 errors 一个默认空数组
+                        ) => {
+                            // 1) 如果有失败的文件，提醒一下
+                            if (errors.length > 0) {
                                 alert(
                                     '以下文件上传失败：\n' +
                                     errors.map(e => e.message).join('\n')
                                 );
                             }
-                            // 把成功的相对 path 回传给父组件
+                            // 2) 回传所有成功的相对路径给父组件
                             onPaths([...paths, ...files.map(f => f.path)]);
-                            // 把新 url 存进 newPreviews
+                            // 3) 把新上传的 URL 加进预览列表
                             setNewPreviews(prev => [...prev, ...files.map(f => f.url)]);
                         }}
                     />
@@ -90,12 +100,18 @@ export default function Step1InputExample({
                     <div className="grid grid-cols-4 gap-3 max-h-60 overflow-auto p-1">
                         {thumbs.map((src, i) => (
                             <div key={i} className="relative group">
-                                <img src={src} alt={`img-${i}`} className="w-full h-24 object-cover rounded" />
+                                <img
+                                    src={src}
+                                    alt={`img-${i}`}
+                                    className="w-full h-24 object-cover rounded"
+                                />
                                 <button
                                     onClick={() => remove(i)}
                                     className="absolute -top-1 -right-1 hidden group-hover:block bg-red-600 text-white rounded-full w-5 h-5 text-xs leading-5"
                                     title="删除"
-                                >×</button>
+                                >
+                                    ×
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -109,23 +125,34 @@ export default function Step1InputExample({
                 </>
             )}
 
-            {/* VIDEO + TEXT */}
+            {/* -------- VIDEO + TEXT -------- */}
             {scenario === 'VIDEO_TEXT' && (
                 <>
                     <FileUploader
                         accept="video/*"
                         label="上传视频"
-                        onUploaded={(files, errors) => {
-                            if (errors.length) alert(errors.map(e => e.message).join('\n'));
+                        onUploaded={(
+                            files: UploadedFile[],
+                            errors: Error[] = []
+                        ) => {
+                            if (errors.length > 0) {
+                                alert(errors.map(e => e.message).join('\n'));
+                            }
                             if (files[0]) {
                                 onPaths([files[0].path]);
                                 setNewPreviews([files[0].url]);
                             }
                         }}
                     />
+
                     {newPreviews[0] && (
-                        <video src={newPreviews[0]} controls className="w-full mt-2 max-h-60 rounded" />
+                        <video
+                            src={newPreviews[0]}
+                            controls
+                            className="w-full mt-2 max-h-60 rounded"
+                        />
                     )}
+
                     <textarea
                         value={desc}
                         onChange={e => onDesc(e.target.value)}
@@ -135,21 +162,34 @@ export default function Step1InputExample({
                 </>
             )}
 
-            {/* AUDIO + TEXT */}
+            {/* -------- AUDIO + TEXT -------- */}
             {scenario === 'AUDIO_TEXT' && (
                 <>
                     <FileUploader
                         accept="audio/mp3,audio/wav"
                         label="上传音频(mp3 / wav)"
-                        onUploaded={(files, errors) => {
-                            if (errors.length) alert(errors.map(e => e.message).join('\n'));
+                        onUploaded={(
+                            files: UploadedFile[],
+                            errors: Error[] = []
+                        ) => {
+                            if (errors.length > 0) {
+                                alert(errors.map(e => e.message).join('\n'));
+                            }
                             if (files[0]) {
                                 onPaths([files[0].path]);
                                 setNewPreviews([files[0].url]);
                             }
                         }}
                     />
-                    {newPreviews[0] && <audio src={newPreviews[0]} controls className="w-full mt-2" />}
+
+                    {newPreviews[0] && (
+                        <audio
+                            src={newPreviews[0]}
+                            controls
+                            className="w-full mt-2"
+                        />
+                    )}
+
                     <textarea
                         value={desc}
                         onChange={e => onDesc(e.target.value)}

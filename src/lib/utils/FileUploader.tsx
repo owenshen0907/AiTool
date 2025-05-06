@@ -1,4 +1,4 @@
-// File: src/lib/utils/FileUploader.tsx
+// src/lib/utils/FileUploader.tsx
 'use client';
 
 import React from 'react';
@@ -14,7 +14,13 @@ interface FileUploaderProps {
     multiple?: boolean;
     maxCount?: number;
     label?: React.ReactNode;
-    onUploaded: (files: UploadedFile[], errors: Error[]) => void;
+
+    /**
+     * 上传完成后回调
+     * @param successes 上传成功的文件列表
+     * @param failures  上传失败的错误列表
+     */
+    onUploaded: (successes: UploadedFile[], failures: Error[]) => void;
 }
 
 export default function FileUploader({
@@ -24,29 +30,20 @@ export default function FileUploader({
                                          label = '点击或拖拽上传',
                                          onUploaded,
                                      }: FileUploaderProps) {
-
-    // 真正的上传函数
-    const doUpload = async (file: File): Promise<UploadedFile> => {
-        const form = new FormData();
-        form.append('file', file, file.name);
-
-        const res = await fetch(`/api/upload?rand=${uuidv4()}`, {
-            method: 'POST',
-            body: form,
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`${file.name} 上传失败：${text}`);
-        }
-        return res.json();
-    };
-
-    // 带重试的上传
-    const uploadWithRetry = async (file: File, retries = 3): Promise<UploadedFile> => {
+    // 单文件上传 + 重试
+    const uploadOne = async (file: File, retries = 3): Promise<UploadedFile> => {
         let lastErr: any;
-        for (let i = 0; i < retries; i++) {
+        for (let i = 1; i <= retries; i++) {
             try {
-                return await doUpload(file);
+                const form = new FormData();
+                form.append('file', file, file.name);
+                const res = await fetch(`/api/upload?rand=${uuidv4()}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: form,
+                });
+                if (!res.ok) throw new Error(await res.text());
+                return await res.json();
             } catch (err) {
                 lastErr = err;
             }
@@ -54,26 +51,24 @@ export default function FileUploader({
         throw lastErr;
     };
 
-    const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
         const list = Array.from(e.target.files).slice(0, maxCount);
 
-        // 并行跑所有上传（每个带重试），收集结果
-        const settles = await Promise.allSettled(list.map(f => uploadWithRetry(f)));
-
         const successes: UploadedFile[] = [];
-        const errors: Error[] = [];
+        const failures: Error[] = [];
 
-        settles.forEach(r => {
-            if (r.status === 'fulfilled') {
-                successes.push(r.value);
-            } else {
-                errors.push(r.reason instanceof Error ? r.reason : new Error(String(r.reason)));
+        for (const file of list) {
+            try {
+                const up = await uploadOne(file, 3);
+                successes.push(up);
+            } catch (err: any) {
+                failures.push(new Error(`${file.name}: ${err.message || err}`));
             }
-        });
+        }
 
-        onUploaded(successes, errors);
-        e.target.value = ''; // 允许再次选同文件
+        onUploaded(successes, failures);
+        e.target.value = '';
     };
 
     return (
@@ -83,7 +78,7 @@ export default function FileUploader({
                 type="file"
                 accept={accept}
                 multiple={multiple}
-                onChange={handle}
+                onChange={handleChange}
                 className="hidden"
             />
         </label>
