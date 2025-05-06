@@ -15,7 +15,7 @@ echo "🔥 删除旧镜像..."
 docker rmi $IMAGE_NAME || true
 
 echo "📥 拉取最新代码..."
-git pull
+#git pull
 
 echo "🔨 重新构建镜像（Dockerfile）..."
 docker build --no-cache -t $IMAGE_NAME .

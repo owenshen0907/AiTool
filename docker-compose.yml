@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  nihongo:
+  aitool:
     image: aitool-runtime
     container_name: aitool
     ports:
