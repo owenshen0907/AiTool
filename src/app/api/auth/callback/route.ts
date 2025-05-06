@@ -7,11 +7,7 @@ import { upsertUser } from '@/lib/repositories/userRepository';
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
-
-    if (!code) {
-        console.error('缺少 code，跳转到登录页');
-        return NextResponse.redirect('/login');
-    }
+    if (!code) return NextResponse.redirect('/login');
 
     // 1. 交换 access_token
     const tokenRes = await fetch(`${CASDOOR_CONFIG.endpoint}/api/login/oauth/access_token`, {
@@ -56,18 +52,18 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. 设置 Cookie 并跳转到首页
-    const response = NextResponse.redirect(new URL('/', request.url));
+    const response = NextResponse.redirect('/');
     response.cookies.set('sessionToken', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // 本地开发也能用
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',                                    // 整站都可见
+        path: '/'
     });
     response.cookies.set('userId', userId, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // 本地开发也能用
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',                                      // 整站都可见
+        path: '/'
     });
     return response;
 }
