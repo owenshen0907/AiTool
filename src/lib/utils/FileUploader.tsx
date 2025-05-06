@@ -5,23 +5,16 @@ import React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface UploadedFile {
-    /** 服务器返回的相对路径，如 upload/uid/img/20250506/a.jpg */
     path: string;
-    /** 服务器返回的可访问 URL（含域名或根斜杠） */
     url: string;
 }
 
 interface FileUploaderProps {
-    /** input accept，例："image/*" "video/*" "audio/mp3" */
     accept: string;
-    /** 是否允许多选 */
     multiple?: boolean;
-    /** 最多多少个文件（多选时生效） */
     maxCount?: number;
-    /** 上传按钮内部文案 */
     label?: React.ReactNode;
-    /** 成功后把 *相对路径数组* 与 *URL 数组* 回调出去 */
-    onUploaded: (files: UploadedFile[]) => void;
+    onUploaded: (files: UploadedFile[], errors: Error[]) => void;
 }
 
 export default function FileUploader({
@@ -31,7 +24,8 @@ export default function FileUploader({
                                          label = '点击或拖拽上传',
                                          onUploaded,
                                      }: FileUploaderProps) {
-    /** 发送到 /api/upload */
+
+    // 真正的上传函数
     const doUpload = async (file: File): Promise<UploadedFile> => {
         const form = new FormData();
         form.append('file', file, file.name);
@@ -40,24 +34,46 @@ export default function FileUploader({
             method: 'POST',
             body: form,
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`${file.name} 上传失败：${text}`);
+        }
         return res.json();
+    };
+
+    // 带重试的上传
+    const uploadWithRetry = async (file: File, retries = 3): Promise<UploadedFile> => {
+        let lastErr: any;
+        for (let i = 0; i < retries; i++) {
+            try {
+                return await doUpload(file);
+            } catch (err) {
+                lastErr = err;
+            }
+        }
+        throw lastErr;
     };
 
     const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
         const list = Array.from(e.target.files).slice(0, maxCount);
 
-        try {
-            const uploaded = await Promise.all(list.map(doUpload));
-            onUploaded(uploaded);
-        } catch (err) {
-            /* eslint-disable no-alert */
-            console.error('upload failed:', err);
-            alert('文件上传失败，请重试');
-        } finally {
-            e.target.value = ''; // 允许再次选同文件
-        }
+        // 并行跑所有上传（每个带重试），收集结果
+        const settles = await Promise.allSettled(list.map(f => uploadWithRetry(f)));
+
+        const successes: UploadedFile[] = [];
+        const errors: Error[] = [];
+
+        settles.forEach(r => {
+            if (r.status === 'fulfilled') {
+                successes.push(r.value);
+            } else {
+                errors.push(r.reason instanceof Error ? r.reason : new Error(String(r.reason)));
+            }
+        });
+
+        onUploaded(successes, errors);
+        e.target.value = ''; // 允许再次选同文件
     };
 
     return (
