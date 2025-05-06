@@ -1,4 +1,4 @@
-// File: src/app/api/chat/route.ts
+// File: src/app/api/completions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { withUser } from '@/lib/api/auth';
 import { getSupplierById } from '@/lib/repositories/supplierRepository';
@@ -13,7 +13,7 @@ interface ChatRequest {
 }
 
 export const POST = withUser(async (req: NextRequest, userId: string) => {
-    console.log('👉 [chat] resolved userId =', userId);
+    console.log('👉 [completions] resolved userId =', userId);
     let body: ChatRequest;
     try {
         body = await req.json();
@@ -82,7 +82,7 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
             headers,
         });
     } catch (err) {
-        console.error('Error proxying chat', err);
+        console.error('Error proxying completions', err);
         return new NextResponse('Proxy error', { status: 500 });
     }
 });

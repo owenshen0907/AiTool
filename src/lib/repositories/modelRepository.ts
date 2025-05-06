@@ -28,7 +28,7 @@ export async function getModelsBySupplier(supplierId: string): Promise<Model[]> 
     id: r.id,
     supplierId: r.supplier_id,
     name: r.name,
-    modelType: r.model_type as 'chat' | 'non-chat',
+    modelType: r.model_type as 'completions' | 'non-completions',
     supportsImageInput: r.supports_image_input,
     supportsVideoInput: r.supports_video_input,
     supportsAudioOutput: r.supports_audio_output,
@@ -62,7 +62,7 @@ export async function clearDefaultModelForSupplierByModel(modelId: string) {
 interface CreateModelPayload {
   supplierId: string;
   name: string;
-  modelType: 'chat' | 'non-chat';
+  modelType: 'completions' | 'non-completions';
   supportsImageInput: boolean;
   supportsVideoInput: boolean;
   supportsAudioOutput: boolean;
@@ -115,7 +115,7 @@ export async function createModel(payload: CreateModelPayload): Promise<Model> {
     id: r.id,
     supplierId: r.supplier_id,
     name: r.name,
-    modelType: r.model_type as 'chat' | 'non-chat',
+    modelType: r.model_type as 'completions' | 'non-completions',
     supportsImageInput: r.supports_image_input,
     supportsVideoInput: r.supports_video_input,
     supportsAudioOutput: r.supports_audio_output,
@@ -129,7 +129,7 @@ export async function createModel(payload: CreateModelPayload): Promise<Model> {
 
 export interface UpdateModelPayload {
   name?: string;
-  modelType?: 'chat' | 'non-chat';
+  modelType?: 'completions' | 'non-completions';
   supportsImageInput?: boolean;
   supportsVideoInput?: boolean;
   supportsAudioOutput?: boolean;
@@ -175,7 +175,7 @@ export async function updateModel(
     id: r.id,
     supplierId: r.supplier_id,
     name: r.name,
-    modelType: r.model_type as 'chat' | 'non-chat',
+    modelType: r.model_type as 'completions' | 'non-completions',
     supportsImageInput: r.supports_image_input,
     supportsVideoInput: r.supports_video_input,
     supportsAudioOutput: r.supports_audio_output,

@@ -56,7 +56,7 @@ export default function SupplierModelManagement({ onClose }: Props) {
       const data: Model[] = await res.json();
       data.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
       setModels(data);
-      setChatModels(data.filter(m => m.modelType === 'chat'));
+      setChatModels(data.filter(m => m.modelType === 'completions'));
       setTestModel('');
       setTestPassed(null);
     }

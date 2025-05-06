@@ -76,7 +76,7 @@ export default function ExperiencePanel({
                 return next;
             });
 
-            const res = await fetch('/api/chat', {
+            const res = await fetch('/api/completions', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },

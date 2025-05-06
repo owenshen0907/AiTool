@@ -13,7 +13,7 @@ interface ModelRequestBody {
     supplier_id?: string;
     id?: string;
     name?: string;
-    model_type?: 'chat' | 'non-chat';
+    model_type?: 'completions' | 'non-completions';
     supports_image_input?: boolean;
     supports_video_input?: boolean;
     supports_audio_output?: boolean;

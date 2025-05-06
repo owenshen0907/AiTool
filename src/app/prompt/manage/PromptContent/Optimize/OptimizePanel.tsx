@@ -88,7 +88,7 @@ export default function OptimizePanel({
 
         const userContent = blocks.join('\n\n');
 
-        const res = await fetch('/api/chat', {
+        const res = await fetch('/api/completions', {
             method: 'POST',                             // ← 一定要写 POST
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',                 // 如果你需要带 cookie

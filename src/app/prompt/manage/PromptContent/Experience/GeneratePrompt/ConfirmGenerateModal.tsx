@@ -179,7 +179,7 @@ export default function ConfirmGenerateModal({
         setLoading(true);
         try {
             const messages = await buildMessages();
-            const res = await fetch('/api/chat', {
+            const res = await fetch('/api/completions', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },

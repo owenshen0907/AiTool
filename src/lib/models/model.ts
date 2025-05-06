@@ -13,7 +13,7 @@ export interface Model {
     id: string;
     supplierId: string;
     name: string;
-    modelType: 'chat' | 'non-chat';
+    modelType: 'completions' | 'non-completions';
     supportsImageInput: boolean;
     supportsVideoInput: boolean;
     supportsAudioOutput: boolean;

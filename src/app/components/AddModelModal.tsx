@@ -10,7 +10,7 @@ interface Props {
 
 export default function AddModelModal({ supplierId, onClose }: Props) {
   const [name, setName] = useState('');
-  const [modelType, setModelType] = useState<'chat' | 'non-chat'>('chat');
+  const [modelType, setModelType] = useState<'completions' | 'non-completions'>('completions');
   const [supportsImageInput, setSupportsImageInput] = useState(false);
   const [supportsVideoInput, setSupportsVideoInput] = useState(false);
   const [supportsAudioOutput, setSupportsAudioOutput] = useState(false);
