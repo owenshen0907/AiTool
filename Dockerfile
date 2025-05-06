@@ -24,4 +24,3 @@ ENV NODE_ENV=production
 
 # 启动命令
 CMD ["npm", "run", "start"]
-RUN mkdir -p /app/public/upload

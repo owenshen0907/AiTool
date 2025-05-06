@@ -13,7 +13,8 @@ export function middleware(request: NextRequest) {
         path.startsWith('/_next') ||
         path.startsWith('/favicon.ico') ||
         path.startsWith('/public') ||
-        path.startsWith('/api/auth/callback')
+        path.startsWith('/api/auth/callback') ||
+        path === '/api/auth/logout'
     ) {
         return NextResponse.next();
     }
