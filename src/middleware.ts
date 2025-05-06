@@ -13,15 +13,18 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // 2) 主站静态资源、回调、登出、聊天转发都放行
+    // 2) 所有以 /api/ 开头的，都直接放行
+    if (pathname.startsWith('/api/')) {
+        return NextResponse.next();
+    }
+
+    // —— 以下才是真正给前端页面做登录保护的逻辑 —— //
+    // 放行静态资源、首页等
     if (
         pathname === '/' ||
         pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon.ico') ||
-        pathname.startsWith('/public') ||
-        pathname.startsWith('/api/auth/callback') ||
-        pathname === '/api/auth/logout' ||
-        pathname === '/api/chat' // 关键：放行 /api/chat，才能让客户端带上 Cookie 并命中路由
+        pathname.startsWith('/public')
     ) {
         return NextResponse.next();
     }
