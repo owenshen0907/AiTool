@@ -5,8 +5,7 @@ import { CASDOOR_CONFIG } from '@/config';
 import { upsertUser } from '@/lib/repositories/userRepository';
 
 export async function GET(request: NextRequest) {
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get('code');
+    const code = request.nextUrl.searchParams.get('code');
     if (!code) return NextResponse.redirect('/login');
 
     // 1. 交换 access_token
@@ -52,21 +51,23 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. 设置 Cookie 并跳转到首页
-    const origin = process.env.NEXT_PUBLIC_BASE_URL ?? request.nextUrl.origin;
-    const homeUrl = new URL('/', origin);
+    // const origin = process.env.NEXT_PUBLIC_BASE_URL ?? request.nextUrl.origin;
+    // const homeUrl = new URL('/', origin);
 
-    const response = NextResponse.redirect(homeUrl);
+    // 回调完成后，也跳回主站
+    const appBase = process.env.NEXT_PUBLIC_APP_URL!;
+    const response = NextResponse.redirect(appBase + '/');
     response.cookies.set('sessionToken', accessToken, {
         httpOnly: true,
-        secure:  process.env.NODE_ENV === 'production',
+        secure:   process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path:    '/',
+        path:     '/'
     });
     response.cookies.set('userId', userId, {
         httpOnly: true,
-        secure:  process.env.NODE_ENV === 'production',
+        secure:   process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path:    '/',
+        path:     '/'
     });
     return response;
 }
