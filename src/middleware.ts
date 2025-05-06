@@ -50,8 +50,8 @@ export function middleware(request: NextRequest) {
     loginUrl.searchParams.set('redirect_uri', CASDOOR_CONFIG.redirectUri);
     loginUrl.searchParams.set('scope',        'read');
     loginUrl.searchParams.set('state',        'casdoor');
-    loginUrl.searchParams.set('app_name',     CASDOOR_CONFIG.appName);
-    loginUrl.searchParams.set('org_name',     CASDOOR_CONFIG.orgName);
+    // loginUrl.searchParams.set('app_name',     CASDOOR_CONFIG.appName);
+    // loginUrl.searchParams.set('org_name',     CASDOOR_CONFIG.orgName);
     return NextResponse.redirect(loginUrl);
 }
 

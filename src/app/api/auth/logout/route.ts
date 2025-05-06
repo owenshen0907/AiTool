@@ -8,5 +8,5 @@ export async function GET(request: NextRequest) {
     const res = NextResponse.redirect(appBase + '/');
     res.cookies.set('sessionToken','',{ httpOnly:true, secure:true, path:'/', maxAge:0 });
     res.cookies.set('userId','',      { httpOnly:true, secure:true, path:'/', maxAge:0 });
-    return res;
+    return NextResponse.redirect(appBase + '/');
 }
