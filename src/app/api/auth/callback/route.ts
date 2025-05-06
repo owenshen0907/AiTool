@@ -52,18 +52,21 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. 设置 Cookie 并跳转到首页
-    const response = NextResponse.redirect('/');
+    const origin = process.env.NEXT_PUBLIC_BASE_URL ?? request.nextUrl.origin;
+    const homeUrl = new URL('/', origin);
+
+    const response = NextResponse.redirect(homeUrl);
     response.cookies.set('sessionToken', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure:  process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/'
+        path:    '/',
     });
     response.cookies.set('userId', userId, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure:  process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/'
+        path:    '/',
     });
     return response;
 }
