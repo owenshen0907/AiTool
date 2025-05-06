@@ -179,6 +179,7 @@ export default function ConfirmGenerateModal({ isOpen, onClose, data }: Props) {
             const messages = await buildMessages();
             const res = await fetch('/api/chat', {
                 method : 'POST',
+                credentials: 'same-origin',
                 headers: { 'Content-Type':'application/json' },
                 body   : JSON.stringify({ scene: 'PROMPT_MATE_GEN', meta, messages }),
             });
