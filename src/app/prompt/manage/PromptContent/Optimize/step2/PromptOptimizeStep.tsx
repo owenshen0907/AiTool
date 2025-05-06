@@ -67,6 +67,7 @@ export default function PromptOptimizeStep({
                     <ArrowLeft className="mr-1" /> 返回
                 </button>
                 <button
+                    type="button"
                     onClick={onOptimize}
                     disabled={loading}
                     className="px-4 py-2 bg-green-600 text-white rounded flex items-center"

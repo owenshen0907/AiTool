@@ -1,95 +1,117 @@
-// app/api/prompt/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+// File: src/app/api/prompt/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { withUser } from '@/lib/api/auth'
 import {
     createPromptSchema,
     updatePromptSchema,
-} from '@/lib/utils/validators';
-import * as service from '@/lib/services/promptService';
+} from '@/lib/utils/validators'
+import * as service from '@/lib/services/promptService'
 
-export async function GET(req: NextRequest) {
-    const { searchParams } = new URL(req.url);
+/**
+ * GET /api/prompt
+ * 支持：
+ *  - ?search=xxx    —— 全文搜索
+ *  - ?term=xxx      —— 同上（兼容旧参数）
+ *  - ?id=xxx        —— 获取单条
+ *  - ?parent_id=yyy —— 列表查询
+ */
+export const GET = withUser(async (req: NextRequest, userId: string) => {
+    const { searchParams } = new URL(req.url)
 
-    // —— 0. 如果有 search 参数，走全文搜索 ——
-    const q = searchParams.get('search');
+    // 0. 全文搜索
+    const q = searchParams.get('search')
     if (q) {
-        const list = await service.searchPrompts(q);
-        return NextResponse.json(list);
+        const list = await service.searchPrompts(q)
+        return NextResponse.json(list)
     }
-    // 如果有 term，就走搜索逻辑
-    const term = searchParams.get('term');
+    // 兼容 term 参数
+    const term = searchParams.get('term')
     if (term !== null) {
-        const all = await service.searchPrompts(term);
-        // 只返回必要的字段给前端（可用 mapRaw 做类型转换）
-        return NextResponse.json(all);
+        const all = await service.searchPrompts(term)
+        return NextResponse.json(all)
     }
 
-    // —— 1. 如果 URL 上带了 id，就取单条 ——
-    const id = searchParams.get('id');
+    // 1. 按 id 查询
+    const id = searchParams.get('id')
     if (id) {
-        const item = await service.getPromptById(id);
-        if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-        return NextResponse.json(item);
+        const item = await service.getPromptById(id)
+        if (!item) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 })
+        }
+        return NextResponse.json(item)
     }
 
-    // —— 2. 否则按 parent_id 列表 ——
-    const parent_id = searchParams.get('parent_id') || undefined;
-    const list = await service.listPrompts(parent_id);
-    return NextResponse.json(list);
-}
+    // 2. 按 parent_id 列表
+    const parent_id = searchParams.get('parent_id') || undefined
+    const list = await service.listPrompts(parent_id)
+    return NextResponse.json(list)
+})
 
-export async function POST(req: NextRequest) {
-    const body = await req.json();
-    const parse = createPromptSchema.safeParse(body);
+/**
+ * POST /api/prompt
+ * 新建一个目录或 Prompt
+ */
+export const POST = withUser(async (req: NextRequest, userId: string) => {
+    const body = await req.json()
+    const parse = createPromptSchema.safeParse(body)
     if (!parse.success) {
-        return NextResponse.json({ error: parse.error.format() }, { status: 400 });
+        return NextResponse.json(
+            { error: parse.error.format() },
+            { status: 400 }
+        )
     }
-    const userId = req.headers.get('x-user-id') || 'anonymous';
-    const created = await service.createPrompt(userId, parse.data);
-    return NextResponse.json(created, { status: 201 });
-}
+    const created = await service.createPrompt(userId, parse.data)
+    return NextResponse.json(created, { status: 201 })
+})
 
-export async function PUT(req: NextRequest) {
-    const body = await req.json();
-    const parse = updatePromptSchema.safeParse(body);
+/**
+ * PUT /api/prompt
+ * 更新一个已有的 Prompt（只更新内容、标题等，不改 created_by）
+ */
+export const PUT = withUser(async (req: NextRequest, userId: string) => {
+    const body = await req.json()
+    const parse = updatePromptSchema.safeParse(body)
     if (!parse.success) {
-        return NextResponse.json({ error: parse.error.format() }, { status: 400 });
+        return NextResponse.json(
+            { error: parse.error.format() },
+            { status: 400 }
+        )
     }
-    const userId = req.headers.get('x-user-id') || 'anonymous';
     const updated = await service.updatePromptService(
         userId,
         parse.data.id!,
         parse.data
-    );
+    )
     if (!updated) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
-    return NextResponse.json(updated);
-}
-
-export async function DELETE(req: NextRequest) {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) {
-        return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-    }
-    const userId = req.headers.get('x-user-id') || 'anonymous';
-    const deleted = await service.deletePromptService(userId, id);
-    if (!deleted) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    }
-    return NextResponse.json({ success: true });
-}
+    return NextResponse.json(updated)
+})
 
 /**
- * 新增 PATCH 方法，用于子节点排序（reorder）。
- * 前端调用 `fetch('/api/prompt', { method: 'PATCH', body: {...} })` 即可。
+ * DELETE /api/prompt?id=xxx
+ * 删除一个 Prompt 或 目录
  */
-export async function PATCH(req: NextRequest) {
-    const { parent_id, ordered_ids }: { parent_id: string | null; ordered_ids: string[] } =
-        await req.json();
+export const DELETE = withUser(async (req: NextRequest, userId: string) => {
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    if (!id) {
+        return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+    }
+    const deleted = await service.deletePromptService(userId, id)
+    if (!deleted) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+    return NextResponse.json({ success: true })
+})
 
-    const userId = req.headers.get('x-user-id') || 'anonymous';
-    await service.reorderPrompts(userId, parent_id, ordered_ids);
-
-    return NextResponse.json({ success: true });
-}
+/**
+ * PATCH /api/prompt
+ * 用于对子节点重新排序，body 格式：
+ *   { parent_id: string|null, ordered_ids: string[] }
+ */
+export const PATCH = withUser(async (req: NextRequest, userId: string) => {
+    const { parent_id, ordered_ids }: { parent_id: string | null; ordered_ids: string[] } = await req.json()
+    await service.reorderPrompts(userId, parent_id, ordered_ids)
+    return NextResponse.json({ success: true })
+})

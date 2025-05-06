@@ -50,6 +50,7 @@ export default function OptimizePanel({
             return;
         }
         setLoadingOpt(true);
+        setOptimizedPrompt('');
 
         const blocks: string[] = [];
 
@@ -88,21 +89,22 @@ export default function OptimizePanel({
         const userContent = blocks.join('\n\n');
 
         const res = await fetch('/api/chat', {
-            method: 'POST',
+            method: 'POST',                             // ← 一定要写 POST
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',                 // 如果你需要带 cookie
             body: JSON.stringify({
                 scene: 'PROMPT_OPT',
-                messages: [{ role: 'user', content: userContent }],
+                messages: [
+                    { role: 'user', content: userContent }
+                ]
             }),
         });
-
         if (res.body) {
-            let reply = '';
-            await parseSSEStream(res.body, (evt: any) => {
-                const chunk = evt.choices?.[0]?.delta?.content;
-                if (chunk) {
-                    reply += chunk;
-                    setOptimizedPrompt(reply);
+            let acc = '';
+            await parseSSEStream(res.body, ({ type, text }) => {
+                if (type === 'content') {
+                    acc += text;
+                    setOptimizedPrompt(acc);
                 }
             });
         } else {

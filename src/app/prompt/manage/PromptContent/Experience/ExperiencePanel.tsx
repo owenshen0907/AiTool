@@ -65,11 +65,12 @@ export default function ExperiencePanel({
 
     const handleSend = useCallback(
         async ({ text, model, supplier }: { text: string; model: string; supplier: Supplier }) => {
+            // Append user message and placeholder for assistant
             setMessages(prev => {
                 const next: Message[] = [
                     ...prev,
                     { role: 'user', content: text },
-                    { role: 'assistant', content: '' },
+                    { role: 'assistant', content: '' }, // placeholder
                 ];
                 messagesRef.current = next;
                 return next;
@@ -91,6 +92,7 @@ export default function ExperiencePanel({
                 const reply = data.choices?.[0]?.message?.content ?? '';
                 setMessages(prev => {
                     const next = [...prev];
+                    // replace last placeholder
                     next[next.length - 1] = { role: 'assistant', content: reply };
                     messagesRef.current = next;
                     return next;
@@ -98,50 +100,49 @@ export default function ExperiencePanel({
                 return;
             }
 
-            await parseSSEStream(res.body, (evt: any) => {
-                const chunk = evt.choices?.[0]?.delta?.content;
-                if (chunk) {
-                    setMessages(prev => {
-                        const next = [...prev];
-                        next[next.length - 1] = {
-                            role: 'assistant',
-                            content: next[next.length - 1].content + chunk,
-                        };
-                        messagesRef.current = next;
-                        return next;
-                    });
-                }
+            await parseSSEStream(res.body, ({ type, text: chunk }) => {
+                setMessages(prev => {
+                    const next = [...prev];
+                    // append to last assistant
+                    const i = next.length - 1;
+                    next[i] = { role: 'assistant', content: next[i].content + chunk };
+                    messagesRef.current = next;
+                    return next;
+                });
             });
         },
         []
     );
 
-    const handleGenerate   = useCallback(() => setIsModalOpen(true), []);
+    const handleGenerate = useCallback(() => setIsModalOpen(true), []);
     const handleRegenerate = useCallback(() => setIsModalOpen(true), []);
 
-    const handleGenerateConfirm = useCallback((config: {
-        contentParts: unknown[];
-        intent: string;
-        outputFormat: string;
-        schema?: string;
-        outputExample?: string;
-    }) => {
-        const { contentParts, intent, outputFormat, schema, outputExample } = config;
-        const partsStr = JSON.stringify(contentParts);
-        let promptText = [
-            `内容Parts：${partsStr}`,
-            `意图：${intent}`,
-            `输出格式：${outputFormat}`,
-        ].join('\n');
-        if (schema)       promptText += `\nSchema 约束：${schema}`;
-        if (outputExample) promptText += `\n输出示例：${outputExample}`;
+    const handleGenerateConfirm = useCallback(
+        (config: {
+            contentParts: unknown[];
+            intent: string;
+            outputFormat: string;
+            schema?: string;
+            outputExample?: string;
+        }) => {
+            const { contentParts, intent, outputFormat, schema, outputExample } = config;
+            const partsStr = JSON.stringify(contentParts);
+            let promptText = [
+                `内容Parts：${partsStr}`,
+                `意图：${intent}`,
+                `输出格式：${outputFormat}`,
+            ].join('\n');
+            if (schema) promptText += `\nSchema 约束：${schema}`;
+            if (outputExample) promptText += `\n输出示例：${outputExample}`;
 
-        setSystemPrompt(promptText);
-        const init: Message[] = [{ role: 'system', content: promptText }];
-        setMessages(init);
-        messagesRef.current = init;
-        setIsModalOpen(false);
-    }, []);
+            setSystemPrompt(promptText);
+            const init: Message[] = [{ role: 'system', content: promptText }];
+            setMessages(init);
+            messagesRef.current = init;
+            setIsModalOpen(false);
+        },
+        []
+    );
 
     return (
         <div className="flex h-full">
@@ -222,6 +223,7 @@ export default function ExperiencePanel({
                     />
                 </div>
             </div>
+
 
             <GeneratePromptModal
                 promptId={promptId}

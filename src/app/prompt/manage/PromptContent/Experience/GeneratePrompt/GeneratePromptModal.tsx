@@ -298,7 +298,24 @@ export default function GeneratePromptModal({ promptId, isOpen, onClose }: Props
             </div>
 
             {/* 预览弹窗 */}
-            <ConfirmGenerateModal isOpen={showConfirm} onClose={() => setShowConfirm(false)} data={previewData} />
+            <ConfirmGenerateModal
+                promptId={promptId}               // ← 一定要把 promptId 传进去
+                isOpen={showConfirm}
+                onClose={() => setShowConfirm(false)}
+                data={previewData}
+                onConfirm={async (id, generated) => {
+                    // 点击“采纳”之后，把生成内容写回后端
+                    await fetch('/api/prompt', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id, content: generated }),
+                    });
+                    // 关掉弹窗
+                    setShowConfirm(false);
+                    // （可选）提示一下“已保存”
+                    alert('Prompt 已更新');
+                }}
+            />
         </>
     );
 }
