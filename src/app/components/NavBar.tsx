@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import UserInfoModal from './UserInfoModal';          // 保持不变
 import SupplierModelManagement from './SupplierModelManagement'; // 新的管理组件
 
@@ -206,6 +207,20 @@ export default function NavBar() {
                         <HoverMenu key={item.title} item={item} />
                     ))}
                 </ul>
+                {/* GitHub 图标链接 */}
+                <a
+                    href="https://github.com/owenshen0907/AiTool"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:opacity-80"
+                >
+                    <Image
+                        src="/icons/github.svg"
+                        alt="GitHub"
+                        width={24}
+                        height={24}
+                    />
+                </a>
 
                 {/* 用户头像与下拉 */}
                 <div
