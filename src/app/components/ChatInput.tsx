@@ -1,9 +1,20 @@
 // app/components/ChatInput.tsx
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, ImageIcon, Send } from 'lucide-react';
+import React, {
+    useState,
+    useRef,
+    useEffect,
+    useCallback,
+    KeyboardEvent,
+    CompositionEvent,
+} from 'react';
+import { Send } from 'lucide-react';
 import type { Supplier, Model } from '@/lib/models/model';
+
+import ChatImageInput from './ChatImageInput';
+import ChatVoiceInput from './ChatVoiceInput';
+import SupplierModelSelector from './SupplierModelSelector';
 
 export interface ChatInputProps<CTX = any> {
     context?: CTX;
@@ -28,34 +39,38 @@ export default function ChatInput<CTX = any>({
                                                  enableVoice = true,
                                                  onSend,
                                              }: ChatInputProps<CTX>) {
+    // 供应商 & 模型
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
     const [models, setModels] = useState<Model[]>([]);
     const [model, setModel] = useState<string>('');
 
+    // 文本 / 图片 / URL / 语音
     const [text, setText] = useState('');
     const [images, setImages] = useState<File[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [voiceBlob, setVoiceBlob] = useState<Blob>();
     const [listening, setListening] = useState(false);
 
+    // IME 合成锁
+    const [isComposing, setIsComposing] = useState(false);
+
+    // 录音相关
     const mediaRef = useRef<MediaRecorder>();
     const chunks: Blob[] = [];
 
-    // 拉取供应商列表
+    // 拉供应商
     useEffect(() => {
         async function fetchSuppliers() {
             try {
                 const res = await fetch('/api/suppliers');
                 if (res.ok) {
-                    let data: Supplier[] = await res.json();
-                    // 默认供应商排在最前
-                    data.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+                    const data: Supplier[] = await res.json();
+                    data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
                     setSuppliers(data);
-                    // 如果还未选择，自动选默认或首个
-                    if (!selectedSupplierId) {
+                    if (!selectedSupplierId && data.length) {
                         const def = data.find(s => s.isDefault) || data[0];
-                        if (def) setSelectedSupplierId(def.id);
+                        setSelectedSupplierId(def.id);
                     }
                 }
             } catch (err) {
@@ -65,7 +80,7 @@ export default function ChatInput<CTX = any>({
         fetchSuppliers();
     }, []);
 
-    // 拉取模型列表
+    // 拉模型
     useEffect(() => {
         async function fetchModels() {
             if (!selectedSupplierId) {
@@ -76,11 +91,9 @@ export default function ChatInput<CTX = any>({
             try {
                 const res = await fetch(`/api/models?supplier_id=${selectedSupplierId}`);
                 if (res.ok) {
-                    let data: Model[] = await res.json();
-                    // 默认模型排最前
-                    data.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0));
+                    const data: Model[] = await res.json();
+                    data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
                     setModels(data);
-                    // 自动选默认或首个
                     const defModel = data.find(m => m.isDefault) || data[0];
                     setModel(defModel?.name || '');
                 }
@@ -91,6 +104,7 @@ export default function ChatInput<CTX = any>({
         fetchModels();
     }, [selectedSupplierId]);
 
+    // 录音
     const startRecording = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const recorder = new MediaRecorder(stream);
@@ -105,93 +119,86 @@ export default function ChatInput<CTX = any>({
         setListening(false);
     };
 
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files) setImages(prev => [...prev, ...Array.from(files)]);
-    };
-
-    const onAddUrl = () => {
-        const url = prompt('请输入图片 URL');
-        if (url) setImageUrls(prev => [...prev, url]);
-    };
-
-    const handleSend = () => {
-        if (!selectedSupplierId) {
-            alert('请先选择供应商');
-            return;
-        }
+    // 真正发送
+    const doSend = useCallback(() => {
+        if (!selectedSupplierId) return alert('请先选择供应商');
         const supplier = suppliers.find(s => s.id === selectedSupplierId);
-        if (!supplier) {
-            alert('无效的供应商');
-            return;
-        }
-        if (!model) {
-            alert('请先选择模型');
-            return;
-        }
-        if (!text.trim() && images.length + imageUrls.length === 0 && !voiceBlob) return;
+        if (!supplier) return alert('无效的供应商');
+        if (!model) return alert('请先选择模型');
+        if (!text.trim() && !images.length && !imageUrls.length && !voiceBlob) return;
 
         onSend({ text, images, imageUrls, voiceBlob, model, context, supplier });
+
+        // 重置
         setText('');
         setImages([]);
         setImageUrls([]);
         setVoiceBlob(undefined);
+    }, [
+        selectedSupplierId,
+        suppliers,
+        model,
+        text,
+        images,
+        imageUrls,
+        voiceBlob,
+        context,
+        onSend,
+    ]);
+
+    const sendDisabled =
+        !selectedSupplierId ||
+        !model ||
+        (!text.trim() && !images.length && !imageUrls.length && !voiceBlob);
+
+    // 回车 & IME
+    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
+            e.preventDefault();
+            doSend();
+        }
+    };
+    const handleComposition = (e: CompositionEvent<HTMLTextAreaElement>) => {
+        setIsComposing(e.type === 'compositionstart');
     };
 
-    const sendDisabled = !selectedSupplierId || !model || (!text.trim() && images.length === 0 && imageUrls.length === 0 && !voiceBlob);
-
     return (
-        <div className="p-4 bg-white rounded-lg shadow">
-            <textarea
-                value={text}
-                onChange={e => setText(e.target.value)}
-                placeholder={placeholder}
-                className="w-full h-24 p-2 border border-gray-300 rounded resize-none focus:outline-none focus:ring"
-            />
+        <div className="w-full p-4 bg-white rounded-lg shadow">
+      <textarea
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder={placeholder}
+          className="w-full h-24 p-2 border border-gray-300 rounded resize-none focus:outline-none focus:ring"
+          onKeyDown={handleKeyDown}
+          onCompositionStart={handleComposition}
+          onCompositionEnd={handleComposition}
+      />
 
             <div className="mt-2 grid grid-cols-2 gap-4 items-center">
                 <div className="flex items-center space-x-4">
-                    {enableImage && (
-                        <label className="cursor-pointer hover:text-gray-800">
-                            <ImageIcon size={20} />
-                            <input type="file" accept="image/*" multiple hidden onChange={onFileChange} />
-                        </label>
-                    )}
-                    {enableVoice && (
-                        <button
-                            onClick={listening ? stopRecording : startRecording}
-                            className={listening ? 'text-red-500 hover:text-red-700' : 'hover:text-gray-800'}
-                        >
-                            <Mic size={20} />
-                        </button>
-                    )}
-
-                    <select
-                        value={selectedSupplierId}
-                        onChange={e => setSelectedSupplierId(e.target.value)}
-                        className="border rounded px-3 py-1"
-                    >
-                        <option value="">选择供应商</option>
-                        {suppliers.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={model}
-                        onChange={e => setModel(e.target.value)}
-                        disabled={!selectedSupplierId}
-                        className="border rounded px-3 py-1 disabled:opacity-50"
-                    >
-                        <option value="">选择模型</option>
-                        {models.map(m => (
-                            <option key={m.id} value={m.name}>{m.name}</option>
-                        ))}
-                    </select>
+                    <ChatImageInput
+                        enableImage={enableImage}
+                        onFilesSelected={files => setImages(prev => [...prev, ...files])}
+                        onUrlEntered={url => setImageUrls(prev => [...prev, url])}
+                    />
+                    <ChatVoiceInput
+                        enableVoice={enableVoice}
+                        listening={listening}
+                        onStart={startRecording}
+                        onStop={stopRecording}
+                    />
+                    <SupplierModelSelector
+                        suppliers={suppliers}
+                        selectedSupplierId={selectedSupplierId}
+                        onSupplierChange={setSelectedSupplierId}
+                        models={models}
+                        selectedModel={model}
+                        onModelChange={setModel}
+                    />
                 </div>
 
                 <button
-                    onClick={handleSend}
+                    onClick={doSend}
                     disabled={sendDisabled}
                     className="justify-self-end px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
