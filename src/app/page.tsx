@@ -25,15 +25,15 @@ export default function HomePage() {
             {/* 功能区 */}
             <FeaturesSection />
 
-            {/* 平台介绍 */}
-            <section className="bg-white p-8 text-center">
-                <h2 className="text-2xl text-gray-800 mb-4">关于本平台</h2>
-                <p className="text-base text-gray-600 leading-relaxed max-w-2xl mx-auto">
-                    本平台集成了 AI 场景下常用的六大模块：
-                    <strong> Prompt 管理、知识库管理、模型微调、语音处理、图片生成</strong>及
-                    <strong> 实用 Agent</strong>，支持多级子功能一键访问，帮助你快速搭建智能应用、优化工作流程。
+            {/* 页脚 */}
+            <footer className="bg-gray-100 text-center text-sm text-gray-500 py-4">
+                <p className="mb-2">
+                    本站致力于提供一站式 AI 工具平台，所有 AI 生成内容请谨慎甄别与使用。
                 </p>
-            </section>
+                <p>
+                    友情链接：<a href="https://everything.cafe" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">Everything Café</a>
+                </p>
+            </footer>
         </main>
     );
 }

@@ -133,8 +133,7 @@ export default function NavBar() {
             title: 'Prompt',
             children: [
                 { title: 'Prompt管理', href: '/prompt/manage' },
-                { title: 'Prompt生成', href: '/prompt/create' },
-                { title: 'Prompt调试', href: '/prompt/debug' },
+                { title: 'Prompt调试', href: '/prompt/case' },
             ],
         },
         {

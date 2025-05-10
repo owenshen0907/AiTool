@@ -7,7 +7,7 @@ import {
     deleteInputDataByPrompt,
     deleteInputData,
 } from '@/lib/repositories/promptGenerationInputDataRepository';
-import type { PromptGenerationInputData } from '@/lib/models/prompt';
+import type { PromptGenerationInputData } from '@/lib/models/prompt/prompt';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);

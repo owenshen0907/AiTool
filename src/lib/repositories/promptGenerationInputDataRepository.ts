@@ -1,6 +1,6 @@
 // src/lib/repositories/promptGenerationInputDataRepository.ts
 import { pool } from '@/lib/db/client';
-import { PromptGenerationInputData } from '@/lib/models/prompt';
+import { PromptGenerationInputData } from '@/lib/models/prompt/prompt';
 
 /**
  * 查询某个 prompt 下所有生成时用到的输入数据，按 part_index 升序

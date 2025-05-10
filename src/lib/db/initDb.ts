@@ -1,5 +1,7 @@
 // lib/db/initDb.ts
 import { pool } from './client.js';
+import { migrateCaseContent } from './migrations/caseContentMigration.js';
+
 
 export async function initDb() {
     if (process.env.DB_INIT !== 'true') {
@@ -57,6 +59,22 @@ CREATE TABLE IF NOT EXISTS models (
 );
 CREATE INDEX IF NOT EXISTS idx_models_supplier_id ON models(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_models_model_type   ON models(model_type);
+
+-- 数据库迁移脚本示例
+CREATE TABLE IF NOT EXISTS directories (
+  id          UUID          PRIMARY KEY,
+  feature     VARCHAR(50)   NOT NULL,           -- 功能区标识（比如 'case', 'prompt'…）
+  parent_id   UUID          NULL REFERENCES directories(id),
+  name        TEXT          NOT NULL,           -- 目录名称
+  position    INT           NOT NULL DEFAULT 0, -- 同级排序索引
+  created_by  VARCHAR(50)   NOT NULL,           -- 操作人 ID
+  created_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+-- 索引，按功能区+层级+顺序快速查询
+CREATE INDEX IF NOT EXISTS idx_directories_feature       ON directories(feature);
+CREATE INDEX IF NOT EXISTS idx_directories_parent_pos     ON directories(feature, parent_id, position);
 
 -- prompts 表
 CREATE TABLE IF NOT EXISTS prompts (
@@ -161,6 +179,9 @@ CREATE INDEX IF NOT EXISTS idx_bad_cases_audios_gin
 CREATE INDEX IF NOT EXISTS idx_bad_cases_videos_gin
   ON prompt_bad_cases USING GIN (videos);
         `);
+
+        // 执行 case_content 的迁移
+        await migrateCaseContent(client);
         console.log('Database initialized successfully.');
     } catch (err) {
         console.error('Error initializing DB:', err);

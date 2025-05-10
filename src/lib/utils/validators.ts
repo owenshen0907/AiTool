@@ -26,3 +26,15 @@ export const createPromptSchema = z.object({
 export const updatePromptSchema = z
     .object({ id: z.string().uuid() })
     .merge(createPromptSchema.partial());
+
+// 用于创建 Case 分类
+export const createCaseCategorySchema = z.object({
+    parent_id: z.string().uuid().nullable().optional(),  // 接受 string、null 或 undefined
+    name: z.string().min(1),
+    description: z.string().optional(),
+});
+
+// 更新 Case 分类时必须带 id，其他字段可选
+export const updateCaseCategorySchema = z
+    .object({ id: z.string().uuid() })
+    .merge(createCaseCategorySchema.partial());

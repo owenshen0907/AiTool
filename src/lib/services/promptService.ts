@@ -1,7 +1,7 @@
 // src/lib/services/romptServices.ts
 import { v4 as uuidv4 } from 'uuid';
 import * as repo from '@/lib/repositories/promptRepository';
-import { Prompt, AttributeItem, UpdateLog } from '@/lib/models/prompt';
+import { Prompt, AttributeItem, UpdateLog } from '@/lib/models/prompt/prompt';
 
 /**
  * Input for creating a new prompt or directory. All optional fields are optional in payload.

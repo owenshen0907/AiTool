@@ -1,7 +1,8 @@
+// app/prompt/manage/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { PromptNode, PromptItem } from '@/lib/models/prompt';
+import type { PromptNode, PromptItem } from '@/lib/models/prompt/prompt';
 import {
     fetchPrompts,
     fetchPromptById,

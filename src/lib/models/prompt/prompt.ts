@@ -1,4 +1,4 @@
-// src/lib/models/prompt.ts
+// src/lib/models/prompt/prompt.ts
 export interface AttributeItem {
     name: string;
     value: boolean;

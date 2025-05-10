@@ -8,7 +8,7 @@ import PromptOptimizeStep from './step2/PromptOptimizeStep';
 import PromptValidateStep, { TestCase } from './step3/PromptValidateStep';
 import { parseSSEStream } from '@/lib/utils/sse';
 import { updatePrompt } from '@/lib/api/prompt';
-import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt';
+import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt/prompt';
 
 export interface OptimizePanelProps {
     promptId: string;

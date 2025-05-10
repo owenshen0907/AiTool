@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { ArrowLeft, ArrowRight, Check, RefreshCcw } from 'lucide-react';
-import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt';
+import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt/prompt';
 
 export interface PromptOptimizeStepProps {
     /** 原始 Prompt 文本，只读 */

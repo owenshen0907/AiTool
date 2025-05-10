@@ -5,7 +5,7 @@ import {
     createPromptInputData,
     updatePromptInputData,
 } from '@/lib/api/prompt'
-import type { PromptGenerationInputData } from '@/lib/models/prompt'
+import type { PromptGenerationInputData } from '@/lib/models/prompt/prompt'
 
 export default function useGeneratePrompt(promptId: string) {
     const [initialData, setInitialData] = useState<PromptGenerationInputData[]>([])

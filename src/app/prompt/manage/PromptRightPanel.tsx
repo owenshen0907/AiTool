@@ -3,7 +3,7 @@
 'use client';
 import React from 'react';
 import { RefreshCw, Lock, Unlock } from 'lucide-react';
-import type { AttributeItem } from '@/lib/models/prompt';
+import type { AttributeItem } from '@/lib/models/prompt/prompt';
 
 interface PromptRightPanelProps {
     tags: string[];

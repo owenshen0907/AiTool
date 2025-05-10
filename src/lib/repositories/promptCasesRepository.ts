@@ -1,5 +1,5 @@
 import { pool } from '@/lib/db/client';
-import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt';
+import type { GoodCaseItem, BadCaseItem } from '@/lib/models/prompt/prompt';
 
 // -------- Good Cases --------
 

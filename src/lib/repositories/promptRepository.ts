@@ -1,6 +1,6 @@
 // src/lib/repositories/promptRepository.ts
 import { pool } from '@/lib/db/client';
-import { Prompt } from '@/lib/models/prompt';
+import { Prompt } from '@/lib/models/prompt/prompt';
 
 export async function getPromptById(id: string): Promise<Prompt | null> {
     const { rows } = await pool.query<Prompt>(

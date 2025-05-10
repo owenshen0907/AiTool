@@ -6,7 +6,7 @@ import type {
     GoodCaseItem,
     BadCaseItem,
     PromptGenerationInputData
-} from '@/lib/models/prompt';
+} from '@/lib/models/prompt/prompt';
 
 interface RawPrompt {
     id: string;

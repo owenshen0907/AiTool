@@ -1,3 +1,4 @@
+// app/prompt/manage/PromptLeftPanel.tsx
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -8,7 +9,7 @@ import {
     FileText,
     MoreVertical,
 } from 'lucide-react';
-import type { PromptNode } from '@/lib/models/prompt';
+import type { PromptNode } from '@/lib/models/prompt/prompt';
 
 interface Props {
     nodes: PromptNode[];

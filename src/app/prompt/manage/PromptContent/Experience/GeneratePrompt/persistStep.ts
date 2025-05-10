@@ -1,7 +1,7 @@
 // =============================
 // File: src/app/prompt/manage/PromptContent/Experience/GeneratePrompt/persistStep.ts
 // =============================
-import type { PromptGenerationInputData } from '@/lib/models/prompt';
+import type { PromptGenerationInputData } from '@/lib/models/prompt/prompt';
 
 export type PersistPayload = Omit<PromptGenerationInputData, 'id' | 'created_at'>;
 

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import type { BadCaseItem } from '@/lib/models/prompt';
+import type { BadCaseItem } from '@/lib/models/prompt/prompt';
 
 export interface TestCase {
     user: string;
