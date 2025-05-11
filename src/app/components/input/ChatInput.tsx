@@ -14,7 +14,7 @@ import type { Supplier, Model } from '@/lib/models/model';
 
 import ChatImageInput from './ChatImageInput';
 import ChatVoiceInput from './ChatVoiceInput';
-import SupplierModelSelector from './SupplierModelSelector';
+import SupplierModelSelector from '../info/SupplierModelSelector';
 
 export interface ChatInputProps<CTX = any> {
     context?: CTX;

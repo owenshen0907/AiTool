@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import UserInfoModal from './UserInfoModal';          // 保持不变
-import SupplierModelManagement from './SupplierModelManagement'; // 新的管理组件
+import UserInfoModal from './info/UserInfoModal';          // 保持不变
+import SupplierModelManagement from './info/SupplierModelManagement'; // 新的管理组件
 
 interface MenuItem {
     title: string;

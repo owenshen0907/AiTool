@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ChatInput from '@/app/components/ChatInput';
+import ChatInput from '@/app/components/input/ChatInput';
 import type { Supplier } from '@/lib/models/model';
 import { parseSSEStream } from '@/lib/utils/sse';
 import ReactMarkdown from 'react-markdown';

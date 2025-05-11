@@ -1,15 +1,18 @@
+// File: app/prompt/case/CaseContentPanel.tsx
 'use client';
-
 import React, { useState } from 'react';
 import type { ContentItem } from '@/lib/models/content';
-import { GripVertical, Pencil, Trash2, Plus } from 'lucide-react';
+import LeftTopPanel       from './content/LeftTopPanel';
+import LeftBottomTable    from './content/LeftBottomTable';
+import PromptPanel        from './content/PromptPanel';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
-    items: ContentItem[];
+    items: ContentItem[];                      // 可不传也行，这里保留为了将来扩展
     selectedItem: ContentItem | null;
-    onSelectItem: (id: string) => void;
-    onCreateItem: () => void;
-    onUpdateItem: (item: ContentItem) => void;
+    onSelectItem: (id: string) => void;        // 选目录时重置当前选中 Content
+    onCreateItem: () => void;                  // 新建 Content
+    onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => void;
     onDeleteItem: (id: string) => void;
     onReorderItems: (orderedIds: string[]) => void;
 }
@@ -23,77 +26,85 @@ export default function CaseContentPanel({
                                              onDeleteItem,
                                              onReorderItems,
                                          }: Props) {
-    // 简单拖拽排序
-    const [dragId, setDragId] = useState<string | null>(null);
+    const contentId = selectedItem?.id ?? '';
 
-    const handleDrop = (targetId: string) => {
-        if (!dragId || dragId === targetId) return;
-        const ordered = [...items];
-        const from = ordered.findIndex((i) => i.id === dragId);
-        const to   = ordered.findIndex((i) => i.id === targetId);
-        const [m]  = ordered.splice(from, 1);
-        ordered.splice(to, 0, m);
-        onReorderItems(ordered.map((i) => i.id));
-        setDragId(null);
-    };
+    // Prompt 文本
+    const [prompt, setPrompt] = useState(`{
+  "task": "翻译并润色文本",
+  "constraints": ["保持原文含义", "自然流畅"]
+}`);
+
+    // 收缩状态
+    const [rightCollapsed, setRightCollapsed] = useState(false);
+    const [topCollapsed, setTopCollapsed]     = useState(false);
 
     return (
-        <div className="flex h-full">
-            {/* 左侧列表 */}
-            <div className="w-80 border-r">
-                <div className="flex items-center justify-between border-b p-2">
-                    <span className="font-semibold">内容列表</span>
-                    <button onClick={onCreateItem} className="rounded bg-blue-600 p-1 text-white hover:bg-blue-700">
-                        <Plus size={16} />
+        <div className="flex h-screen overflow-hidden">
+
+            {/* 左侧 3/4 区域 */}
+            <div className="flex flex-col flex-1 h-full border-r">
+
+                {/* 上方标题 & 概述 区 */}
+                <div
+                    className={`
+            relative flex items-center 
+            ${topCollapsed ? 'h-8' : 'h-1/6'} 
+            border-b overflow-hidden transition-all duration-200
+          `}
+                >
+                    {/* 折叠按钮 */}
+                    <button
+                        onClick={() => setTopCollapsed(tc => !tc)}
+                        className="absolute top-1 right-2 p-1 hover:bg-gray-200 rounded"
+                        title={topCollapsed ? '展开' : '收起'}
+                    >
+                        {topCollapsed ? <ChevronDown size={16}/> : <ChevronUp size={16}/>}
                     </button>
+
+                    {/* 正常内容 */}
+                    {!topCollapsed && (
+                        <LeftTopPanel
+                            item={selectedItem}
+                            onSave={patch =>
+                                selectedItem && onUpdateItem(selectedItem, patch)
+                            }
+                        />
+                    )}
                 </div>
 
-                <ul className="h-[calc(100%-40px)] overflow-auto">
-                    {items.map((it) => (
-                        <li
-                            key={it.id}
-                            draggable
-                            onDragStart={() => setDragId(it.id)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={() => handleDrop(it.id)}
-                            className={`group flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 ${
-                                selectedItem?.id === it.id ? 'bg-blue-50' : ''
-                            }`}
-                            onClick={() => onSelectItem(it.id)}
-                        >
-                            <span className="truncate">{it.title}</span>
-                            <GripVertical size={14} className="opacity-0 group-hover:opacity-100" />
-                        </li>
-                    ))}
-                </ul>
+                {/* 下方 Case 列表 + 测试 区 */}
+                <div className="flex-1 overflow-hidden">
+                    <LeftBottomTable
+                        contentId={contentId}
+                        prompt={prompt}
+                    />
+                </div>
             </div>
 
-            {/* 右侧详情 */}
-            <div className="flex-1 p-6 overflow-auto">
-                {selectedItem ? (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-semibold">{selectedItem.title}</h2>
-                            <div className="space-x-3">
-                                <button
-                                    onClick={() => onUpdateItem(selectedItem)}
-                                    className="rounded bg-green-600 px-3 py-1 text-white hover:bg-green-700"
-                                >
-                                    <Pencil size={14} className="inline" /> 编辑
-                                </button>
-                                <button
-                                    onClick={() => onDeleteItem(selectedItem.id)}
-                                    className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
-                                >
-                                    <Trash2 size={14} className="inline" /> 删除
-                                </button>
-                            </div>
-                        </div>
-                        {selectedItem.summary && <p className="text-gray-600">{selectedItem.summary}</p>}
-                        {selectedItem.body && <pre className="whitespace-pre-wrap">{selectedItem.body}</pre>}
-                    </div>
-                ) : (
-                    <div className="flex h-full items-center justify-center text-gray-400">请选择左侧内容</div>
+            {/* 右侧 Prompt 编辑 区 */}
+            <div
+                className={`
+          relative flex flex-col 
+          ${rightCollapsed ? 'w-8' : 'w-1/4'} 
+          h-full bg-white overflow-hidden transition-all duration-200
+        `}
+            >
+                {/* 折叠按钮 */}
+                <button
+                    onClick={() => setRightCollapsed(rc => !rc)}
+                    className="absolute top-2 left-2 p-1 hover:bg-gray-200 rounded"
+                    title={rightCollapsed ? '展开 Prompt' : '收起 Prompt'}
+                >
+                    {rightCollapsed ? <ChevronLeft size={16}/>
+                        : <ChevronRight size={16}/>}
+                </button>
+
+                {/* Prompt 编辑区域 */}
+                {!rightCollapsed && (
+                    <PromptPanel
+                        prompt={prompt}
+                        onChange={setPrompt}
+                    />
                 )}
             </div>
         </div>

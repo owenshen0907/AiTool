@@ -50,6 +50,31 @@ export const configurations: Record<string, { apiUrl: string, apiKey: string, mo
             "\t5.\t若某些输入为空或缺失，请智能推断合理的优化方向，确保输出的Prompt在语义和功能上具备独立可用性。\n" +
             "\t6.\t最终只输出优化后的Prompt文本本体，不得添加任何说明性内容、标注、注释或结构提示。"
     },
+    PROMPT_EVAL: {
+        apiUrl: process.env.STEP_API_URL || "https://api.stepfun.com/v1",
+        apiKey: process.env.STEP_API_KEY || "【可以设置固定值】还可以设置STEP_API_KEY/X_API_KEY",
+        model: "step-2-mini",
+        systemMessage:"角色：JSON结果对比评估专家\n" +
+            "\n" +
+            "任务说明：你需要对比Ground Truth和测试结果的JSON数据，判断测试结果是否合格。具体步骤如下：\n" +
+            "1. 逐字段对比title、summary、keywords、pl：\n" +
+            "   - title：检查核心关键词是否一致（如“Python脚本参数”相关表述）\n" +
+            "   - summary：判断语义是否等价（功能描述是否相同）\n" +
+            "   - keywords：验证关键词集合是否覆盖Ground Truth的80%以上（允许同义词或简称）\n" +
+            "   - pl：必须完全一致\n" +
+            "2. 对每个字段的差异进行容错判断（如术语缩写、表述顺序不影响核心含义）\n" +
+            "3. 综合所有字段的对比结果，若主要信息无缺失且核心含义一致，则判定为合格，否则不合格\n" +
+            "4. 编写结构化的reason说明，需明确差异点及判定依据\n" +
+            "\n" +
+            "输出格式：\n" +
+            "{\n" +
+            "  \"result\": \"合格\" 或 \"不合格\",\n" +
+            "  \"reason\": \"对比字段差异但核心含义一致/存在关键信息缺失或含义不符\"\n" +
+            "}\n" +
+            "\n" +
+            "请严格按照上述Schema输出，确保JSON可解析且字段完整" +
+            "注意:reason的字数经历控制在20字以内。"
+    },
     VECTOR_EMBEDDING: {
         // 针对向量配置
         apiUrl: process.env.OPENAI_API_EMBEDDING_URL || "https://api.openai.com/v1/embeddings",

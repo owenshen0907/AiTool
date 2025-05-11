@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import DirectoryManager   from '../../components/DirectoryManager';
-import ContentModal       from '../../components/CreateContentModal';
+import DirectoryManager   from '../../components/directory/DirectoryManager';
+import ContentModal       from '../../components/directory/CreateContentModal';
 import CaseContentPanel   from './CaseContentPanel';
 import type { ContentItem } from '@/lib/models/content';
 
@@ -32,15 +32,29 @@ export default function CaseManagePage() {
         if (!currentDir) { setVisibleItems([]); return; }
         loadDir(currentDir).then(setVisibleItems);
     }, [currentDir, loadDir]);
+    // useEffect(() => {
+    //     console.log('modalVisible 状态变化:', modalVisible);
+    // }, [modalVisible]);
+    //
+    // useEffect(() => {
+    //     console.log('currentDir 状态变化:', currentDir);
+    // }, [currentDir]);
 
     /* ---------- 弹框 ---------- */
     const [modalVisible, setModalVisible] = useState(false);
     const [editingItem , setEditingItem ] = useState<ContentItem | null>(null);
 
     const openCreate = (dirId: string) => {
+        setModalVisible(true);
         setCurrentDir(dirId);
         setEditingItem(null);
-        setModalVisible(true);
+        // 添加更多日志
+        console.log('状态已更新：', {
+            modalVisible: true,
+            dirId: dirId,
+            editingItem: null
+        });
+
     };
 
     const openEdit = (item: ContentItem) => {
@@ -95,6 +109,14 @@ export default function CaseManagePage() {
             orderedIds.map(id => list.find(i => i.id === id)!).filter(Boolean)
         );
     };
+    // 新增：内联保存逻辑
+    const handleUpdateItem = async (item: ContentItem, patch: Partial<ContentItem>) => {
+        if (!currentDir) return;
+        await updateContent(feature, { id: item.id, ...patch, directoryId: currentDir });
+        mutateDir(currentDir, list => list.map(i => (i.id === item.id ? { ...i, ...patch } : i)));
+        // 若正在查看的就是它，也同步选中状态
+        setSelectedItem(prev => (prev?.id === item.id ? { ...item, ...patch } : prev));
+    };
 
     /* ---------- 渲染 ---------- */
     return (
@@ -118,7 +140,7 @@ export default function CaseManagePage() {
                     selectedItem={selectedItem}
                     onSelectItem={id => setSelectedItem(visibleItems.find(i => i.id === id) ?? null)}
                     onCreateItem={() => currentDir && openCreate(currentDir)}
-                    onEditItem={openEdit}
+                    onUpdateItem={handleUpdateItem}
                     onDeleteItem={deleteItem}
                     onReorderItems={reorder}
                 />

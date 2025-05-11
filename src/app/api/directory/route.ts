@@ -41,7 +41,16 @@ export const PUT = withUser(async (req: NextRequest, userId: string) => {
     const body = await req.json();
     const { id, name, parent_id } = body;
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-    const updated = await service.updateDirectoryService(userId, id, { name, parentId: parent_id });
+
+    const updateData: Record<string, any> = {};
+    if (name !== undefined) updateData.name = name;
+
+    // ✅ 只在 parent_id 非空字符串、非 null、非 undefined 时更新
+    if (parent_id !== undefined && parent_id !== null && parent_id !== '') {
+        updateData.parentId = parent_id;
+    }
+
+    const updated = await service.updateDirectoryService(userId, id, updateData);
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(updated);
 });
