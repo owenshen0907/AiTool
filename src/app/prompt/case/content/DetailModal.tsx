@@ -72,7 +72,8 @@ export default function DetailModal({
                                 oldValue={row.groundTruth}
                                 newValue={row.testResult ?? ''}
                                 splitView={true}
-                                onlyHighlightChanges={true}
+                                showDiffOnly={true}              // ↓ 替换 onlyHighlightChanges
+                                extraLinesSurroundingDiff={0}    // 根据需要调整上下文行数
                                 styles={{
                                     variables: {
                                         light: {
