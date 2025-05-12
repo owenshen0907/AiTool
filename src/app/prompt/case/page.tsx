@@ -110,12 +110,38 @@ export default function CaseManagePage() {
         );
     };
     // 新增：内联保存逻辑
-    const handleUpdateItem = async (item: ContentItem, patch: Partial<ContentItem>) => {
+    const handleUpdateItem = async (
+        item: ContentItem,
+        patch: Partial<Pick<ContentItem, 'title' | 'summary' | 'body'>>
+    ) => {
         if (!currentDir) return;
-        await updateContent(feature, { id: item.id, ...patch, directoryId: currentDir });
-        mutateDir(currentDir, list => list.map(i => (i.id === item.id ? { ...i, ...patch } : i)));
-        // 若正在查看的就是它，也同步选中状态
-        setSelectedItem(prev => (prev?.id === item.id ? { ...item, ...patch } : prev));
+
+        // 从 patch 里取出可能要更新的字段
+        const { title, summary, body } = patch;
+
+        // 构造一个“完整”的 payload，确保 title 一定是 string
+        const payload = {
+            id: item.id,
+            directoryId: currentDir,
+            title: title ?? item.title,      // 如果 patch 里没有，就用老的
+            summary: summary ?? item.summary, // summary/body 可选，undefined 也没问题
+            body: body ?? item.body,
+        };
+
+        // 现在 payload.title 肯定不是 undefined，就不会报错了
+        await updateContent(feature, payload);
+
+        // 再更新缓存和选中状态
+        mutateDir(currentDir, list =>
+            list.map(i =>
+                i.id === item.id
+                    ? { ...i, ...(patch as Partial<ContentItem>) }
+                    : i
+            )
+        );
+        setSelectedItem(prev =>
+            prev?.id === item.id ? { ...prev, ...(patch as Partial<ContentItem>) } : prev
+        );
     };
 
     /* ---------- 渲染 ---------- */

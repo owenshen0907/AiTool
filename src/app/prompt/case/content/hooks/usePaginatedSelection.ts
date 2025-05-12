@@ -7,7 +7,7 @@ import type { CaseRow } from '../CaseTable';
 /**
  * Hook that provides pagination and selection toggles
  */
-export function usePaginatedSelection(rows: CaseRow[], pageSize = 20) {
+export function usePaginatedSelection(rows: CaseRow[], pageSize = 10) {
     const [page, setPage] = useState(1);
     const pageCount = useMemo(() => Math.ceil(rows.length / pageSize), [rows, pageSize]);
 

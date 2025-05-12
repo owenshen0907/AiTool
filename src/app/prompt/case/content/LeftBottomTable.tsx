@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import TableToolbar from './TableToolbar';
 import CaseTable from './CaseTable';
+import type { CaseRow } from './CaseTable';
 import { useCaseList } from './hooks/useCaseList';
 import { useImportExport } from './hooks/useImportExport';
 import { usePaginatedSelection } from './hooks/usePaginatedSelection';
@@ -11,6 +12,7 @@ import { useCaseTester } from './hooks/useCaseTester';
 import FileImportInput from './FileImportInput';
 import ImportPreviewModal from './ImportPreviewModal';
 import DetailModal from './DetailModal';
+import { generateExcel } from '@/lib/utils/fileUtils';
 import type { Supplier, Model } from '@/lib/models/model';
 
 interface Props {
@@ -72,7 +74,7 @@ export default function LeftBottomTable({ contentId, prompt }: Props) {
 
     // 自动评估
 // 复用 executeSingle 里的流式解析
-    const evaluateSingle = useCallback(async (row) => {
+    const evaluateSingle = useCallback(async (row: CaseRow) => {
         const sup = suppliers.find(s=>s.id===supplierId);
         if(!sup||!testModel) return;
         let buffer = '';
@@ -137,6 +139,23 @@ export default function LeftBottomTable({ contentId, prompt }: Props) {
             pool.push(runNext());
         }
     }, [rows, evaluateSingle, concurrency]);
+    // ❶ 使用 generateExcel 来导出
+    const handleExportTestResults = useCallback(() => {
+        const data = rows.map(r => ({
+            序号:        r.seq,
+            Case:       r.caseText,
+            'Ground Truth': r.groundTruth,
+            '测试结果':    r.testResult,
+            '是否通过':    r.passed ? '✅ 合格' : '❌ 不合格',
+            原因:        r.reason ?? '',
+        }));
+
+        // 调用 generateExcel，传入一个带 name 的 sheet 数组
+        generateExcel(
+            [{ name: '测试结果', data }],
+            `测试结果_${new Date().toISOString()}.xlsx`
+        );
+    }, [rows]);
 
     return (
         <div className="p-4">
@@ -152,7 +171,18 @@ export default function LeftBottomTable({ contentId, prompt }: Props) {
                     }}
                 />
             )}
-            {detailRow && <DetailModal visible row={detailRow} onClose={() => setDetailRow(null)} />}
+            {detailRow && (
+                <DetailModal
+                    visible
+                    row={detailRow}
+                    onClose={() => setDetailRow(null)}
+                    onSave={(updated: Partial<CaseRow>) => {
+                        // 把部分更新字段合并回原来的那一行
+                        updateRow({ ...detailRow, ...updated });
+                        setDetailRow(null);
+                    }}
+                />
+            )}
             <table className="min-w-full border-collapse border border-gray-300 text-sm">
                 <TableToolbar
                     onAddCase={addRow}
@@ -169,7 +199,7 @@ export default function LeftBottomTable({ contentId, prompt }: Props) {
                     onStartTest={() => executeBatch(rows, updateRow)}
                     onAutoEvaluate={handleAutoEvaluate}
                     onSaveTests={() => {}}
-                    onExportTestResults={() => {}}
+                    onExportTestResults={handleExportTestResults}
                     testing={false}
                 />
 

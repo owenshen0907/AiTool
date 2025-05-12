@@ -5,14 +5,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { promptCaseApi } from '@/lib/api/promptCaseList';
 import type { CaseRow } from '../CaseTable';
 
-/**
- * Hook that manages CRUD operations and dirty state for case rows
- */
 export function useCaseList(contentId: string) {
     const [rows, setRows] = useState<CaseRow[]>([]);
 
+    // 初始拉数据
     useEffect(() => {
-        if (!contentId) return setRows([]);
+        if (!contentId) {
+            setRows([]);
+            return;
+        }
         promptCaseApi.list(contentId).then(list =>
             setRows(list.map(r => ({ ...r, selected: false, dirty: false })))
         );
@@ -36,49 +37,51 @@ export function useCaseList(contentId: string) {
     }, [contentId]);
 
     const updateRow = useCallback((newRow: CaseRow) => {
-        setRows(prev => prev.map(r => r.id === newRow.id ? newRow : r));
+        setRows(prev => prev.map(r => (r.id === newRow.id ? newRow : r)));
     }, []);
 
-    const saveRow = useCallback(async (row: CaseRow) => {
-        if (!row.caseText.trim() || !row.groundTruth.trim()) return;
-        if (row.id.startsWith('new-')) {
+    // 抽取创建/更新单行的逻辑
+    const persist = useCallback(async (r: CaseRow) => {
+        const text = r.caseText?.trim();
+        const truth = r.groundTruth?.trim();
+        if (!text || !truth) return;
+
+        if (r.id.startsWith('new-')) {
             await promptCaseApi.create({
-                caseContentId: row.caseContentId,
-                seq: row.seq,
-                caseText: row.caseText,
-                groundTruth: row.groundTruth,
+                caseContentId: r.caseContentId,
+                seq: r.seq,
+                caseText: text,
+                groundTruth: truth,
             } as any);
         } else {
-            await promptCaseApi.update(row.id, {
-                caseText: row.caseText,
-                groundTruth: row.groundTruth,
+            await promptCaseApi.update(r.id, {
+                caseText: text,
+                groundTruth: truth,
             });
         }
-        const list = await promptCaseApi.list(contentId);
-        setRows(list.map(r => ({ ...r, selected: false, dirty: false })));
-    }, [contentId]);
+    }, []);
 
-    const bulkSave = useCallback(async () => {
-        const dirtyRows = rows.filter(r => r.dirty);
-        for (const d of dirtyRows) {
-            if (!d.caseText.trim() || !d.groundTruth.trim()) continue;
-            if (d.id.startsWith('new-')) {
-                await promptCaseApi.create({
-                    caseContentId: d.caseContentId,
-                    seq: d.seq,
-                    caseText: d.caseText,
-                    groundTruth: d.groundTruth,
-                } as any);
-            } else {
-                await promptCaseApi.update(d.id, {
-                    caseText: d.caseText,
-                    groundTruth: d.groundTruth,
-                });
+    const saveRow = useCallback(
+        async (row: CaseRow) => {
+            await persist(row);
+            // 重新拉最新数据，并重置 selected/dirty
+            const list = await promptCaseApi.list(contentId);
+            setRows(list.map(r => ({ ...r, selected: false, dirty: false })));
+        },
+        [contentId, persist]
+    );
+
+    const bulkSave = useCallback(
+        async () => {
+            const dirtyRows = rows.filter(r => r.dirty);
+            for (const d of dirtyRows) {
+                await persist(d);
             }
-        }
-        const list = await promptCaseApi.list(contentId);
-        setRows(list.map(r => ({ ...r, selected: false, dirty: false })));
-    }, [contentId, rows]);
+            const list = await promptCaseApi.list(contentId);
+            setRows(list.map(r => ({ ...r, selected: false, dirty: false })));
+        },
+        [contentId, rows, persist]
+    );
 
     const deleteRow = useCallback(async (id: string) => {
         if (id.startsWith('new-')) {

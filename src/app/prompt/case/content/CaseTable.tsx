@@ -5,7 +5,6 @@ import React, { FC } from 'react';
 import { Save, Trash2, PlayCircle, Search } from 'lucide-react';
 import type { PromptCaseList } from '@/lib/models/prompt/promptCase';
 
-// 扩展 PromptCaseList，增加 UI 状态字段
 export interface CaseRow extends PromptCaseList {
     selected?:   boolean;
     dirty?:      boolean;
@@ -51,31 +50,33 @@ const CaseTable: FC<CaseTableProps> = ({
                 {idx + 1}
             </td>
 
-            {/* Case 列 */}
+            {/* Case 列（textarea 限制两行） */}
             <td className="border px-2 py-1 w-[30%]">
-                <input
-                    value={row.caseText || ''}
-                    onChange={e =>
-                        onChangeRow({ ...row, caseText: e.target.value, dirty: true })
-                    }
-                    className="w-full border rounded px-1 py-1"
-                />
+          <textarea
+              value={row.caseText || ''}
+              onChange={e =>
+                  onChangeRow({ ...row, caseText: e.target.value, dirty: true })
+              }
+              rows={2}
+              className="w-full border rounded px-1 py-1 resize-none overflow-hidden"
+          />
             </td>
 
-            {/* Ground Truth 列 */}
+            {/* Ground Truth 列（textarea 限制两行） */}
             <td className="border px-2 py-1 w-[30%]">
-                <input
-                    value={row.groundTruth || ''}
-                    onChange={e =>
-                        onChangeRow({ ...row, groundTruth: e.target.value, dirty: true })
-                    }
-                    className="w-full border rounded px-1 py-1"
-                />
+          <textarea
+              value={row.groundTruth || ''}
+              onChange={e =>
+                  onChangeRow({ ...row, groundTruth: e.target.value, dirty: true })
+              }
+              rows={2}
+              className="w-full border rounded px-1 py-1 resize-none overflow-hidden"
+          />
             </td>
 
-            {/* 测试结果 列 */}
+            {/* 测试结果 列（只读，line-clamp-2） */}
             <td className="border px-2 py-1 w-[30%]">
-                {row.testResult ?? '—'}
+                <p className="line-clamp-2">{row.testResult ?? '—'}</p>
             </td>
 
             {/* 是否通过 */}
@@ -83,14 +84,13 @@ const CaseTable: FC<CaseTableProps> = ({
                 {row.passed == null ? '—' : row.passed ? '✅' : '❌'}
             </td>
 
-            {/* 原因 */}
-            <td className="border px-2 py-1 w-32 overflow-hidden whitespace-nowrap text-ellipsis">
-                {row.reason ?? '—'}
+            {/* 原因 列（只读，line-clamp-2） */}
+            <td className="border px-2 py-1 w-32">
+                <p className="line-clamp-2">{row.reason ?? '—'}</p>
             </td>
 
             {/* 操作 */}
             <td className="border px-2 py-1 w-32 text-center space-x-1">
-                {/* 保存 */}
                 <button
                     onClick={() => {
                         if (confirm('保存后将会覆盖原 case，确认要保存吗？')) {
@@ -102,8 +102,6 @@ const CaseTable: FC<CaseTableProps> = ({
                 >
                     <Save size={16} strokeWidth={2} />
                 </button>
-
-                {/* 执行单条测试 */}
                 <button
                     onClick={() => onExecuteRow(row.id)}
                     className="p-1 text-blue-600"
@@ -111,8 +109,6 @@ const CaseTable: FC<CaseTableProps> = ({
                 >
                     <PlayCircle size={16} strokeWidth={2} />
                 </button>
-
-                {/* 查看详情 */}
                 <button
                     onClick={() => onViewDetail(row)}
                     className="p-1 text-gray-600"
@@ -120,11 +116,13 @@ const CaseTable: FC<CaseTableProps> = ({
                 >
                     <Search size={16} strokeWidth={2} />
                 </button>
-
-                {/* 删除 */}
                 <button
                     onClick={() => {
-                        if (confirm('删除后将从数据库移除，无法恢复，确认要删除吗？')) {
+                        if (
+                            confirm(
+                                '删除后将从数据库移除，无法恢复，确认要删除吗？'
+                            )
+                        ) {
                             onDeleteRow(row.id);
                         }
                     }}
