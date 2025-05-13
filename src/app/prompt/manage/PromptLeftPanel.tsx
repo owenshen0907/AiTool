@@ -26,7 +26,6 @@ interface Props {
     onSearch: (term: string) => void;
 }
 
-// 确保 children 永不为 undefined
 type TreeNode = Omit<PromptNode, 'children'> & { children: TreeNode[] };
 
 function buildTree(nodes: PromptNode[]): TreeNode[] {
@@ -34,7 +33,7 @@ function buildTree(nodes: PromptNode[]): TreeNode[] {
     nodes.forEach(n => (map[n.id] = { ...n, children: [] }));
     const roots: TreeNode[] = [];
     Object.values(map).forEach(node => {
-        if (node.parentId && map[node.parentId]) {
+        if (node.parentId != null && map[node.parentId]) {
             map[node.parentId].children.push(node);
         } else {
             roots.push(node);
@@ -57,19 +56,17 @@ export default function PromptLeftPanel({
                                             searchResults,
                                             onSearch,
                                         }: Props) {
-    // 构建整棵树并缓存
     const fullTree = useMemo(() => buildTree(nodes), [nodes]);
-
-    // 仅用于输入框的本地状态，不再用于过滤
     const [search, setSearch] = useState('');
-
-    // 哪些节点要展开（空集 or 根据 searchResults 自动展开）
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const hideTimer = useRef<NodeJS.Timeout>();
+
     useEffect(() => {
         if (!searchResults) return;
         const toOpen = new Set<string>();
         const matched = new Set(searchResults.map(n => n.id));
-        const parentMap = new Map(nodes.map(n => [n.id, n.parentId]));
+        const parentMap = new Map(nodes.map(n => [n.id, n.parentId] as const));
         matched.forEach(id => {
             let p = parentMap.get(id) ?? null;
             while (p) {
@@ -81,9 +78,6 @@ export default function PromptLeftPanel({
         setExpanded(toOpen);
     }, [searchResults, nodes]);
 
-    // 菜单状态
-    const [activeMenu, setActiveMenu] = useState<string | null>(null);
-    const hideTimer = useRef<NodeJS.Timeout>();
     useEffect(() => () => hideTimer.current && clearTimeout(hideTimer.current), []);
 
     const toggleNode = (id: string) => {
@@ -94,12 +88,12 @@ export default function PromptLeftPanel({
         });
     };
 
-    // 渲染单个节点
     const renderNode = (node: TreeNode, level = 0): JSX.Element => {
         const isDir = node.type === 'dir';
         const isExpanded = expanded.has(node.id);
         const hasChildren = node.children.length > 0;
         const isSel = node.id === selectedId;
+        const srcNode = nodes.find(n => n.id === node.id);
 
         return (
             <li key={node.id}>
@@ -116,15 +110,64 @@ export default function PromptLeftPanel({
                     onDragStart={e => e.dataTransfer.setData('text/plain', node.id)}
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => {
+                        e.preventDefault();
                         const srcId = e.dataTransfer.getData('text/plain');
-                        if (isDir) {
-                            onMove(srcId, node.id);
+                        const src = nodes.find(n => n.id === srcId);
+                        if (!src) return;
+
+                        // 根目录仅能在根级排序
+                        if (src.type === 'dir' && src.parentId == null) {
+                            if (node.parentId != null) {
+                                alert('根目录只能在根级内排序');
+                                return;
+                            }
+                            if (srcId === node.id) return;
+                            if (confirm(`确定将根目录 "${src.title}" 排序到 "${node.title}" 之前吗？`)) {
+                                onReorder(srcId, node.id);
+                            }
+                            return;
+                        }
+
+                        // 目录节点（非根）
+                        if (src.type === 'dir') {
+                            if (node.type === 'dir') {
+                                // 拖到目录上：移动目录
+                                if (confirm(`确定将目录 "${src.title}" 移动到目录 "${node.title}" 吗？`)) {
+                                    onMove(srcId, node.id);
+                                }
+                            } else {
+                                // 拖到文件上：同级排序
+                                if (src.parentId !== node.parentId) {
+                                    alert('请在同一目录内排序目录');
+                                    return;
+                                }
+                                if (srcId === node.id) return;
+                                if (confirm(`确定将目录 "${src.title}" 排序到 "${node.title}" 之前吗？`)) {
+                                    onReorder(srcId, node.id);
+                                }
+                            }
+                            return;
+                        }
+
+                        // 文件节点
+                        if (node.type === 'dir') {
+                            // 拖到目录上：移动文件
+                            if (confirm(`确定将文件 "${src.title}" 移动到目录 "${node.title}" 吗？`)) {
+                                onMove(srcId, node.id);
+                            }
                         } else {
-                            onReorder(srcId, node.id);
+                            // 拖到文件上：同级排序
+                            if (src.parentId !== node.parentId) {
+                                alert('请将文件拖至目标目录以移动');
+                                return;
+                            }
+                            if (srcId === node.id) return;
+                            if (confirm(`确定将文件 "${src.title}" 排序到文件 "${node.title}" 之前吗？`)) {
+                                onReorder(srcId, node.id);
+                            }
                         }
                     }}
                 >
-                    {/* 图标 + 标题 */}
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
                         {isDir ? (
                             <button
@@ -145,7 +188,6 @@ export default function PromptLeftPanel({
                         <div className="truncate">{node.title}</div>
                     </div>
 
-                    {/* 菜单 */}
                     <div className="relative flex-shrink-0">
                         <button
                             className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
@@ -192,10 +234,6 @@ export default function PromptLeftPanel({
                                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                                         onClick={() => {
                                             setActiveMenu(null);
-                                            if (level >= 2) {
-                                                alert('最多三层目录');
-                                                return;
-                                            }
                                             onNewDir(node);
                                         }}
                                     >
@@ -220,9 +258,7 @@ export default function PromptLeftPanel({
                     </div>
                 </div>
 
-                {hasChildren && isExpanded && (
-                    <ul>{node.children.map(c => renderNode(c, level + 1))}</ul>
-                )}
+                {hasChildren && isExpanded && <ul>{node.children.map(c => renderNode(c, level + 1))}</ul>}
             </li>
         );
     };
@@ -252,9 +288,7 @@ export default function PromptLeftPanel({
                     </button>
                 </div>
             )}
-            <ul className="px-1 pt-1">
-                {fullTree.map(n => renderNode(n))}
-            </ul>
+            <ul className="px-1 pt-1">{fullTree.map(n => renderNode(n))}</ul>
         </div>
     );
 }

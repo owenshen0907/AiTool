@@ -109,7 +109,8 @@ export default function DirectoryNode({
                 style={{ paddingLeft: indent }}
                 onClick={() => {
                     onSelectDir(node.id);
-                    if (isCollapsible) toggleExpand(node.id);
+                    // if (isCollapsible) toggleExpand(node.id);
+                    toggleExpand(node.id);
                 }}
             >
                 {!collapsed && (
@@ -117,7 +118,7 @@ export default function DirectoryNode({
                         {/* Collapse arrow */}
                         <button
                             className={`mr-1 transform transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
-                            onClick={e => { e.stopPropagation(); toggleExpand(node.id); }}
+                            onClick={e => { e.stopPropagation();onSelectDir(node.id); toggleExpand(node.id); }}
                         >
                             <ChevronRight size={14} />
                         </button>

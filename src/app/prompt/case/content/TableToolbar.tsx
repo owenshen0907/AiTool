@@ -3,7 +3,7 @@
 import React, { FC, useState, useEffect } from 'react';
 import { Plus, MoreVertical } from 'lucide-react';
 import { Menu } from '@headlessui/react';
-import SupplierModelSelector from '../../../components/info/SupplierModelSelector';
+import SupplierModelSelector from '@/components/info/SupplierModelSelector';
 import type { Supplier, Model } from '@/lib/models/model';
 
 export interface TableToolbarProps {
@@ -165,7 +165,7 @@ const TableToolbar: FC<TableToolbarProps> = ({
                     <button
                         onClick={onStartTest}
                         disabled={testing}
-                        className={`btn-blue ${testing ? 'opacity-50' : ''}`}
+                        className={`px-2 py-1 bg-blue-600 text-white rounded disabled:opacity-50 ${testing ? '' : ''}`}
                     >
                         {testing ? '测试中…' : '开始测试'}
                         {testing && <span className="ml-2 animate-spin">⏳</span>}

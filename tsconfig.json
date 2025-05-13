@@ -1,40 +1,62 @@
 {
   "compilerOptions": {
+    // 编译目标：把代码转成符合 ES2017 特性的 JS
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+
+    // 用到的内置库声明：DOM API、ESNext 特性等
+    "lib": ["dom", "dom.iterable", "esnext"],
+
+    // 允许编译 .js 文件
     "allowJs": true,
+
+    // 跳过第三方声明文件的类型检查，加快编译
     "skipLibCheck": true,
+
+    // 开启所有严格类型检查选项
     "strict": true,
+
+    // 不生成输出文件，只做类型检查
     "noEmit": true,
+
+    // 兼容 CommonJS 和 ESModule 的互操作
     "esModuleInterop": true,
+
+    // 输出模块格式为 ES Module
     "module": "esnext",
+
+    // 模块解析策略，Node 风格
     "moduleResolution": "node",
+
+    // 允许从 JSON 文件 import
     "resolveJsonModule": true,
+
+    // 将每个文件视为单独的模块，避免在某些情况下报错
     "isolatedModules": true,
+
+    // JSX 保留交给 Babel/Next.js 处理
     "jsx": "preserve",
+
+    // 增量编译，加快重编译速度
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+
+    // Next.js 专用插件
+    "plugins": [{ "name": "next" }],
+
+    // —— 路径别名配置 ——
+    // “@/*” 会映射到 “./src/*”
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@/components/*": ["src/app/components/*"]
     }
+
+    // 注意：一旦用了 paths，就 **必须** 配置 baseUrl
+    // （否则编译器不知道从哪开始解析 “@/”）
+    // 详见下一节
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+
+  // 指定要纳入编辑器 / 编译的文件
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+
+  // 排除 node_modules 目录
+  "exclude": ["node_modules"]
 }

@@ -3,6 +3,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import type { ContentItem } from '@/lib/models/content';
+import InstructionGuide from './InstructionGuide';
+
 import { Pencil, Save, X } from 'lucide-react';
 
 interface Props {
@@ -22,7 +24,7 @@ export default function LeftTopPanel({ item, onSave }: Props) {
         setEditMode(false);
     }, [item?.id]);
 
-    if (!item) return <div className="flex h-full items-center justify-center text-gray-400">未选择内容</div>;
+    if (!item) return <InstructionGuide />;
 
     const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleString() : '—';
 

@@ -1,15 +1,21 @@
+// src/app/components/NavBar.tsx
 'use client';
 
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import UserInfoModal from './info/UserInfoModal';          // 保持不变
-import SupplierModelManagement from './info/SupplierModelManagement'; // 新的管理组件
+import UserInfoModal from './info/UserInfoModal';
+import SupplierModelManagement from './info/SupplierModelManagement';
+import { menuData, MenuItem } from './menuData';
 
-interface MenuItem {
-    title: string;
-    href?: string;
-    children?: MenuItem[];
+interface UserType {
+    id: string;
+    data: {
+        displayName?: string;
+        name: string;
+        avatar?: string;
+    };
+    models: any[];
 }
 
 function HoverMenu({
@@ -62,7 +68,7 @@ function HoverMenu({
             py-1 z-[${zIndex}]
           `}
                 >
-                    {item.children.map((child) => (
+                    {item.children.map(child => (
                         <HoverMenu key={child.title} item={child} level={level + 1} />
                     ))}
                 </ul>
@@ -71,14 +77,8 @@ function HoverMenu({
     );
 }
 
-interface User {
-    id: string;
-    data: { displayName?: string; name: string; avatar?: string };
-    models: any[];
-}
-
-export default function NavBar() {
-    const [userData, setUserData] = useState<User | null>(null);
+export default function NavBar(): JSX.Element {
+    const [userData, setUserData] = useState<UserType | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showUserModal, setShowUserModal] = useState(false);
     const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -86,6 +86,7 @@ export default function NavBar() {
 
     useEffect(() => {
         const abort = new AbortController();
+
         async function fetchUser() {
             try {
                 const res = await fetch('/api/user/get', {
@@ -98,7 +99,7 @@ export default function NavBar() {
                 setUserData({
                     id: user.data.name,
                     data: user.data,
-                    models: user.model_list ?? [],
+                    models: user.model_list || [],
                 });
                 sessionStorage.setItem('userData', JSON.stringify(user));
             } catch (err) {
@@ -106,8 +107,14 @@ export default function NavBar() {
                 console.error(err);
             }
         }
+
         const cached = sessionStorage.getItem('userData');
-        cached ? setUserData(JSON.parse(cached)) : fetchUser();
+        if (cached) {
+            setUserData(JSON.parse(cached));
+        } else {
+            fetchUser();
+        }
+
         return () => abort.abort();
     }, []);
 
@@ -127,150 +134,79 @@ export default function NavBar() {
         userTimer.current = window.setTimeout(() => setDropdownOpen(false), 150);
     };
 
-    const menuData: MenuItem[] = [
-        { title: '首页', href: '/' },
-        {
-            title: 'Prompt',
-            children: [
-                { title: 'Prompt管理', href: '/prompt/manage' },
-                { title: 'Prompt调试', href: '/prompt/case' },
-            ],
-        },
-        {
-            title: '知识库',
-            children: [
-                { title: '知识库管理', href: '/kb/manage' },
-                { title: '文件管理', href: '/kb/files' },
-            ],
-        },
-        {
-            title: '模型微调',
-            children: [
-                { title: '微调管理', href: '/fine-tune/manage' },
-                { title: '数据集管理', href: '/fine-tune/datasets' },
-            ],
-        },
-        {
-            title: '语音',
-            children: [
-                { title: 'ASR', href: '/speech/asr' },
-                { title: 'TTS', href: '/speech/tts' },
-                { title: 'Real-Time', href: '/speech/real-time' },
-            ],
-        },
-        { title: '图片', children: [{ title: '图片生成', href: '/image/generate' }] },
-        {
-            title: '实用Agent',
-            children: [
-                {
-                    title: '视频',
-                    children: [
-                        { title: '视频总结', href: '/agent/video/summary' },
-                        { title: '生成剪辑脚本', href: '/agent/video/script' },
-                        { title: '生成文案', href: '/agent/video/copy' },
-                    ],
-                },
-                {
-                    title: '图片',
-                    children: [
-                        { title: '批量分析', href: '/agent/image/batch-analysis' },
-                        { title: '批量标注', href: '/agent/image/batch-annotate' },
-                    ],
-                },
-                {
-                    title: '文件',
-                    children: [
-                        { title: '文本总结', href: '/agent/file/text-summary' },
-                        { title: '图片总结', href: '/agent/file/image-summary' },
-                    ],
-                },
-                {
-                    title: '代码',
-                    children: [
-                        { title: '生成README', href: '/agent/code/readme' },
-                        { title: '生成接口文档', href: '/agent/code/docs' },
-                    ],
-                },
-                { title: '其它', children: [{ title: '自定义测试', href: '/agent/other/custom-test' }] },
-            ],
-        },
-    ];
-
     return (
         <>
             <nav className="flex items-center justify-between px-8 h-14 bg-white shadow-md relative z-50">
+                {/* Logo */}
                 <div className="text-2xl font-semibold text-blue-600">AiTool</div>
 
+                {/* 主菜单 */}
                 <ul className="flex space-x-4">
-                    {menuData.map((item) => (
+                    {menuData.map(item => (
                         <HoverMenu key={item.title} item={item} />
                     ))}
                 </ul>
-                {/* GitHub 图标链接 */}
-                <a
-                    href="https://github.com/owenshen0907/AiTool"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:opacity-80"
-                >
-                    <Image
-                        src="/icons/github.svg"
-                        alt="GitHub"
-                        width={24}
-                        height={24}
-                    />
-                </a>
 
-                {/* 用户头像与下拉 */}
-                <div
-                    className="relative flex items-center"
-                    onMouseEnter={onUserEnter}
-                    onMouseLeave={onUserLeave}
-                >
-                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold cursor-pointer">
-                        {firstChar}
-                    </div>
+                {/* 右侧：GitHub + 用户 */}
+                <div className="flex items-center space-x-4">
+                    {/* GitHub 图标 */}
+                    <a
+                        href="https://github.com/owenshen0907/AiTool"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:opacity-80"
+                    >
+                        <Image src="/icons/github.svg" alt="GitHub" width={24} height={24} />
+                    </a>
 
-                    {dropdownOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg">
-                            <div
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => {
-                                    setShowUserModal(true);
-                                    setDropdownOpen(false);
-                                }}
-                            >
-                                个人信息
-                            </div>
-                            <div
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => {
-                                    setShowSupplierModal(true);
-                                    setDropdownOpen(false);
-                                }}
-                            >
-                                供应商＆模型管理
-                            </div>
-                            <div
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={handleLogout}
-                            >
-                                注销登录
-                            </div>
+                    {/* 用户头像 & 下拉 */}
+                    <div
+                        className="relative flex items-center"
+                        onMouseEnter={onUserEnter}
+                        onMouseLeave={onUserLeave}
+                    >
+                        <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold cursor-pointer">
+                            {firstChar}
                         </div>
-                    )}
+
+                        {dropdownOpen && (
+                            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-lg">
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => {
+                                        setShowUserModal(true);
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    个人信息
+                                </div>
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => {
+                                        setShowSupplierModal(true);
+                                        setDropdownOpen(false);
+                                    }}
+                                >
+                                    供应商＆模型管理
+                                </div>
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={handleLogout}
+                                >
+                                    注销登录
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </nav>
 
-            {/* 个人信息弹框 */}
-            {showUserModal && (
-                <UserInfoModal
-                    data={userData?.data || {}}
-                    onClose={() => setShowUserModal(false)}
-                />
+            {/* 个人信息弹窗 */}
+            {showUserModal && userData && (
+                <UserInfoModal data={userData.data} onClose={() => setShowUserModal(false)} />
             )}
 
-            {/* 新的供应商 & 模型管理弹框 */}
+            {/* 供应商 & 模型管理弹窗 */}
             {showSupplierModal && (
                 <SupplierModelManagement onClose={() => setShowSupplierModal(false)} />
             )}

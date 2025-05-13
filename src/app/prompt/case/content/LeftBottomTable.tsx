@@ -22,6 +22,8 @@ interface Props {
 
 export default function LeftBottomTable({ contentId, prompt }: Props) {
     const [concurrency, setConcurrency] = useState(1);
+    const [testing, setTesting]     = useState(false);
+
 
     // 从 hook 里拿到操作 rows 的方法
     const { rows, addRow, updateRow, saveRow, bulkSave, deleteRow, setRows } =
@@ -156,8 +158,17 @@ export default function LeftBottomTable({ contentId, prompt }: Props) {
             `测试结果_${new Date().toISOString()}.xlsx`
         );
     }, [rows]);
+    const handleStartTest = async () => {
+        setTesting(true);
+        try {
+            await executeBatch(rows, updateRow);
+        } finally {
+            setTesting(false);
+        }
+    };
 
     return (
+
         <div className="p-4">
             <FileImportInput onFileParsed={handleFile} />
             {previewRows && (
@@ -196,11 +207,13 @@ export default function LeftBottomTable({ contentId, prompt }: Props) {
                     onModelChange={setTestModel}
                     concurrency={concurrency}
                     onConcurrencyChange={setConcurrency}
-                    onStartTest={() => executeBatch(rows, updateRow)}
+                    // onStartTest={() => executeBatch(rows, updateRow)}
+                    onStartTest={handleStartTest}
                     onAutoEvaluate={handleAutoEvaluate}
                     onSaveTests={() => {}}
                     onExportTestResults={handleExportTestResults}
-                    testing={false}
+                    // testing={false}
+                    testing={testing}
                 />
 
                 <thead>
