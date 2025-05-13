@@ -44,6 +44,7 @@
 
     // —— 路径别名配置 ——
     // “@/*” 会映射到 “./src/*”
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["src/app/components/*"]
