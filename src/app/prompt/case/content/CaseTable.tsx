@@ -1,4 +1,3 @@
-// File: app/prompt/case/content/CaseTable.tsx
 'use client';
 
 import React, { FC } from 'react';
@@ -52,26 +51,26 @@ const CaseTable: FC<CaseTableProps> = ({
 
             {/* Case 列（textarea 限制两行） */}
             <td className="border px-2 py-1 w-[30%]">
-          <textarea
-              value={row.caseText || ''}
-              onChange={e =>
-                  onChangeRow({ ...row, caseText: e.target.value, dirty: true })
-              }
-              rows={2}
-              className="w-full border rounded px-1 py-1 resize-none overflow-hidden"
-          />
+                <textarea
+                    value={row.caseText || ''}
+                    onChange={e =>
+                        onChangeRow({ ...row, caseText: e.target.value, dirty: true })
+                    }
+                    rows={2}
+                    className="w-full border rounded px-1 py-1 resize-none overflow-hidden"
+                />
             </td>
 
             {/* Ground Truth 列（textarea 限制两行） */}
             <td className="border px-2 py-1 w-[30%]">
-          <textarea
-              value={row.groundTruth || ''}
-              onChange={e =>
-                  onChangeRow({ ...row, groundTruth: e.target.value, dirty: true })
-              }
-              rows={2}
-              className="w-full border rounded px-1 py-1 resize-none overflow-hidden"
-          />
+                <textarea
+                    value={row.groundTruth || ''}
+                    onChange={e =>
+                        onChangeRow({ ...row, groundTruth: e.target.value, dirty: true })
+                    }
+                    rows={2}
+                    className="w-full border rounded px-1 py-1 resize-none overflow-hidden"
+                />
             </td>
 
             {/* 测试结果 列（只读，line-clamp-2） */}
@@ -79,9 +78,9 @@ const CaseTable: FC<CaseTableProps> = ({
                 <p className="line-clamp-2">{row.testResult ?? '—'}</p>
             </td>
 
-            {/* 是否通过 */}
+            {/* 是否通过（默认显示✅） */}
             <td className="border px-2 py-1 w-20 text-center">
-                {row.passed == null ? '—' : row.passed ? '✅' : '❌'}
+                {row.passed === false ? '❌' : '✅'}
             </td>
 
             {/* 原因 列（只读，line-clamp-2） */}
