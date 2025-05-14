@@ -4,7 +4,7 @@ import {
     getModelsBySupplier,
     createModel,
     updateModel,
-    clearDefaultModelForSupplier,
+    clearDefaultModelForSupplierAndType,
     clearDefaultModelForSupplierByModel,
 } from '@/lib/repositories/modelRepository';
 import { withUser } from '@/lib/api/auth';
@@ -74,7 +74,7 @@ export const POST = withUser(async (req: NextRequest) => {
 
     try {
         if (is_default) {
-            await clearDefaultModelForSupplier(supplier_id);
+            await clearDefaultModelForSupplierByModel,(supplier_id);
         }
         const model = await createModel({
             supplierId: supplier_id,
