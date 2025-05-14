@@ -146,7 +146,7 @@ const TableToolbar: FC<TableToolbarProps> = ({
                         selectedSupplierId={supplierId}
                         onSupplierChange={onSupplierChange}
                         models={models}
-                        selectedModel={model}
+                        selectedModelName={model}
                         onModelChange={onModelChange}
                     />
                     {/* 并发设置 */}

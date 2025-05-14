@@ -27,9 +27,9 @@ export const menuData: MenuItem[] = [
             {
                 title: '语音处理',
                 children: [
-                    { title: 'ASR 识别', href: '/speech/asr' },
-                    { title: 'TTS 合成', href: '/speech/tts' },
-                    { title: '实时语音', href: '/speech/real-time' },
+                    { title: 'ASR 识别', href: '/audio/asr' },
+                    { title: 'TTS 合成', href: '/audio/tts' },
+                    { title: '实时语音', href: '/audio/real-time' },
                 ],
             },
             {

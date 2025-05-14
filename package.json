@@ -15,6 +15,7 @@
     "casdoor-js-sdk": "^0.16.0",
     "dotenv": "^16.4.7",
     "file-saver": "^2.0.5",
+    "http-proxy": "^1.18.1",
     "idb": "^8.0.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.503.0",
@@ -30,6 +31,7 @@
     "react-markdown": "^9.0.3",
     "remark-gfm": "^4.0.1",
     "uuid": "^11.1.0",
+    "ws": "^8.18.2",
     "xlsx": "^0.18.5",
     "zod": "^3.24.3"
   },

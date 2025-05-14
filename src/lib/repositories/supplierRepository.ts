@@ -10,9 +10,10 @@ export async function getSuppliersByUser(userId: string): Promise<Supplier[]> {
         abbreviation: string;
         api_key: string;
         api_url: string;
+        wssurl: string | null;
         is_default: boolean;
     }>(
-        `SELECT id, name, abbreviation, api_key, api_url, is_default
+        `SELECT id, name, abbreviation, api_key, api_url, wssurl, is_default
          FROM ai_suppliers
          WHERE user_id = $1
          ORDER BY created_at DESC`,
@@ -24,6 +25,7 @@ export async function getSuppliersByUser(userId: string): Promise<Supplier[]> {
         abbreviation: r.abbreviation,
         apiKey: r.api_key,
         apiUrl: r.api_url,
+        wssUrl: r.wssurl,          // 新增
         isDefault: r.is_default,
     }));
 }
@@ -35,11 +37,21 @@ export async function createSupplier(
         abbreviation: string;
         apiKey: string;
         apiUrl: string;
+        wssUrl?: string;         // 可选
         userId: string;
         isDefault?: boolean;
     }
 ): Promise<Supplier> {
-    const { name, abbreviation, apiKey, apiUrl, userId, isDefault = false } = payload;
+    const {
+        name,
+        abbreviation,
+        apiKey,
+        apiUrl,
+        wssUrl = null,           // 默认 null
+        userId,
+        isDefault = false
+    } = payload;
+
     // 如果新建时要设默认，则先清空其他默认
     if (isDefault) {
         await pool.query(
@@ -47,19 +59,23 @@ export async function createSupplier(
             [userId]
         );
     }
+
     const res = await pool.query<{
         id: string;
         name: string;
         abbreviation: string;
         api_key: string;
         api_url: string;
+        wssurl: string | null;
         is_default: boolean;
     }>(
-        `INSERT INTO ai_suppliers (name, abbreviation, api_key, api_url, user_id, is_default)
-         VALUES ($1,$2,$3,$4,$5,$6)
-             RETURNING id, name, abbreviation, api_key, api_url, is_default`,
-        [name, abbreviation, apiKey, apiUrl, userId, isDefault]
+        `INSERT INTO ai_suppliers
+             (name, abbreviation, api_key, api_url, wssurl, user_id, is_default)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING id, name, abbreviation, api_key, api_url, wssurl, is_default`,
+        [name, abbreviation, apiKey, apiUrl, wssUrl, userId, isDefault]
     );
+
     const r = res.rows[0];
     return {
         id: r.id,
@@ -67,6 +83,7 @@ export async function createSupplier(
         abbreviation: r.abbreviation,
         apiKey: r.api_key,
         apiUrl: r.api_url,
+        wssUrl: r.wssurl,         // 新增
         isDefault: r.is_default,
     };
 }
@@ -81,10 +98,11 @@ export async function getSupplierById(
         abbreviation: string;
         api_key: string;
         api_url: string;
+        wssurl: string | null;
         user_id: string;
         is_default: boolean;
     }>(
-        `SELECT id, name, abbreviation, api_key, api_url, user_id, is_default
+        `SELECT id, name, abbreviation, api_key, api_url, wssurl, user_id, is_default
          FROM ai_suppliers
          WHERE id = $1`,
         [id]
@@ -97,6 +115,7 @@ export async function getSupplierById(
         abbreviation: r.abbreviation,
         apiKey: r.api_key,
         apiUrl: r.api_url,
+        wssUrl: r.wssurl,         // 新增
         userId: r.user_id,
         isDefault: r.is_default,
     };
@@ -110,6 +129,7 @@ export async function updateSupplier(
         abbreviation?: string;
         apiKey?: string;
         apiUrl?: string;
+        wssUrl?: string | null;  // 可选
         isDefault?: boolean;
     },
     userId: string
@@ -146,6 +166,10 @@ export async function updateSupplier(
         sets.push(`api_url = $${idx++}`);
         values.push(payload.apiUrl);
     }
+    if (payload.wssUrl !== undefined) {
+        sets.push(`wssurl = $${idx++}`);   // 新增
+        values.push(payload.wssUrl);
+    }
     if (payload.isDefault !== undefined) {
         sets.push(`is_default = $${idx++}`);
         values.push(payload.isDefault);
@@ -156,16 +180,22 @@ export async function updateSupplier(
     sets.push(`updated_at = NOW()`);
     values.push(id); // for WHERE
 
-    const sql = `UPDATE ai_suppliers SET ${sets.join(', ')}
-               WHERE id = $${idx} RETURNING id, name, abbreviation, api_key, api_url, is_default`;
+    const sql = `
+        UPDATE ai_suppliers
+        SET ${sets.join(', ')}
+        WHERE id = $${idx}
+            RETURNING id, name, abbreviation, api_key, api_url, wssurl, is_default
+    `;
     const res = await pool.query<{
         id: string;
         name: string;
         abbreviation: string;
         api_key: string;
         api_url: string;
+        wssurl: string | null;
         is_default: boolean;
     }>(sql, values);
+
     const r = res.rows[0];
     return {
         id: r.id,
@@ -173,6 +203,7 @@ export async function updateSupplier(
         abbreviation: r.abbreviation,
         apiKey: r.api_key,
         apiUrl: r.api_url,
+        wssUrl: r.wssurl,         // 新增
         isDefault: r.is_default,
     };
 }

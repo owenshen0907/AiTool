@@ -26,36 +26,45 @@ CREATE TABLE IF NOT EXISTS user_info (
     account_level INTEGER
 );
 
--- AI 供应商表
+-- AI 供应商表（含新增的 wssurl 字段，可为空）
 CREATE TABLE IF NOT EXISTS ai_suppliers (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name          TEXT NOT NULL,
-    abbreviation  TEXT NOT NULL,
-    api_key       TEXT NOT NULL,
-    api_url       TEXT NOT NULL,
+    id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    name          TEXT        NOT NULL,
+    abbreviation  TEXT        NOT NULL,
+    api_key       TEXT        NOT NULL,
+    api_url       TEXT        NOT NULL,
+    wssurl        TEXT,  -- WebSocket URL，可为空
     user_id       VARCHAR(50) NOT NULL REFERENCES user_info(user_id) ON DELETE CASCADE,
-    is_default    BOOLEAN NOT NULL DEFAULT FALSE,
+    is_default    BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_suppliers_user_id ON ai_suppliers(user_id);
 
--- 模型表
+-- 模型表（已调整 model_type、并新增输入/输出字段及 supports_websocket）
 CREATE TABLE IF NOT EXISTS models (
-    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    supplier_id             UUID NOT NULL REFERENCES ai_suppliers(id) ON DELETE CASCADE,
-    name                    TEXT NOT NULL,
-    model_type              TEXT NOT NULL CHECK (model_type IN ('chat','non-chat')),
-    supports_image_input    BOOLEAN NOT NULL DEFAULT FALSE,
-    supports_video_input    BOOLEAN NOT NULL DEFAULT FALSE,
-    supports_audio_output   BOOLEAN NOT NULL DEFAULT FALSE,
-    supports_json_mode      BOOLEAN NOT NULL DEFAULT FALSE,
-    supports_tool           BOOLEAN NOT NULL DEFAULT FALSE,
-    supports_web_search     BOOLEAN NOT NULL DEFAULT FALSE,
-    supports_deep_thinking  BOOLEAN NOT NULL DEFAULT FALSE,
-    is_default              BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                       UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    supplier_id              UUID        NOT NULL REFERENCES ai_suppliers(id) ON DELETE CASCADE,
+    name                     TEXT        NOT NULL,
+    model_type               TEXT        NOT NULL
+                                      CHECK (model_type IN ('chat','audio','image','video','other')),
+    -- 输入能力
+    supports_audio_input     BOOLEAN     NOT NULL DEFAULT FALSE,  -- 新增：音频输入
+    supports_image_input     BOOLEAN     NOT NULL DEFAULT FALSE,
+    supports_video_input     BOOLEAN     NOT NULL DEFAULT FALSE,
+    -- 输出能力
+    supports_audio_output    BOOLEAN     NOT NULL DEFAULT FALSE,
+    supports_image_output    BOOLEAN     NOT NULL DEFAULT FALSE,  -- 新增：图片输出
+    supports_video_output    BOOLEAN     NOT NULL DEFAULT FALSE,  -- 新增：视频输出
+    -- 其他能力
+    supports_json_mode       BOOLEAN     NOT NULL DEFAULT FALSE,
+    supports_tool            BOOLEAN     NOT NULL DEFAULT FALSE,
+    supports_web_search      BOOLEAN     NOT NULL DEFAULT FALSE,
+    supports_deep_thinking   BOOLEAN     NOT NULL DEFAULT FALSE,
+    supports_websocket       BOOLEAN     NOT NULL DEFAULT FALSE,  -- 新增：WebSocket 支持
+    is_default               BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_models_supplier_id ON models(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_models_model_type   ON models(model_type);

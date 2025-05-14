@@ -15,6 +15,7 @@ export default function EditSupplierModal({ supplier, onClose, onSaved }: EditSu
     const [abbreviation, setAbbreviation] = useState(supplier.abbreviation);
     const [apiKey, setApiKey] = useState(supplier.apiKey);
     const [apiUrl, setApiUrl] = useState(supplier.apiUrl);
+    const [wssUrl, setWssUrl] = useState(supplier.wssUrl || '');  // 新增
     const [isDefault, setIsDefault] = useState(supplier.isDefault);
     const [loading, setLoading] = useState(false);
 
@@ -30,6 +31,7 @@ export default function EditSupplierModal({ supplier, onClose, onSaved }: EditSu
                     abbreviation,
                     api_key: apiKey,
                     api_url: apiUrl,
+                    wssurl: wssUrl,          // 传递 wssUrl
                     is_default: isDefault,
                 }),
             });
@@ -37,6 +39,7 @@ export default function EditSupplierModal({ supplier, onClose, onSaved }: EditSu
             onSaved();
             onClose();
         } catch (e: any) {
+            console.error('更新供应商失败', e);
             alert('更新失败: ' + e.message);
         } finally {
             setLoading(false);
@@ -44,20 +47,69 @@ export default function EditSupplierModal({ supplier, onClose, onSaved }: EditSu
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-white p-6 rounded shadow" onClick={e => e.stopPropagation()}>
-                <h3 className="mb-4 text-lg">编辑供应商</h3>
-                <input className="mb-2 w-full" value={name} onChange={e => setName(e.target.value)} />
-                <input className="mb-2 w-full" value={abbreviation} onChange={e => setAbbreviation(e.target.value)} />
-                <input className="mb-2 w-full" value={apiKey} onChange={e => setApiKey(e.target.value)} />
-                <input className="mb-2 w-full" value={apiUrl} onChange={e => setApiUrl(e.target.value)} />
-                <label className="flex items-center mb-4">
-                    <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)} />
-                    <span className="ml-2">设为默认</span>
-                </label>
-                <div className="flex justify-end space-x-2">
-                    <button onClick={onClose} className="px-4 py-1 border rounded">取消</button>
-                    <button onClick={handleSubmit} disabled={loading} className="px-4 py-1 bg-blue-600 text-white rounded">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+        >
+            <div
+                className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md"
+                onClick={e => e.stopPropagation()}
+            >
+                <h3 className="text-xl font-semibold mb-4">编辑 AI 供应商</h3>
+                <div className="space-y-4">
+                    <input
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="名称"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <input
+                        value={abbreviation}
+                        onChange={e => setAbbreviation(e.target.value)}
+                        placeholder="简称"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <input
+                        value={apiKey}
+                        onChange={e => setApiKey(e.target.value)}
+                        placeholder="API Key"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <input
+                        value={apiUrl}
+                        onChange={e => setApiUrl(e.target.value)}
+                        placeholder="API 地址"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <input
+                        value={wssUrl}
+                        onChange={e => setWssUrl(e.target.value)}
+                        placeholder="WebSocket URL (可选)"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <label className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            checked={isDefault}
+                            onChange={e => setIsDefault(e.target.checked)}
+                            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                        />
+                        <span className="text-gray-700">设为默认</span>
+                    </label>
+                </div>
+                <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
+                        disabled={loading}
+                    >
+                        取消
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
                         {loading ? '保存中…' : '保存'}
                     </button>
                 </div>

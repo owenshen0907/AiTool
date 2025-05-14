@@ -6,6 +6,7 @@ export interface Supplier {
     abbreviation: string;
     apiKey: string;
     apiUrl: string;
+    wssUrl: string;
     isDefault: boolean;
 }
 
@@ -13,13 +14,17 @@ export interface Model {
     id: string;
     supplierId: string;
     name: string;
-    modelType: 'completions' | 'non-completions';
+    modelType: 'chat' | 'audio' | 'image' | 'video' | 'other';
+    supportsAudioInput: boolean;
     supportsImageInput: boolean;
     supportsVideoInput: boolean;
     supportsAudioOutput: boolean;
+    supportsImageOutput: boolean;
+    supportsVideoOutput: boolean;
     supportsJsonMode: boolean;
     supportsTool: boolean;
     supportsWebSearch: boolean;
     supportsDeepThinking: boolean;
+    supportsWebsocket: boolean;
     isDefault: boolean;
 }

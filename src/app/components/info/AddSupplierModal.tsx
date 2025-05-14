@@ -14,12 +14,13 @@ export default function AddSupplierModal({ onClose, onSaved }: AddSupplierModalP
     const [abbreviation, setAbbreviation] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [apiUrl, setApiUrl] = useState('');
+    const [wssUrl, setWssUrl] = useState('');          // 新增
     const [isDefault, setIsDefault] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
         if (!name.trim() || !abbreviation.trim() || !apiKey.trim() || !apiUrl.trim()) {
-            alert('请填写所有字段');
+            alert('请填写所有必填字段');
             return;
         }
         setLoading(true);
@@ -32,6 +33,7 @@ export default function AddSupplierModal({ onClose, onSaved }: AddSupplierModalP
                     abbreviation,
                     api_key: apiKey,
                     api_url: apiUrl,
+                    wssurl: wssUrl,                  // 传递 wssUrl
                     is_default: isDefault,
                 }),
             });
@@ -58,30 +60,36 @@ export default function AddSupplierModal({ onClose, onSaved }: AddSupplierModalP
                 className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md"
                 onClick={e => e.stopPropagation()}
             >
-                <h3 className="text-xl font-semibold mb-4">新增模型供应商</h3>
+                <h3 className="text-xl font-semibold mb-4">新增 AI 供应商</h3>
                 <div className="space-y-4">
                     <input
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        placeholder="名称"
+                        placeholder="名称 *"
                         className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                     <input
                         value={abbreviation}
                         onChange={e => setAbbreviation(e.target.value)}
-                        placeholder="简称"
+                        placeholder="简称 *"
                         className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                     <input
                         value={apiKey}
                         onChange={e => setApiKey(e.target.value)}
-                        placeholder="API Key"
+                        placeholder="API Key *"
                         className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                     <input
                         value={apiUrl}
                         onChange={e => setApiUrl(e.target.value)}
-                        placeholder="API 地址"
+                        placeholder="API 地址 *"
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                    <input
+                        value={wssUrl}
+                        onChange={e => setWssUrl(e.target.value)}
+                        placeholder="WebSocket URL (可选)"
                         className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     />
                     <label className="flex items-center space-x-2">
@@ -99,12 +107,16 @@ export default function AddSupplierModal({ onClose, onSaved }: AddSupplierModalP
                         onClick={onClose}
                         className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100"
                         disabled={loading}
-                    >取消</button>
+                    >
+                        取消
+                    </button>
                     <button
                         onClick={handleSubmit}
                         disabled={loading}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    >{loading ? '添加中…' : '保存'}</button>
+                    >
+                        {loading ? '添加中…' : '保存'}
+                    </button>
                 </div>
             </div>
         </div>
