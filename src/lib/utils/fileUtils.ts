@@ -2,7 +2,8 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 /**
  * Parse a CSV file or string into array of records.
  */
@@ -121,4 +122,42 @@ export function generateExcel(
     const buf = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
     const blob = new Blob([buf], { type: 'application/octet-stream' });
     saveAs(blob, fileName);
+}
+
+export function generatePDF(
+    data: object[] | any[][],
+    columns?: string[],
+    title: string = '',
+    fileName: string = 'export.pdf'
+): void {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt' });
+
+    /* ---- Title ---- */
+    if (title) {
+        doc.setFontSize(14);
+        doc.text(title, 40, 40);
+    }
+
+    /* ---- Table ---- */
+    if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data[0])) {
+            // data[][] style
+            autoTable(doc, {
+                head: [columns || data[0].map((_: any, i: number) => `Col ${i + 1}`)],
+                body: data as any[][],
+                startY: title ? 60 : 20,
+            });
+        } else {
+            // array of objects
+            const keys = columns || Object.keys(data[0] as object);
+            autoTable(doc, {
+                head: [keys],
+                body: (data as object[]).map((row) => keys.map((k) => (row as any)[k])),
+                startY: title ? 60 : 20,
+            });
+        }
+    }
+
+    /* ---- Download ---- */
+    doc.save(fileName);
 }

@@ -2,34 +2,35 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import TableToolbar         from './TableToolbar';
-import BottomTable, { CaseItem } from './BottomTable';
-import DataImportManager, { ColumnDef } from '@/components/common/DataImport/DataImportManager';
+import TableToolbar                      from './TableToolbar';
+import BottomTable, { CaseItem }         from './BottomTable';
+import DataImportManager, { ColumnDef }  from '@/components/common/DataImport/DataImportManager';
 
-import { generateCSV, parseExcel } from '@/lib/utils/fileUtils';
-import type { Supplier }  from '@/lib/models/model';
+import {
+    generateCSV,
+    parseExcel,
+    generateExcel,
+    // generatePDF   // 若需 PDF 导出，取消注释并确保已安装 jspdf & jspdf-autotable
+} from '@/lib/utils/fileUtils';
+import type { Supplier } from '@/lib/models/model';
 
-/* ---------------- 基础类型 ---------------- */
-interface CaseImportRow {
-    id:   string;
-    text: string;
-    selected?: boolean;
-}
+/* ---------------- 导入模板行类型 ---------------- */
+interface CaseImportRow { id: string; text: string; selected?: boolean }
 
-/* ============ 主组件 ============ */
+/* ---------------- 主组件 ---------------- */
 export default function TTSTestPage() {
-    /* -------- 核心状态 -------- */
-    const [cases, setCases]           = useState<CaseItem[]>([]);
-    const [selectedIds, setSelected]  = useState<string[]>([]);
-    const [testing, setTesting]       = useState(false);
+    /* 核心状态 */
+    const [cases,       setCases]    = useState<CaseItem[]>([]);
+    const [selectedIds, setSelected] = useState<string[]>([]);
+    const [testing,     setTesting]  = useState(false);
 
-    /* -------- 供应商 / 模型 / 并发 -------- */
+    /* 供应商 / 模型 / 并发 */
     const [suppliers,   setSuppliers]   = useState<Supplier[]>([]);
     const [supplierId,  setSupplierId]  = useState('');
     const [model,       setModel]       = useState('');
     const [concurrency, setConcurrency] = useState(1);
 
-    /* ========= 拉供应商列表 ========= */
+    /* -------- 供应商列表 -------- */
     useEffect(() => {
         fetch('/api/suppliers')
             .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
@@ -43,134 +44,198 @@ export default function TTSTestPage() {
     const currentSupplier = () =>
         suppliers.find(s => s.id === supplierId || s.wssUrl === supplierId);
 
-    /* ========= 导入 / 导出 ========= */
-    const exportTemplate = () => {
+    /* ------------------------------------------------------------------ */
+    /*                         导入 / 导出 csv 模板                       */
+    /* ------------------------------------------------------------------ */
+    const exportTemplate = () =>
         generateCSV(
             [['说明：请在此行编辑 Case 文本，然后保存上传'], ['Case 文本']],
             [],
             'template.csv'
         );
-    };
 
-    const exportWithData = () => {
+    const exportWithData = () =>
         generateCSV(
-            [['说明：请在此行编辑 Case 文本，然后保存上传'], ['Case 文本'],
-                ...cases.map(c => [c.text])],
+            [
+                ['说明：请在此行编辑 Case 文本，然后保存上传'],
+                ['Case 文本'],
+                ...cases.map(c => [c.text]),
+            ],
             [],
             'template_with_data.csv'
         );
-    };
 
-    /** 仅支持 csv / xlsx 两种 **/
     const parseFile = async (f: File): Promise<CaseImportRow[]> => {
         if (f.name.toLowerCase().endsWith('.csv')) {
             const lines = (await f.text()).split(/\r?\n/).slice(2, 1002);
             return lines
                 .map(t => t.trim())
                 .filter(Boolean)
-                .map((t, i) => ({ id:`${Date.now()}-${i}`, text:t }));
+                .map((t, i) => ({ id: `${Date.now()}-${i}`, text: t }));
         }
-        // xlsx
-        const sheet = (await parseExcel(f))[Object.keys(await parseExcel(f))[0]];
-        return sheet
+        /* XLSX */
+        const sheets = await parseExcel(f);
+        const first  = sheets[Object.keys(sheets)[0]];
+        return first
             .filter((r: any) => (r['Case 文本'] ?? '').trim())
             .slice(0, 1000)
-            .map((r: any, i: number) => ({ id:`${Date.now()}-${i}`, text:r['Case 文本'] }));
+            .map((r: any, i: number) => ({ id: `${Date.now()}-${i}`, text: r['Case 文本'] }));
     };
 
     const columns: ColumnDef<CaseImportRow>[] = [
-        { key:'text', label:'Case 文本', editable:true }
+        { key: 'text', label: 'Case 文本', editable: true },
     ];
 
-    const handleImport = (rows: CaseImportRow[]) => {
+    const handleImport = (rows: CaseImportRow[]) =>
         setCases(prev => [
             ...prev,
             ...rows.map(r => ({
-                id:r.id, text:r.text, chunks:[], intervals:[], sessionId:''
-            }))
+                id: r.id,
+                text: r.text,
+                chunks: [],
+                intervals: [],
+                sessionId: '',
+                connectAt: undefined,
+                doneAt: undefined,
+            })),
         ]);
-    };
 
-    /* ========= 单行 TTS ========= */
-    const runCase = (row: CaseItem) => new Promise<void>((resolve, reject) => {
-        const sup = currentSupplier();
-        if (!sup?.wssUrl || !sup.apiKey) return reject('缺少 wssUrl 或 apiKey');
+    /* ------------------------------------------------------------------ */
+    /*                            导出结果函数                            */
+    /* ------------------------------------------------------------------ */
+    function exportResults() {
+        /* ---- Excel 示例 ---- */
+        generateExcel(
+            cases.map(c => ({
+                Text:        c.text,
+                Intervals:   (c.intervals ?? []).join(', '),
+                ConnectTime: c.connectAt ? new Date(c.connectAt).toISOString() : '',
+                DoneTime:    c.doneAt    ? new Date(c.doneAt).toISOString()    : '',
+                SessionId:   c.sessionId,
+            })),
+            `tts_results_${Date.now()}.xlsx`
+        );
 
-        // 清空历史
-        setCases(prev => prev.map(c =>
-            c.id === row.id ? { ...c, chunks:[], intervals:[], sessionId:'' } : c
-        ));
+        // generatePDF(
+        //   cases.map(c => ({
+        //     Text: c.text,
+        //     SessionId: c.sessionId,
+        //     Connect: c.connectAt ? new Date(c.connectAt).toLocaleTimeString() : '',
+        //     Done:    c.doneAt    ? new Date(c.doneAt).toLocaleTimeString()    : '',
+        //     Intervals: (c.intervals ?? []).join(', ')
+        //   })),
+        //   undefined,
+        //   'TTS 测试结果',
+        //   `tts_results_${Date.now()}.pdf`
+        // );
 
-        const base = sup.wssUrl.endsWith('/realtime/audio')
-            ? sup.wssUrl
-            : sup.wssUrl.replace(/\/$/, '') + '/realtime/audio';
+    }
 
-        const url =
-            `/api/tts-sse?target=${encodeURIComponent(base)}` +
-            `&token=${encodeURIComponent(sup.apiKey)}` +
-            `&model=${encodeURIComponent(model)}` +
-            `&text=${encodeURIComponent(row.text)}`;
+    /* ------------------------------------------------------------------ */
+    /*                       单条 TTS（SSE + WS）                         */
+    /* ------------------------------------------------------------------ */
+    function runCase(row: CaseItem) {
+        return new Promise<void>((resolve, reject) => {
+            const sup = currentSupplier();
+            if (!sup?.wssUrl || !sup.apiKey) return reject('缺少 wssUrl 或 apiKey');
 
-        const es = new EventSource(url);
-        let last = performance.now();
+            /* 清空行状态 */
+            setCases(p => p.map(c =>
+                c.id === row.id
+                    ? { ...c, chunks: [], intervals: [], connectAt: undefined, doneAt: undefined, sessionId: '' }
+                    : c
+            ));
 
-        es.onmessage = e => {
-            const msg = JSON.parse(e.data);
-            if (msg.type === 'tts.connection.done') {
-                setCases(prev => prev.map(c =>
-                    c.id === row.id ? { ...c, sessionId: msg.data.session_id } : c
+            const base = sup.wssUrl.endsWith('/realtime/audio')
+                ? sup.wssUrl
+                : sup.wssUrl.replace(/\/$/, '') + '/realtime/audio';
+
+            const url =
+                `/api/tts-sse?target=${encodeURIComponent(base)}` +
+                `&token=${encodeURIComponent(sup.apiKey)}` +
+                `&model=${encodeURIComponent(model)}` +
+                `&text=${encodeURIComponent(row.text)}`;
+
+            const es = new EventSource(url);
+
+            /* 原始 JSON 透传（sessionId + 音频片段） */
+            es.onmessage = (e) => {
+                const msg = JSON.parse(e.data);
+                if (msg.type === 'tts.connection.done') {
+                    setCases(p => p.map(c =>
+                        c.id === row.id ? { ...c, sessionId: msg.data.session_id } : c
+                    ));
+                }
+                if (msg.type === 'tts.response.audio.delta') {
+                    setCases(p => p.map(c =>
+                        c.id === row.id ? { ...c, chunks: [...c.chunks, msg.data.audio] } : c
+                    ));
+                }
+            };
+
+            /* 自定义事件 */
+            es.addEventListener('connect', ev => {
+                setCases(p => p.map(c =>
+                    c.id === row.id ? { ...c, connectAt: Number(ev.data) } : c
                 ));
-            }
-            if (msg.type === 'tts.response.audio.delta') {
-                const now = performance.now();
-                setCases(prev => prev.map(c =>
-                    c.id === row.id
-                        ? {
-                            ...c,
-                            chunks:    [...c.chunks, msg.data.audio],
-                            intervals: [...(c.intervals ?? []), Math.round(now - last)],
-                        }
-                        : c
+            });
+
+            es.addEventListener('interval', ev => {
+                const diff = Number(ev.data);
+                setCases(p => p.map(c =>
+                    c.id === row.id ? { ...c, intervals: [...(c.intervals ?? []), diff] } : c
                 ));
-                last = now;
-            }
-        };
+            });
 
-        es.addEventListener('end', () => { es.close(); resolve(); });
-        es.onerror = err => { es.close(); reject(err); };
-    });
+            es.addEventListener('done', ev => {
+                setCases(p => p.map(c =>
+                    c.id === row.id ? { ...c, doneAt: Number(ev.data) } : c
+                ));
+            });
 
-    /* ========= 并发批量执行 ========= */
-    const runMany = (rows: CaseItem[]) => {
+            /* 结束 / 错误 */
+            const finish = () => { es.close(); resolve(); };
+            es.addEventListener('end', finish);
+            es.addEventListener('error', err => { es.close(); reject(err); });
+        });
+    }
+
+    /* ---------------- 批量并发执行 ---------------- */
+    function runMany(rows: CaseItem[]) {
         if (!rows.length) return;
-        const queue   = [...rows];
-        let running   = 0;
+        const limit = Math.max(1, concurrency);
+        let idx = 0, running = 0;
         setTesting(true);
 
-        const next = () => {
-            if (!queue.length && running === 0) { setTesting(false); return; }
-            if (running >= concurrency || !queue.length) return;
-
-            const row = queue.shift()!;
-            running += 1;
-            runCase(row)
-                .catch(console.error)
-                .finally(() => { running -= 1; next(); });
-            next();
+        const launch = () => {
+            if (idx >= rows.length && running === 0) { setTesting(false); return; }
+            while (running < limit && idx < rows.length) {
+                const row = rows[idx++];
+                running += 1;
+                runCase(row)
+                    .catch(console.error)
+                    .finally(() => { running -= 1; launch(); });
+            }
         };
-        next();
-    };
+        launch();
+    }
 
-    /* ========= 行增删 ========= */
-    const addCase = () => setCases(prev => [
-        ...prev,
-        { id:`row-${Date.now()}`, text:'', chunks:[], intervals:[], sessionId:'' }
-    ]);
+    /* ---------------- 行操作 ---------------- */
+    const addCase = () =>
+        setCases(p => [...p, {
+            id: `row-${Date.now()}`,
+            text: '',
+            chunks: [],
+            intervals: [],
+            sessionId: '',
+            connectAt: undefined,
+            doneAt: undefined,
+        }]);
 
     const removeCase = (id: string) =>
-        setCases(prev => prev.filter(c => c.id !== id));
+        setCases(p => p.filter(c => c.id !== id));
 
-    /* ========= 渲染 ========= */
+    /* ---------------- 渲染 ---------------- */
     return (
         <div className="p-4 space-y-6">
             <TableToolbar
@@ -182,17 +247,17 @@ export default function TTSTestPage() {
                 concurrency={concurrency}
                 onConcurrencyChange={setConcurrency}
                 testing={testing}
-                /* 选中 → 批量执行；没有选中默认第一行 */
                 onStartTest={() => {
                     const list = selectedIds.length
                         ? cases.filter(c => selectedIds.includes(c.id))
                         : cases.slice(0, 1);
                     runMany(list);
                 }}
+                onExportResults={exportResults}
             />
 
             <DataImportManager<CaseImportRow>
-                existingRows={cases.map(c => ({ id:c.id, text:c.text }))}
+                existingRows={cases.map(c => ({ id: c.id, text: c.text }))}
                 exportTemplate={exportTemplate}
                 exportWithData={exportWithData}
                 parseImportFile={parseFile}
@@ -205,7 +270,7 @@ export default function TTSTestPage() {
                 selectedIds={selectedIds}
                 onSelectionChange={setSelected}
                 onRemoveCase={removeCase}
-                onRunCase={row => runMany([row])}   // 单行 = 并发 1
+                onRunCase={row => runMany([row])}
             />
         </div>
     );

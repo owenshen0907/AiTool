@@ -5,6 +5,7 @@ import { parse } from 'url';
 export const config = { api: { bodyParser: false } };
 
 export default function handler(req, res) {
+    /* --- 参数校验 --- */
     const { query } = parse(req.url, true);
     const { target, token, model, text } = query;
     if (!target || !token || !model || !text) {
@@ -12,55 +13,63 @@ export default function handler(req, res) {
         return;
     }
 
-    // SSE 响应头
+    /* --- SSE 头 --- */
     res.writeHead(200, {
-        'Content-Type':            'text/event-stream; charset=utf-8',
-        'Cache-Control':           'no-cache',
-        Connection:                'keep-alive',
+        'Content-Type':  'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        Connection:      'keep-alive',
     });
     res.write('\n');
 
-    // 拼真实 WS URL
-    const sep   = target.includes('?') ? '&' : '?';
-    const wsUrl = `${target}${sep}model=${encodeURIComponent(model)}`;
-
+    /* --- 建 WebSocket --- */
+    const wsUrl = `${target}${target.includes('?') ? '&' : '?'}model=${encodeURIComponent(model)}`;
     const ws = new WebSocket(wsUrl, {
         headers: { Authorization: `Bearer ${token}` },
     });
 
     let sessionId = '';
+    let last      = 0;
 
     ws.on('message', raw => {
         let msg;
-        try { msg = JSON.parse(raw.toString()); }
-        catch { return; }
+        try { msg = JSON.parse(raw.toString()); } catch { return; }
 
-        // 1) 透传所有消息
-        res.write('data: ' + JSON.stringify(msg) + '\n\n');
+        /* 1) 原始消息透传 */
+        res.write(`data: ${JSON.stringify(msg)}\n\n`);
 
-        // 2) 建联成功后创建会话
+        /* 2) 建联成功 → 推送 connect 时间节点 */
         if (msg.type === 'tts.connection.done') {
+            res.write(`event: connect\ndata: ${Date.now()}\n\n`);
             sessionId = msg.data.session_id;
             ws.send(JSON.stringify({
                 type: 'tts.create',
-                data: { session_id: sessionId, voice_id: 'voice-tone-Eog0tIPGwy' }
+                data: { session_id: sessionId, voice_id: 'voice-tone-Eog0tIPGwy' },
             }));
         }
 
-        // 3) 会话创建成功后直接发文本+done
+        /* 3) 会话 OK → 发送文本 */
         if (msg.type === 'tts.response.created') {
+            last = Date.now();
             ws.send(JSON.stringify({
                 type: 'tts.text.delta',
-                data: { session_id: sessionId, text }
+                data: { session_id: sessionId, text },
             }));
             ws.send(JSON.stringify({
                 type: 'tts.text.done',
-                data: { session_id: sessionId }
+                data: { session_id: sessionId },
             }));
         }
 
-        // 4) 结束或出错时关闭
+        /* 4) 分片间隔事件 */
+        if (msg.type === 'tts.response.audio.delta') {
+            const now  = Date.now();
+            res.write(`event: interval\ndata: ${now - last}\n\n`);
+            last = now;
+        }
+
+        /* 5) 完成 → 推送 done 时间节点 */
         if (msg.type === 'tts.response.audio.done' || msg.type === 'tts.response.error') {
+            res.write(`event: done\ndata: ${Date.now()}\n\n`);
             ws.close();
             res.write('event: end\ndata: {}\n\n');
             res.end();
@@ -68,7 +77,7 @@ export default function handler(req, res) {
     });
 
     ws.on('error', err => {
-        res.write('event: error\ndata: ' + JSON.stringify({ message: err.message }) + '\n\n');
+        res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
         res.end();
     });
 
