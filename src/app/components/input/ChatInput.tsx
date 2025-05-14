@@ -192,7 +192,7 @@ export default function ChatInput<CTX = any>({
                         selectedSupplierId={selectedSupplierId}
                         onSupplierChange={setSelectedSupplierId}
                         models={models}
-                        selectedModel={model}
+                        selectedModelName={model}
                         onModelChange={setModel}
                     />
                 </div>
