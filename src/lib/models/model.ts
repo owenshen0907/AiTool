@@ -6,7 +6,7 @@ export interface Supplier {
     abbreviation: string;
     apiKey: string;
     apiUrl: string;
-    wssUrl: string;
+    wssUrl:      string | null;
     isDefault: boolean;
 }
 
