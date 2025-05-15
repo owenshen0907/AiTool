@@ -86,7 +86,7 @@ export const menuData: MenuItem[] = [
 
 
     {
-        title: '关于欧文',
+        title: '智能文档',
         children: [
             { title: '工作文档', href: '/docs/work' },
             { title: '学习笔记', href: '/docs/study' },
