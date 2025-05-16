@@ -12,7 +12,7 @@ export const GET = withUser(async (req: NextRequest, userId: string) => {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (id) {
-        const item = await service.getPromptCaseContentService(userId, id);
+        const item = await service.getPromptCaseContentService(id);
         if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
         return NextResponse.json(item);
     }
