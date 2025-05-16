@@ -12,7 +12,7 @@ export async function listPromptCaseContentService(
     directoryId: string
 ): Promise<CaseContentItem[]> {
     // 验证目录存在，且有权限查看（略）
-    const dir = await directoryRepo.getDirectoryById(directoryId);
+    const dir = await directoryRepo.getDirectoryById(userId,directoryId);
     if (!dir) throw new Error('Directory not found');
     return repo.listPromptCaseContentByDirectory(directoryId);
 }
@@ -21,7 +21,7 @@ export async function listPromptCaseContentService(
  * 获取单个 Case 内容
  */
 export async function getPromptCaseContentService(
-    userId: string,
+    // userId: string,
     id: string
 ): Promise<CaseContentItem | null> {
     const item = await repo.getPromptCaseContentById(id);
@@ -39,7 +39,7 @@ export async function createPromptCaseContentService(
     body?: string
 ): Promise<CaseContentItem> {
     // 验证目录存在
-    const dir = await directoryRepo.getDirectoryById(directoryId);
+    const dir = await directoryRepo.getDirectoryById(userId,directoryId);
     if (!dir) throw new Error('Directory not found');
     // 获取 position
     const position = await repo.getNextPromptCaseContentPosition(directoryId);
@@ -94,7 +94,7 @@ export async function reorderPromptCaseContentService(
     orderedIds: string[]
 ): Promise<void> {
     // 验证目录存在
-    const dir = await directoryRepo.getDirectoryById(directoryId);
+    const dir = await directoryRepo.getDirectoryById(userId,directoryId);
     if (!dir) throw new Error('Directory not found');
     await repo.reorderPromptCaseContent(directoryId, orderedIds);
 }
