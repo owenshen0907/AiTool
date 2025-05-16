@@ -9,14 +9,14 @@ export async function listDirectoriesService(
     parentId?: string
 ): Promise<DirectoryItem[]> {
     // 业务逻辑可加权限校验
-    return repo.listDirectories(feature, parentId);
+    return repo.listDirectories(userId,feature, parentId );
 }
 
 export async function getDirectoryService(
     userId: string,
     id: string
 ): Promise<DirectoryItem | null> {
-    return repo.getDirectoryById(id);
+    return repo.getDirectoryById(userId,id);
 }
 
 export async function createDirectoryService(
@@ -25,7 +25,7 @@ export async function createDirectoryService(
     parentId: string | undefined,
     name: string
 ): Promise<DirectoryItem> {
-    const position = await repo.getNextDirectoryPosition(feature, parentId);
+    const position = await repo.getNextDirectoryPosition(userId,feature, parentId);
     return repo.insertDirectory({
         id: uuidv4(),
         feature,
@@ -41,17 +41,17 @@ export async function updateDirectoryService(
     id: string,
     changes: Partial<DirectoryItem>
 ): Promise<DirectoryItem | null> {
-    const exist = await repo.getDirectoryById(id);
+    const exist = await repo.getDirectoryById(id,userId);
     if (!exist) return null;
     await repo.updateDirectory(id, changes);
-    return repo.getDirectoryById(id);
+    return repo.getDirectoryById(id,userId);
 }
 
 export async function deleteDirectoryService(
     userId: string,
     id: string
 ): Promise<boolean> {
-    const exist = await repo.getDirectoryById(id);
+    const exist = await repo.getDirectoryById(id,userId);
     if (!exist) return false;
     await repo.deleteDirectory(id);
     return true;
@@ -63,5 +63,5 @@ export async function reorderDirectoriesService(
     parentId: string | null,
     orderedIds: string[]
 ): Promise<void> {
-    await repo.reorderDirectories(feature, parentId, orderedIds);
+    await repo.reorderDirectories(userId,feature, parentId, orderedIds);
 }

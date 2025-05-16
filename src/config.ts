@@ -1,12 +1,12 @@
 // src/config.ts
 
 export const CASDOOR_CONFIG = {
-    endpoint: process.env.CASDOOR_ENDPOINT || "https://your-casdoor-domain",
-    clientId: process.env.CASDOOR_CLIENT_ID || "your_client_id",
-    clientSecret: process.env.CASDOOR_CLIENT_SECRET || "your_client_secret",
-    appName: process.env.CASDOOR_APP_NAME || "your_app_name",
-    orgName: process.env.CASDOOR_ORG_NAME || "your_org_name",
-    redirectUri: process.env.CASDOOR_REDIRECT_URI || "https://your-domain.com/api/auth/callback",
+    endpoint: process.env.NEXT_PUBLIC_CASDOOR_ENDPOINT || "https://your-casdoor-domain",
+    clientId: process.env.NEXT_PUBLIC_CASDOOR_CLIENT_ID || "your_client_id",
+    clientSecret: process.env.NEXT_PUBLIC_CASDOOR_CLIENT_SECRET || "your_client_secret",
+    appName: process.env.NEXT_PUBLIC_CASDOOR_APP_NAME || "your_app_name",
+    orgName: process.env.NEXT_PUBLIC_CASDOOR_ORG_NAME || "your_org_name",
+    redirectUri: process.env.NEXT_PUBLIC_CASDOOR_REDIRECT_URI || "https://your-domain.com/api/auth/callback",
 };
 
 

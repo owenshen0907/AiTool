@@ -7,7 +7,7 @@ import type {
     BadCaseItem,
     PromptGenerationInputData
 } from '@/lib/models/prompt/prompt';
-
+import { safeFetch } from '@/lib/utils/safeFetch';
 interface RawPrompt {
     id: string;
     parent_id: string | null;
@@ -40,7 +40,7 @@ export async function fetchPrompts(parentId?: string): Promise<PromptNode[]> {
     const url = parentId
         ? `/api/prompt?parent_id=${encodeURIComponent(parentId)}`
         : `/api/prompt`;
-    const res = await fetch(url);
+    const res = await safeFetch(url);
     if (!res.ok) {
         throw new Error(`fetchPrompts failed: ${res.status}`);
     }
@@ -50,7 +50,7 @@ export async function fetchPrompts(parentId?: string): Promise<PromptNode[]> {
 
 /** Fetch one prompt in detail */
 export async function fetchPromptById(id: string): Promise<PromptItem> {
-    const res = await fetch(`/api/prompt?id=${encodeURIComponent(id)}`);
+    const res = await safeFetch(`/api/prompt?id=${encodeURIComponent(id)}`);
     if (!res.ok) {
         throw new Error(`fetchPromptById failed: ${res.status}`);
     }
@@ -70,7 +70,7 @@ export async function createPrompt(params: {
     comments?: string[];
     is_public?: boolean;
 }): Promise<PromptItem> {
-    const res = await fetch('/api/prompt', {
+    const res = await safeFetch('/api/prompt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
@@ -92,7 +92,7 @@ export async function updatePrompt(params: {
     comments?: string[];
     is_public?: boolean;
 }): Promise<PromptItem> {
-    const res = await fetch('/api/prompt', {
+    const res = await safeFetch('/api/prompt', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
@@ -103,7 +103,7 @@ export async function updatePrompt(params: {
 }
 
 export async function deletePrompt(id: string): Promise<{ success: boolean }> {
-    const res = await fetch(`/api/prompt?id=${encodeURIComponent(id)}`, {
+    const res = await safeFetch(`/api/prompt?id=${encodeURIComponent(id)}`, {
         method: 'DELETE'
     });
     if (!res.ok) throw new Error(`deletePrompt failed: ${res.status}`);
@@ -114,7 +114,7 @@ export async function deletePrompt(id: string): Promise<{ success: boolean }> {
 // -------- Good Cases API --------
 
 export async function fetchGoodCases(promptId: string): Promise<GoodCaseItem[]> {
-    const res = await fetch(
+    const res = await safeFetch(
         `/api/prompt/good_cases?prompt_id=${encodeURIComponent(promptId)}`
     );
     if (!res.ok) throw new Error(`fetchGoodCases failed: ${res.status}`);
@@ -125,7 +125,7 @@ export async function createGoodCases(
     promptId: string,
     items: Partial<GoodCaseItem>[]
 ): Promise<GoodCaseItem[]> {
-    const res = await fetch('/api/prompt/good_cases', {
+    const res = await safeFetch('/api/prompt/good_cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt_id: promptId, items })
@@ -137,7 +137,7 @@ export async function createGoodCases(
 export async function updateGoodCases(
     items: Partial<GoodCaseItem>[]
 ): Promise<GoodCaseItem[]> {
-    const res = await fetch('/api/prompt/good_cases', {
+    const res = await safeFetch('/api/prompt/good_cases', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items })
@@ -147,7 +147,7 @@ export async function updateGoodCases(
 }
 
 export async function deleteGoodCases(ids: string[]): Promise<{ success: boolean }> {
-    const res = await fetch('/api/prompt/good_cases', {
+    const res = await safeFetch('/api/prompt/good_cases', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids })
@@ -160,7 +160,7 @@ export async function deleteGoodCases(ids: string[]): Promise<{ success: boolean
 // -------- Bad Cases API --------
 
 export async function fetchBadCases(promptId: string): Promise<BadCaseItem[]> {
-    const res = await fetch(
+    const res = await safeFetch(
         `/api/prompt/bad_cases?prompt_id=${encodeURIComponent(promptId)}`
     );
     if (!res.ok) throw new Error(`fetchBadCases failed: ${res.status}`);
@@ -171,7 +171,7 @@ export async function createBadCases(
     promptId: string,
     items: Partial<BadCaseItem>[]
 ): Promise<BadCaseItem[]> {
-    const res = await fetch('/api/prompt/bad_cases', {
+    const res = await safeFetch('/api/prompt/bad_cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt_id: promptId, items })
@@ -183,7 +183,7 @@ export async function createBadCases(
 export async function updateBadCases(
     items: Partial<BadCaseItem>[]
 ): Promise<BadCaseItem[]> {
-    const res = await fetch('/api/prompt/bad_cases', {
+    const res = await safeFetch('/api/prompt/bad_cases', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items })
@@ -193,7 +193,7 @@ export async function updateBadCases(
 }
 
 export async function deleteBadCases(ids: string[]): Promise<{ success: boolean }> {
-    const res = await fetch('/api/prompt/bad_cases', {
+    const res = await safeFetch('/api/prompt/bad_cases', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids })
@@ -203,7 +203,7 @@ export async function deleteBadCases(ids: string[]): Promise<{ success: boolean 
 }
 /** 按 title 模糊搜索，返回 PromptNode[] */
 export async function searchPromptsByTitle(term: string): Promise<PromptNode[]> {
-    const res = await fetch(`/api/prompt?term=${encodeURIComponent(term)}`);
+    const res = await safeFetch(`/api/prompt?term=${encodeURIComponent(term)}`);
     if (!res.ok) throw new Error(`searchPromptsByTitle failed: ${res.status}`);
     const raws: RawPrompt[] = await res.json();
     return raws.map(mapRaw);
@@ -214,7 +214,7 @@ export async function reorderPrompts(
     parent_id: string | null,
     ordered_ids: string[]
 ): Promise<void> {
-    const res = await fetch('/api/prompt', {
+    const res = await safeFetch('/api/prompt', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parent_id, ordered_ids }),
@@ -229,7 +229,7 @@ export async function reorderPrompts(
 export async function fetchPromptInputData(
     promptId: string
 ): Promise<PromptGenerationInputData[]> {
-    const res = await fetch(
+    const res = await safeFetch(
         `/api/prompt/input_data?prompt_id=${encodeURIComponent(promptId)}`
     );
     if (!res.ok) throw new Error(`fetchPromptInputData failed: ${res.status}`);
@@ -241,7 +241,7 @@ export async function createPromptInputData(
     promptId: string,
     items: Omit<PromptGenerationInputData, 'id' | 'created_at'>[]
 ): Promise<PromptGenerationInputData[]> {
-    const res = await fetch('/api/prompt/input_data', {
+    const res = await safeFetch('/api/prompt/input_data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt_id: promptId, items }),
@@ -254,7 +254,7 @@ export async function createPromptInputData(
 export async function updatePromptInputData(
     items: Partial<Omit<PromptGenerationInputData, 'created_at'>>[]
 ): Promise<PromptGenerationInputData[]> {
-    const res = await fetch('/api/prompt/input_data', {
+    const res = await safeFetch('/api/prompt/input_data', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items }),
@@ -267,7 +267,7 @@ export async function updatePromptInputData(
 export async function deletePromptInputDataByPrompt(
     promptId: string
 ): Promise<{ success: boolean }> {
-    const res = await fetch(
+    const res = await safeFetch(
         `/api/prompt/input_data?prompt_id=${encodeURIComponent(promptId)}`,
         { method: 'DELETE' }
     );
@@ -279,7 +279,7 @@ export async function deletePromptInputDataByPrompt(
 export async function deletePromptInputData(
     ids: string[]
 ): Promise<{ success: boolean }> {
-    const res = await fetch('/api/prompt/input_data', {
+    const res = await safeFetch('/api/prompt/input_data', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),

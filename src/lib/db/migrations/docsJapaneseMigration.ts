@@ -6,7 +6,7 @@ import { PoolClient } from 'pg';
  */
 export async function docsJapaneseContent(client: PoolClient) {
     await client.query(`
--- docs_japanese 表
+-- japanese_content 表
 CREATE TABLE IF NOT EXISTS japanese_content (
   id            UUID          PRIMARY KEY,
   directory_id  UUID          NOT NULL

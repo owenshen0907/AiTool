@@ -1,14 +1,4 @@
 // File: src/lib/models/directory.ts
-// export interface DirectoryItem {
-//     id: string;
-//     feature: string;
-//     parentId: string | null;
-//     name: string;
-//     position: number;
-//     createdBy: string;
-//     createdAt: string;
-//     updatedAt: string;
-// }
 export interface DirectoryItem {
     /** 目录自身 ID */
     id: string;
