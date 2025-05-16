@@ -56,12 +56,17 @@ export async function GET(request: NextRequest) {
 
     // 回调完成后，也跳回主站
     const appBase = process.env.NEXT_PUBLIC_APP_URL!;
+    const hostname = request.nextUrl.hostname;  // e.g. 'localhost' or 'owenshen.top'
+    const cookieDomain =
+        hostname === 'localhost' ? undefined : '.owenshen.top';
+
     const response = NextResponse.redirect(appBase + '/');
     response.cookies.set('sessionToken', accessToken, {
         httpOnly: true,
         secure:   process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path:     '/'
+        path:     '/',
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
     response.cookies.set('userId', userId, {
         httpOnly: true,
