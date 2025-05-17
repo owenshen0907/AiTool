@@ -12,6 +12,9 @@ export async function GET(_req: NextRequest) {
         httpOnly : true,
         secure   : isProd,     // 本地开发必须是 false
         path     : '/',        // 和写入时保持一致
+        ...(isProd
+            ? { domain: '.owenshen.top' }
+            : {}),
         maxAge   : 0,
     } as const;
 
