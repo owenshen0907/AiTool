@@ -10,8 +10,7 @@ export async function docsJapaneseContent(client: PoolClient) {
 CREATE TABLE IF NOT EXISTS japanese_content (
   id            UUID          PRIMARY KEY,
   directory_id  UUID          NOT NULL
-                            REFERENCES directories(id)
-                            ON DELETE CASCADE,
+                            REFERENCES directories(id),
   title         TEXT          NOT NULL,
   summary       TEXT          NULL,
   body          TEXT          NULL,

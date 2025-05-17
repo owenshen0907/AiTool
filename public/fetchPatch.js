@@ -37,7 +37,7 @@
 
         // ── 其余请求继续原来的拦截/跳转逻辑 ──
         const res = await nativeFetch(input, {
-            credentials: 'include',
+            // credentials: 'include',
             ...init,
         });
         if (shouldRedirect(res)) {

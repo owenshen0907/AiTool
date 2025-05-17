@@ -31,8 +31,13 @@ export function useDirectories(feature: string) {
 
     const removeDir = async (id: string, name: string) => {
         if (!confirm(`确认删除目录「${name}」？`)) return;
-        await deleteDirectoryApi(id);
-        await load();
+        try {
+            await deleteDirectoryApi(id);
+            await load();
+        } catch (err: any) {
+            // 如果后端返回了 { error: '...' }，deleteDirectoryApi 会 throw 新的 Error(msg)
+            alert(err.message || '删除失败');
+        }
     };
 
     return { tree, addSubDir, renameDir, removeDir };

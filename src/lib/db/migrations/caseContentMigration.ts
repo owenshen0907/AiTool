@@ -10,8 +10,7 @@ export async function migrateCaseContent(client: PoolClient) {
 CREATE TABLE IF NOT EXISTS case_content (
   id            UUID          PRIMARY KEY,
   directory_id  UUID          NOT NULL
-                            REFERENCES directories(id)
-                            ON DELETE CASCADE,
+                            REFERENCES directories(id),
   title         TEXT          NOT NULL,
   summary       TEXT          NULL,
   body          TEXT          NULL,
@@ -34,8 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_case_content_directory_position
 CREATE TABLE IF NOT EXISTS prompt_case_list (
   id                UUID        PRIMARY KEY,
   case_content_id   UUID        NOT NULL
-                              REFERENCES case_content(id)
-                              ON DELETE CASCADE,
+                              REFERENCES case_content(id),
   seq               INT         NOT NULL,           -- 序号
   case_text         TEXT        NULL,               -- 文本形式的 Case
   ground_truth      TEXT        NOT NULL,           -- Ground Truth 文本
@@ -47,8 +45,7 @@ CREATE TABLE IF NOT EXISTS prompt_case_list (
 CREATE TABLE IF NOT EXISTS prompt_case_image (
   id                UUID        PRIMARY KEY,
   case_list_id      UUID        NOT NULL
-                              REFERENCES prompt_case_list(id)
-                              ON DELETE CASCADE,
+                              REFERENCES prompt_case_list(id),
   image_url         TEXT        NOT NULL,           -- 图片 URL 或存储路径
   position          INT         NOT NULL,           -- 排序位置
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -58,8 +55,7 @@ CREATE TABLE IF NOT EXISTS prompt_case_image (
 CREATE TABLE IF NOT EXISTS prompt_test_detail (
   id                UUID        PRIMARY KEY,
   case_list_id      UUID        NOT NULL
-                              REFERENCES prompt_case_list(id)
-                              ON DELETE CASCADE,
+                              REFERENCES prompt_case_list(id),
   model_name        TEXT        NOT NULL,           -- 测试所用模型
   test_result       TEXT        NOT NULL,           -- 测试输出结果
   passed            BOOLEAN     NOT NULL,           -- 是否通过

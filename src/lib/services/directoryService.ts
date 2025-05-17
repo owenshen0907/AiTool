@@ -51,8 +51,11 @@ export async function deleteDirectoryService(
     userId: string,
     id: string
 ): Promise<boolean> {
-    const exist = await repo.getDirectoryById(id,userId);
-    if (!exist) return false;
+    // 校验权限/存在性
+    const dir = await repo.getDirectoryById(id, userId);
+    if (!dir) return false;
+
+    // 直接调用，会抛 DirectoryNotEmpty
     await repo.deleteDirectory(id);
     return true;
 }

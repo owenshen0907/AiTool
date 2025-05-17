@@ -28,10 +28,18 @@ export const GET = withUser(async (req: NextRequest, userId: string) => {
  */
 export const POST = withUser(async (req: NextRequest, userId: string) => {
     const body = await req.json();
+    console.log('▶▶ POST /api/directory body:', body);
     const { feature, parent_id, name } = body;
     if (!feature || !name) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
-    const created = await service.createDirectoryService(userId, feature, parent_id, name);
-    return NextResponse.json(created, { status: 201 });
+    // 把空字符串也当成 undefined
+    const parentId = parent_id || undefined;
+    try {
+        const created = await service.createDirectoryService(userId, feature, parentId, name);
+        return NextResponse.json(created, { status: 201 });
+    } catch (e: any) {
+        console.error('❌ createDirectoryService failed:', e);
+        return NextResponse.json({ error: e.message }, { status: 500 });
+    }
 });
 
 /**
@@ -62,9 +70,28 @@ export const DELETE = withUser(async (req: NextRequest, userId: string) => {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-    const ok = await service.deleteDirectoryService(userId, id);
-    if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json({ success: true });
+
+    try {
+        const ok = await service.deleteDirectoryService(userId, id);
+        if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        return NextResponse.json({ success: true });
+    } catch (err: any) {
+        if (err.message === 'DirectoryNotEmpty') {
+            return NextResponse.json(
+                { error: '此目录下还有子目录，请先删除子目录' },
+                { status: 400 }
+            );
+        }
+        if (err.message === 'DirectoryHasContent') {
+            return NextResponse.json(
+                { error: '此目录下还有内容，请先删除内容' },
+                { status: 400 }
+            );
+        }
+        // 其他异常交给全局处理或返回 500
+        console.error(err);
+        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    }
 });
 
 /**

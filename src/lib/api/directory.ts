@@ -76,11 +76,31 @@ export async function updateDirectoryApi(
 }
 
 /** 删除目录（级联由后端决定） */
+// export async function deleteDirectoryApi(id: string): Promise<void> {
+//     const res = await fetch(`/api/directory?id=${id}`, { method: 'DELETE' });
+//     if (!res.ok) throw new Error(`deleteDirectory ${res.status}`);
+// }
 export async function deleteDirectoryApi(id: string): Promise<void> {
     const res = await fetch(`/api/directory?id=${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`deleteDirectory ${res.status}`);
-}
+    if (res.ok) {
+        return;
+    }
 
+    // 默认的 fallback message
+    let errorMsg = `删除失败（${res.status}）`;
+
+    // 尝试从 JSON 里拿到后端的 error 字段
+    try {
+        const data = await res.json();
+        if (data?.error) {
+            errorMsg = data.error;
+        }
+    } catch {
+        // 解析失败就用默认
+    }
+
+    throw new Error(errorMsg);
+}
 /** 同级目录排序 */
 export async function reorderDirectoriesApi(
     feature: string,

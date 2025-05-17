@@ -49,21 +49,28 @@ export async function listDirectories(
 }
 
 // 获取下一个 position
-export async function getNextDirectoryPosition(
-    userId:string,
-    feature: string,
-    parentId?: string,
 
+export async function getNextDirectoryPosition(
+    userId: string,
+    feature: string,
+    parentId?: string | null
 ): Promise<number> {
+    // parentId 为 undefined 或者 null 时，这里会绑定为 null
+    const pid = parentId ?? null;
+
     const { rows } = await pool.query<{ next_pos: number }>(
-        `SELECT COALESCE(MAX(position), 0) + 1 AS next_pos
-       FROM directories
-      WHERE feature = $1 AND created_by = $2 AND parent_id ${parentId ? '= $2' : 'IS NULL'}`,
-        parentId ? [feature, userId, parentId] : [feature, userId]
+        `
+            SELECT COALESCE(MAX(position), 0) + 1 AS next_pos
+            FROM directories
+            WHERE feature     = $1
+              AND created_by  = $2
+              AND parent_id   IS NOT DISTINCT FROM $3::uuid
+        `,
+        [feature, userId, pid]
     );
+
     return rows[0].next_pos;
 }
-
 // 插入新目录
 export async function insertDirectory(
     data: Partial<DirectoryItem>
@@ -115,10 +122,27 @@ export async function updateDirectory(
 
 // 删除目录
 export async function deleteDirectory(id: string): Promise<void> {
-    await pool.query(
-        'DELETE FROM directories WHERE id = $1',
-        [id]
-    );
+    try {
+        await pool.query(
+            'DELETE FROM directories WHERE id = $1',
+            [id]
+        );
+    } catch (err: any) {
+        // 如果是因为还有子行引用它而被拒绝（Foreign Key violation）
+        if (err.code === '23503') {
+            switch (err.constraint) {
+                case 'directories_parent_id_fkey':
+                    // 目录下还有子目录
+                    throw new Error('DirectoryNotEmpty');
+                case 'case_content_directory_id_fkey':
+                case 'japanese_content_directory_id_fkey':
+                    // 目录下还有内容项
+                    throw new Error('DirectoryHasContent');
+            }
+        }
+        // 其他错误依然往上抛
+        throw err;
+    }
 }
 
 // 重排目录顺序
