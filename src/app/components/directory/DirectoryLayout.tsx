@@ -79,6 +79,7 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
     };
 
     const deleteItem = async (id: string) => {
+        console.log('▶▶ DirectoryLayout.deleteItem invoked, id =', id);
         if (!currentDir) return;
         await deleteContent(feature, id);
         mutateDir(currentDir, list => list.filter(i => i.id !== id));

@@ -98,26 +98,39 @@ export async function insertDirectory(
 export async function updateDirectory(
     id: string,
     changes: Partial<DirectoryItem>
-): Promise<void> {
+): Promise<DirectoryItem | null> {
+    // 构造 SET 子句
     const sets: string[] = [];
     const values: any[] = [];
     let idx = 1;
+
     for (const [key, val] of Object.entries(changes)) {
         if (key === 'updatedAt') continue;
         const col = key.replace(/[A-Z]/g, m => `_${m.toLowerCase()}`);
         sets.push(`${col} = $${idx}`);
-        values.push(val as any);
+        values.push(val);
         idx++;
     }
-    if (!sets.length) return;
+
+    if (!sets.length) {
+        // 没有可更新的字段
+        return null;
+    }
+
+    // 始终更新 updated_at
     sets.push(`updated_at = NOW()`);
+
+    // 最后把 id 放到 values，绑定到 WHERE id = $idx
     values.push(id);
-    await pool.query(
-        // `UPDATE directories SET ${sets.join(', ')} WHERE id = $${idx}`,
-        // values
-            `UPDATE directories SET ${sets.join(', ')}  WHERE id = $1 AND created_by = $2`,
-        values
-    );
+
+    const sql = `
+    UPDATE directories
+       SET ${sets.join(', ')}
+     WHERE id = $${idx}
+     RETURNING *
+  `;
+    const { rows } = await pool.query<DirectoryItem>(sql, values);
+    return rows[0] || null;
 }
 
 // 删除目录

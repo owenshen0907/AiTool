@@ -42,6 +42,14 @@ export default function DirectoryNode({
                                           renameDir,
                                           removeDir
                                       }: DirectoryNodeProps) {
+    // 在组件体顶层
+    const openContentMenuFor = (contentId: string) => (e: React.MouseEvent) => {
+        e.stopPropagation();
+        console.log('▶▶ openContentMenu for content', contentId);
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setContentMenuPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
+        setContentMenuOpen(true);
+    };
     // Refs and state for directory menu
     const dirBtnRef = useRef<HTMLDivElement>(null);
     const [dirMenuPos, setDirMenuPos] = useState({ top: 0, left: 0 });
@@ -77,6 +85,7 @@ export default function DirectoryNode({
     // Content menu handlers
     const openContentMenu = (e: React.MouseEvent<HTMLElement>) => {
         e.stopPropagation();
+        // console.log('▶▶ openContentMenu for content', c.id);
         const btn = e.currentTarget as HTMLElement;
         const rect = btn.getBoundingClientRect();
         setContentMenuPos({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
@@ -97,8 +106,8 @@ export default function DirectoryNode({
                 if (elm && !elm.contains(e.target as Node)) setContentMenuOpen(false);
             }
         };
-        document.addEventListener('mousedown', onClick);
-        return () => document.removeEventListener('mousedown', onClick);
+        document.addEventListener('click', onClick);
+        return () => document.removeEventListener('click', onClick);
     }, [dirMenuOpen, contentMenuOpen]);
 
     return (
@@ -164,7 +173,9 @@ export default function DirectoryNode({
                     <div className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { renameDir(node.id, node.name); setDirMenuOpen(false); }}>
                         重命名
                     </div>
-                    <div className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer" onClick={() => { removeDir(node.id, node.name); setDirMenuOpen(false); }}>
+                    <div className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer" onClick={() => {
+                        console.log('▶▶ DirectoryNode deleteItem click, id =', node.id);
+                        removeDir(node.id, node.name); setDirMenuOpen(false); }}>
                         删除
                     </div>
                 </div>,
@@ -217,12 +228,15 @@ export default function DirectoryNode({
                                     >
                                         <button
                                             className="opacity-0 group-hover:opacity-100 transition"
-                                            onClick={openContentMenu}
+                                            // onClick={openContentMenu}
+                                            onClick={openContentMenuFor(c.id)}
                                         >
                                             <MoreVertical size={14} />
                                         </button>
                                     </div>
-                                    {contentMenuOpen && document.body && createPortal(
+                                    {contentMenuOpen && document.body && (
+                                        console.log('▶▶ renderContentMenu for content', c.id),
+                                            createPortal(
                                         <div
                                             id="content-node-menu"
                                             className="absolute w-20 bg-white border shadow rounded-lg z-50"
@@ -230,11 +244,14 @@ export default function DirectoryNode({
                                             onMouseEnter={clearContentTimer}
                                             onMouseLeave={scheduleCloseContentMenu}
                                         >
-                                            <div className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer" onClick={() => { onDeleteItem?.(c.id); setContentMenuOpen(false); }}>
+                                            <div className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer" onClick={() => {
+                                                console.log('▶▶ DirectoryNode deleteContent click, id =', c.id);
+                                                onDeleteItem?.(c.id); setContentMenuOpen(false); }}>
                                                 删除
                                             </div>
                                         </div>,
                                         document.body
+                                            )
                                     )}
                                 </div>
                             </li>
