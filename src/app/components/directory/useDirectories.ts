@@ -1,3 +1,4 @@
+// src/components/directory/useDirectories.ts
 import { useState, useEffect, useCallback } from 'react';
 import type { DirectoryItem } from '@/lib/models/directory';
 import type { TreeNode } from './types';

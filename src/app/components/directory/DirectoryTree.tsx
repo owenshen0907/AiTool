@@ -1,3 +1,4 @@
+// src/components/directory/DirectoryTree.tsx
 import React from 'react';
 import type { TreeNode } from './types';
 import type { ContentItem } from '@/lib/models/content';

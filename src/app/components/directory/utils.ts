@@ -1,4 +1,6 @@
+// src/components/directory/utils.ts
 import type { DirectoryItem } from '@/lib/models/directory';
+
 import type { TreeNode } from './types';
 
 export function buildTree(list: DirectoryItem[]): TreeNode[] {
