@@ -7,5 +7,5 @@ declare global {
         wechat: string;
     }>;
 }
-
 export {};
+declare module 'recorder-js';

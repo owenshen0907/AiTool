@@ -1,9 +1,8 @@
-// app/components/ChatInput.tsx
+// File: app/components/ChatInput.tsx
 'use client';
 
 import React, {
     useState,
-    useRef,
     useEffect,
     useCallback,
     KeyboardEvent,
@@ -11,7 +10,6 @@ import React, {
 } from 'react';
 import { Send } from 'lucide-react';
 import type { Supplier, Model } from '@/lib/models/model';
-
 import ChatImageInput from './ChatImageInput';
 import ChatVoiceInput from './ChatVoiceInput';
 import SupplierModelSelector from '../info/SupplierModelSelector';
@@ -39,27 +37,15 @@ export default function ChatInput<CTX = any>({
                                                  enableVoice = true,
                                                  onSend,
                                              }: ChatInputProps<CTX>) {
-    // 供应商 & 模型
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
     const [models, setModels] = useState<Model[]>([]);
     const [model, setModel] = useState<string>('');
-
-    // 文本 / 图片 / URL / 语音
     const [text, setText] = useState('');
     const [images, setImages] = useState<File[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
-    const [voiceBlob, setVoiceBlob] = useState<Blob>();
-    const [listening, setListening] = useState(false);
-
-    // IME 合成锁
     const [isComposing, setIsComposing] = useState(false);
 
-    // 录音相关
-    const mediaRef = useRef<MediaRecorder>();
-    const chunks: Blob[] = [];
-
-    // 拉供应商
     useEffect(() => {
         async function fetchSuppliers() {
             try {
@@ -78,24 +64,18 @@ export default function ChatInput<CTX = any>({
             }
         }
         fetchSuppliers();
-    }, []);
+    }, [selectedSupplierId]);
 
-    // 拉模型
     useEffect(() => {
         async function fetchModels() {
-            if (!selectedSupplierId) {
-                setModels([]);
-                setModel('');
-                return;
-            }
+            if (!selectedSupplierId) return;
             try {
                 const res = await fetch(`/api/models?supplier_id=${selectedSupplierId}`);
                 if (res.ok) {
                     const data: Model[] = await res.json();
                     data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
                     setModels(data);
-                    const defModel = data.find(m => m.isDefault) || data[0];
-                    setModel(defModel?.name || '');
+                    setModel(data.find(m => m.isDefault)?.name || data[0]?.name || '');
                 }
             } catch (err) {
                 console.error('获取模型失败', err);
@@ -104,58 +84,24 @@ export default function ChatInput<CTX = any>({
         fetchModels();
     }, [selectedSupplierId]);
 
-    // 录音
-    const startRecording = async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const recorder = new MediaRecorder(stream);
-        mediaRef.current = recorder;
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = () => setVoiceBlob(new Blob(chunks, { type: 'audio/webm' }));
-        recorder.start();
-        setListening(true);
-    };
-    const stopRecording = () => {
-        mediaRef.current?.stop();
-        setListening(false);
-    };
+    const onTranscript = useCallback((msg: string) => {
+        setText(t => t + msg);
+    }, []);
 
-    // 真正发送
     const doSend = useCallback(() => {
         if (!selectedSupplierId) return alert('请先选择供应商');
-        const supplier = suppliers.find(s => s.id === selectedSupplierId);
-        if (!supplier) return alert('无效的供应商');
+        const supplier = suppliers.find(s => s.id === selectedSupplierId)!;
         if (!model) return alert('请先选择模型');
-        if (!text.trim() && !images.length && !imageUrls.length && !voiceBlob) return;
+        if (!text.trim() && !images.length && !imageUrls.length) return;
 
-        onSend({ text, images, imageUrls, voiceBlob, model, context, supplier });
-
-        // 重置
+        onSend({ text, images, imageUrls, voiceBlob: undefined, model, context, supplier });
         setText('');
-        setImages([]);
-        setImageUrls([]);
-        setVoiceBlob(undefined);
-    }, [
-        selectedSupplierId,
-        suppliers,
-        model,
-        text,
-        images,
-        imageUrls,
-        voiceBlob,
-        context,
-        onSend,
-    ]);
+        setImages([]); setImageUrls([]);
+    }, [selectedSupplierId, suppliers, model, text, images, imageUrls, onSend, context]);
 
-    const sendDisabled =
-        !selectedSupplierId ||
-        !model ||
-        (!text.trim() && !images.length && !imageUrls.length && !voiceBlob);
-
-    // 回车 & IME
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
-            e.preventDefault();
-            doSend();
+            e.preventDefault(); doSend();
         }
     };
     const handleComposition = (e: CompositionEvent<HTMLTextAreaElement>) => {
@@ -183,9 +129,9 @@ export default function ChatInput<CTX = any>({
                     />
                     <ChatVoiceInput
                         enableVoice={enableVoice}
-                        listening={listening}
-                        onStart={startRecording}
-                        onStop={stopRecording}
+                        model={model}
+                        language="auto"
+                        onTranscript={onTranscript}
                     />
                     <SupplierModelSelector
                         suppliers={suppliers}
@@ -199,7 +145,7 @@ export default function ChatInput<CTX = any>({
 
                 <button
                     onClick={doSend}
-                    disabled={sendDisabled}
+                    disabled={!selectedSupplierId || !model || (!text.trim() && !images.length && !imageUrls.length)}
                     className="justify-self-end px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                     发送 <Send size={16} className="inline ml-1" />
