@@ -129,7 +129,6 @@ export default function ChatInput<CTX = any>({
                     />
                     <ChatVoiceInput
                         enableVoice={enableVoice}
-                        model={model}
                         language="auto"
                         onTranscript={onTranscript}
                     />
