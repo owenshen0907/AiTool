@@ -1,4 +1,4 @@
-// File: app/components/ChatInput.tsx
+// File: app/components/input/ChatInput.tsx
 'use client';
 
 import React, {
@@ -7,8 +7,10 @@ import React, {
     useCallback,
     KeyboardEvent,
     CompositionEvent,
+    useRef,
 } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Mic, Mic2 } from 'lucide-react';
+import NonStreamVoiceInput from './NonStreamVoiceInput';
 import type { Supplier, Model } from '@/lib/models/model';
 import ChatImageInput from './ChatImageInput';
 import ChatVoiceInput from './ChatVoiceInput';
@@ -45,6 +47,11 @@ export default function ChatInput<CTX = any>({
     const [images, setImages] = useState<File[]>([]);
     const [imageUrls, setImageUrls] = useState<string[]>([]);
     const [isComposing, setIsComposing] = useState(false);
+
+    // 保存用户手动输入前缀
+    const prefixRef = useRef<string>('');
+    // 缓存流式语音文本
+    const voiceBufferRef = useRef<string>('');
 
     useEffect(() => {
         async function fetchSuppliers() {
@@ -84,9 +91,27 @@ export default function ChatInput<CTX = any>({
         fetchModels();
     }, [selectedSupplierId]);
 
-    const onTranscript = useCallback((msg: string) => {
-        setText(t => t + msg);
-    }, []);
+    // 流式转写回调，支持前缀保留与最终覆盖
+    const onTranscript = useCallback(
+        (msg: string, isFinal: boolean) => {
+            // 去除两端引号
+            const cleaned = msg.replace(/^"|"$/g, '');
+            if (isFinal) {
+                // 最终文本：更新 prefix 为完整文本，清空 buffer
+                prefixRef.current = prefixRef.current + cleaned;
+                voiceBufferRef.current = '';
+                setText(prefixRef.current);
+            } else {
+                // 流式片段：首次片段，保存前缀
+                if (voiceBufferRef.current === '') {
+                    prefixRef.current = text;
+                }
+                voiceBufferRef.current += cleaned;
+                setText(prefixRef.current + voiceBufferRef.current);
+            }
+        },
+        [text]
+    );
 
     const doSend = useCallback(() => {
         if (!selectedSupplierId) return alert('请先选择供应商');
@@ -96,12 +121,16 @@ export default function ChatInput<CTX = any>({
 
         onSend({ text, images, imageUrls, voiceBlob: undefined, model, context, supplier });
         setText('');
-        setImages([]); setImageUrls([]);
+        setImages([]);
+        setImageUrls([]);
+        prefixRef.current = '';
+        voiceBufferRef.current = '';
     }, [selectedSupplierId, suppliers, model, text, images, imageUrls, onSend, context]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
-            e.preventDefault(); doSend();
+            e.preventDefault();
+            doSend();
         }
     };
     const handleComposition = (e: CompositionEvent<HTMLTextAreaElement>) => {
@@ -131,6 +160,10 @@ export default function ChatInput<CTX = any>({
                         enableVoice={enableVoice}
                         language="auto"
                         onTranscript={onTranscript}
+                    />
+                    <NonStreamVoiceInput
+                        enableVoice={enableVoice}
+                        onTranscription={text => setText(t => t + text)}
                     />
                     <SupplierModelSelector
                         suppliers={suppliers}
