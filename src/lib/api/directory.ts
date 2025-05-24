@@ -66,6 +66,7 @@ export async function updateDirectoryApi(
     const body: Record<string, any> = { id };
     if (name !== undefined)     body.name       = name;
     if (parentId !== undefined) body.parent_id  = parentId;
+    console.log('[API] updateDirectory', body);
     const res = await fetch('/api/directory', {
         method: 'PUT',
         headers: JSON_HEADER,
@@ -107,6 +108,9 @@ export async function reorderDirectoriesApi(
     parentId: string | null,
     orderedIds: string[]
 ): Promise<void> {
+    const body = { feature, parent_id: parentId, ordered_ids: orderedIds };
+    console.log('[API] reorderDirectories', body); // <<<<<< ④ 追加
+
     const res = await fetch('/api/directory', {
         method: 'PATCH',
         headers: JSON_HEADER,

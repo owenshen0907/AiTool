@@ -1,23 +1,19 @@
-// src/hooks/useContentCache.ts
+// File: src/components/directory/useContentCache.ts
 'use client';
 
 import { useState, useCallback } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import { fetchContentByDirectory } from '@/lib/api/content';
 
-/**
- * 把目录内容按 dirId 做缓存，避免反复请求
- */
+
 export function useContentCache(feature: string) {
-    // Map<dirId, ContentItem[]>
+    // { [dirId]: ContentItem[] }
     const [cache, setCache] = useState<Record<string, ContentItem[]>>({});
 
-    /** 主动加载并写入缓存，返回加载后的列表 */
+    /** 加载某目录下的内容（force = true 可强制重新拉取） */
     const loadDir = useCallback(
-        async (dirId: string): Promise<ContentItem[]> => {
-            // 已有缓存就直接返回
-            if (cache[dirId]) return cache[dirId];
-
+        async (dirId: string, force = false): Promise<ContentItem[]> => {
+            if (!force && cache[dirId]) return cache[dirId];
             const list = await fetchContentByDirectory(feature, dirId);
             setCache(prev => ({ ...prev, [dirId]: list }));
             return list;
@@ -25,16 +21,20 @@ export function useContentCache(feature: string) {
         [cache, feature],
     );
 
-    /** 当增删改时，直接 patch 当前 dirId 的内容数组 */
+    /** 当增删改后，patch 更新某目录的缓存数据 */
     const mutateDir = useCallback(
         (dirId: string, updater: (old: ContentItem[]) => ContentItem[]) => {
-            setCache(prev => ({ ...prev, [dirId]: updater(prev[dirId] ?? []) }));
+            setCache(prev => {
+                const oldList = prev[dirId] ?? [];
+                const newList = updater(oldList);
+                return { ...prev, [dirId]: newList };
+            });
         },
         [],
     );
 
-    /** 把所有 dir 已加载内容拍平成单数组，给 DirectoryManager 渲染 */
-    const allItems: ContentItem[] = Object.values(cache).flat();
+    /** 所有已加载目录内容的平铺数组，用于 DirectoryManager 渲染 */
+    const allItems = Object.values(cache).flat();
 
     return { loadDir, mutateDir, allItems };
 }

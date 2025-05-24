@@ -37,23 +37,32 @@ export async function createContent(
     return res.json();
 }
 
-/* 更新 */
+/* 更新（仅发送存在的字段） */
 export async function updateContent(
     feature: string,
-    data: { id: string; directoryId: string; title: string; summary?: string; body?: string }
+    data: {
+        id: string;
+        directoryId?: string;
+        title?: string;
+        summary?: string;
+        body?: string;
+    }
 ): Promise<ContentItem> {
+    const payload: Record<string, any> = {          // ← 先建可变对象
+        feature,
+        id: data.id,
+    };
+    if (data.directoryId !== undefined) payload.directory_id = data.directoryId;
+    if (data.title        !== undefined) payload.title       = data.title;
+    if (data.summary      !== undefined) payload.summary     = data.summary;
+    if (data.body         !== undefined) payload.body        = data.body;
+
     const res = await fetch('/api/content', {
         method: 'PUT',
-        headers: JSON_HEADER,
-        body: JSON.stringify({
-            feature,
-            id: data.id,
-            directory_id: data.directoryId,   // ✅
-            title: data.title,
-            summary: data.summary,
-            body: data.body,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
     });
+
     if (!res.ok) throw new Error(`updateContent failed: ${res.status}`);
     return res.json();
 }
@@ -85,5 +94,43 @@ export async function reorderContent(
         }),
     });
     if (!res.ok) throw new Error(`reorderContent failed: ${res.status}`);
+    return res.json();
+}
+
+export async function moveContent(
+    feature: string,
+    id: string,
+    newDir: string,
+    beforeId?: string
+) {
+    const body: any = { feature, id, new_directory_id: newDir };
+    if (beforeId) body.before_id = beforeId;
+    const res = await fetch('/api/content/move', {
+        method: 'PATCH',
+        headers: JSON_HEADER,
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`moveContent failed: ${res.status}`);
+    return res.json();
+}
+
+/**
+ * 单一接口：把 fileId 移到 newDir 下，并在 newDir 中排序到 targetFileId 之前
+ */
+export async function moveAndReorderContent(
+    feature: string,
+    id: string,
+    newDir?: string,
+    beforeId?: string,
+) {
+    const payload: any = { feature, id };
+    if (newDir)    payload.new_directory_id = newDir;
+    if (beforeId)  payload.before_id          = beforeId;
+    const res = await fetch('/api/content/move', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`moveAndReorderContent ${res.status}`);
     return res.json();
 }

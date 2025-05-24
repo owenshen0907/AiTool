@@ -158,22 +158,6 @@ export async function deleteDirectory(id: string): Promise<void> {
     }
 }
 
-// 重排目录顺序
-// export async function reorderDirectories(
-//     feature: string,
-//     parentId: string | null,
-//     orderedIds: string[]
-// ): Promise<void> {
-//     await pool.query(
-//         `UPDATE directories SET position = x.idx
-//        FROM (
-//          SELECT id, ROW_NUMBER() OVER () - 1 AS idx
-//          FROM unnest($1::uuid[]) AS id
-//        ) x
-//        WHERE directories.id = x.id`,
-//         [orderedIds]
-//     );
-// }
 export async function reorderDirectories(
     userId: string,
     feature: string,

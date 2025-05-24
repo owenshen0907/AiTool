@@ -41,12 +41,16 @@ export async function updateContent(
     feature: string,
     data: Partial<ContentItem> & { id: string }
 ): Promise<ContentItem> {
-    await repo.update(feature, data.id, {
-        directoryId: data.directoryId,
-        title: data.title,
-        summary: data.summary,
-        body: data.body,
-    });
+    /* ✅ 过滤掉 undefined */
+    const patch: Partial<ContentItem> = {};
+    if (data.directoryId !== undefined) patch.directoryId = data.directoryId;
+    if (data.title        !== undefined) patch.title       = data.title;
+    if (data.summary      !== undefined) patch.summary     = data.summary;
+    if (data.body         !== undefined) patch.body        = data.body;
+    if ((data as any).position !== undefined) patch.position = (data as any).position;
+
+    await repo.update(feature, data.id, patch);
+
     const updated = await repo.getById(feature, data.id);
     if (!updated) throw new Error('Not found');
     return updated;

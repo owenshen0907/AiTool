@@ -1,3 +1,4 @@
+// src/lib/models/content.ts
 export interface ContentItem {
     id: string;
     directoryId: string;
