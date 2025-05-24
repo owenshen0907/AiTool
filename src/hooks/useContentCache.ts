@@ -1,29 +1,37 @@
+// File: src/hooks/useContentCache.ts
 'use client';
 
 import { useState, useCallback } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import { fetchContentByDirectory } from '@/lib/api/content';
 
+/**
+ * 缓存每个目录下的 ContentItem[]，
+ * 提供 loadDir、mutateDir、clearCachedDir 三个操作。
+ */
 export function useContentCache(feature: string) {
     const [cache, setCache] = useState<Record<string, ContentItem[]>>({});
 
-    // loadDir: force=true 强制拉接口；否则用缓存
+    /** 读取目录，如果 force=true 则跳过缓存强制拉取 */
     const loadDir = useCallback(
         async (dirId: string, force = false): Promise<ContentItem[]> => {
             if (!dirId) return [];
+            // 如果已有缓存且不强制刷新，直接返回
             if (!force && cache[dirId]) {
-                // console.log('返回缓存', dirId, cache[dirId]);
                 return cache[dirId];
             }
+            // 否则调用 API
             const list = await fetchContentByDirectory(feature, dirId);
-            // console.log('强制刷新API', dirId, list);
             setCache(prev => ({ ...prev, [dirId]: list }));
             return list;
         },
-        [feature, cache]
+        [cache, feature]
     );
 
-    // 前端同步本地缓存
+    /**
+     * 局部更新某个目录的缓存，
+     * updater(oldList) => newList
+     */
     const mutateDir = useCallback(
         (dirId: string, updater: (old: ContentItem[]) => ContentItem[]) => {
             setCache(prev => {
@@ -34,7 +42,7 @@ export function useContentCache(feature: string) {
         []
     );
 
-    // 清理缓存
+    /** 删除某个目录的缓存条目，下次 loadDir 会重新拉取 */
     const clearCachedDir = useCallback(
         (dirId: string) => {
             setCache(prev => {
@@ -46,8 +54,8 @@ export function useContentCache(feature: string) {
         []
     );
 
-    // 合并所有内容（树状结构遍历用）
+    /** 所有目录里的扁平列表，主要给 DirectoryManager 渲染树与文件拖拽用 */
     const allItems = Object.values(cache).flat();
 
-    return { loadDir, mutateDir, clearCachedDir, allItems, cache };
+    return { cache, loadDir, mutateDir, clearCachedDir, allItems };
 }

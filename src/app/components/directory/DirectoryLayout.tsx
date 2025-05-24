@@ -1,12 +1,13 @@
+// File: src/components/directory/DirectoryLayout.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import DirectoryManager from './DirectoryManager';
-import ContentModal from './CreateContentModal';
+import ContentModal     from './CreateContentModal';
 
 import type { ContentItem } from '@/lib/models/content';
-import { useContentCache } from '@/hooks/useContentCache';
-import { useDirectories } from './useDirectories';
+import { useContentCache }  from '@/hooks/useContentCache';
+import { useDirectories }   from './useDirectories';
 import {
     createContent,
     updateContent,
@@ -18,24 +19,25 @@ import {
 export interface DirectoryLayoutProps {
     feature: string;
     children: (props: {
-        currentDir: string | null;
+        currentDir:   string | null;
         selectedItem: ContentItem | null;
         visibleItems: ContentItem[];
         onSelectItem: (id: string) => void;
-        onCreateItem: (data: { title: string; summary?: string; body?: string }) => Promise<void>;
-        onUpdateItem: (item: ContentItem, patch: { title?: string; summary?: string; body?: string }) => Promise<void>;
-        onUpdate: (item: ContentItem, patch: { title?: string; summary?: string; body?: string }) => Promise<void>;
-        onDeleteItem: (id: string) => Promise<void>;
-        onReorderFile: (dirId: string, orderedIds: string[]) => Promise<void>;
-        onMoveItem: (id: string, newDirId: string) => Promise<void>;
-        onOpenEdit: (item: ContentItem) => void;
+        onCreate:     (dirId: string) => Promise<void>;
+        onUpdate:     (item: ContentItem, patch: { title?: string; summary?: string; body?: string }) => Promise<void>;
+        onDelete:     (id: string) => Promise<void>;
+        onReorder:    (dirId: string, orderedIds: string[]) => Promise<void>;
+        onMove:       (id: string, newDirId: string) => Promise<void>;
+        onOpenEdit:   (item: ContentItem) => void;
     }) => React.ReactNode;
 }
 
 export default function DirectoryLayout({ feature, children }: DirectoryLayoutProps) {
-    const [currentDir, setCurrentDir] = useState<string | null>(null);
-    const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
+    const [currentDir,    setCurrentDir]    = useState<string | null>(null);
+    const [selectedItem,  setSelectedItem]  = useState<ContentItem | null>(null);
     const [reloadTreeFlag, setReloadTreeFlag] = useState(0);
+
+    // 目录树增删改查
     const {
         tree,
         reload: reloadTree,
@@ -43,45 +45,41 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
         renameDir,
         removeDir,
     } = useDirectories(feature);
-    const [autoExpandDirs, setAutoExpandDirs] = useState<string[]>([]);
 
     // 内容缓存
-    const { loadDir, mutateDir, clearCachedDir, allItems, cache } = useContentCache(feature);
+    const { cache, loadDir, mutateDir, clearCachedDir, allItems } = useContentCache(feature);
 
-    // 当前目录下可见内容
-    const visibleItems: ContentItem[] = currentDir ? (cache[currentDir] ?? []) : [];
+    // 当前目录下可见 items
+    const visibleItems = currentDir ? (cache[currentDir] ?? []) : [];
 
-    // Modal 状态
-    const [modalVisible, setModalVisible] = useState(false);
-    const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
-
-    // 切目录时自动加载（只加载一次）
+    // 切目录时初次加载
     useEffect(() => {
         if (currentDir && !cache[currentDir]) {
             loadDir(currentDir, true).catch(console.error);
         }
     }, [currentDir, cache, loadDir]);
 
-    // Modal 打开新建
-    const openCreate = (dirId: string) => {
+    // 新建 / 编辑 弹框
+    const [modalVisible, setModalVisible] = useState(false);
+    const [editingItem,  setEditingItem]  = useState<ContentItem | null>(null);
+
+    const openCreate = useCallback((dirId: string) => {
         setEditingItem(null);
         setCurrentDir(dirId);
-        setTimeout(() => setModalVisible(true), 0); // 防止弹框刚切目录时状态没同步
-    };
+        // 延迟一下，保证 currentDir 更新后再显示
+        setTimeout(() => setModalVisible(true), 0);
+    }, []);
 
-    // Modal 打开编辑
-    const openEdit = (item: ContentItem) => {
+    const openEdit = useCallback((item: ContentItem) => {
         setEditingItem(item);
         setModalVisible(true);
-    };
+    }, []);
 
-    // Modal 关闭
     const closeModal = () => {
         setModalVisible(false);
         setEditingItem(null);
     };
 
-    // Modal 提交（新建/编辑）
     const handleModalSubmit = async (data: { title: string; summary?: string; body?: string }) => {
         if (!currentDir) return;
         try {
@@ -94,7 +92,7 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
                 const created = await createContent(feature, { directoryId: currentDir, ...data });
                 mutateDir(currentDir, list => [...list, created]);
             }
-            await loadDir(currentDir, true); // 强制刷新（保证后端顺序和位置等字段都最新）
+            await loadDir(currentDir, true);
         } catch (e: any) {
             alert(`保存失败：${e.message}`);
         } finally {
@@ -102,16 +100,15 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
         }
     };
 
-    // 行内新建
-    const onCreateItem = useCallback(async (data: { title: string; summary?: string; body?: string }) => {
-        if (!currentDir) return;
-        const created = await createContent(feature, { directoryId: currentDir, ...data });
-        mutateDir(currentDir, list => [...list, created]);
-        await loadDir(currentDir, true);
-    }, [feature, currentDir, mutateDir, loadDir]);
+    // -------------------------
+    // 传给子组件的回调们
+    // -------------------------
 
-    // 行内更新
-    const onUpdateItem = useCallback(async (item: ContentItem, patch: { title?: string; summary?: string; body?: string }) => {
+    const onCreate = useCallback(async (dirId: string) => {
+        openCreate(dirId);
+    }, [openCreate]);
+
+    const onUpdate = useCallback(async (item: ContentItem, patch: any) => {
         await updateContent(feature, { id: item.id, ...patch });
         if (currentDir) {
             mutateDir(currentDir, list =>
@@ -121,8 +118,7 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
         }
     }, [feature, currentDir, mutateDir, loadDir]);
 
-    // 删除
-    const onDeleteItem = useCallback(async (id: string) => {
+    const onDelete = useCallback(async (id: string) => {
         if (!window.confirm('确认要删除此内容？')) return;
         await deleteContent(feature, id);
         if (currentDir) {
@@ -132,38 +128,31 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
         if (selectedItem?.id === id) setSelectedItem(null);
     }, [feature, currentDir, mutateDir, loadDir, selectedItem]);
 
-    // 目录/内容区强制刷新
-    const reloadDirs = useCallback(() => {
-        reloadTree();
-        setReloadTreeFlag(f => f + 1);
-    }, [reloadTree]);
+    const onReorder = useCallback(async (dirId: string, orderedIds: string[]) => {
+        await reorderContent(feature, dirId, orderedIds);
+        clearCachedDir(dirId);
+        await loadDir(dirId, true);
+    }, [feature, clearCachedDir, loadDir]);
 
-    // autoExpandDirs 控制后自动清空（可视化效果用）
-    useEffect(() => {
-        if (autoExpandDirs.length) {
-            const timer = setTimeout(() => setAutoExpandDirs([]), 500);
-            return () => clearTimeout(timer);
-        }
-    }, [autoExpandDirs]);
-
-    // 移动/排序：刷新原目录与目标目录 + 展开
-    const onMoveItem = async (id: string, newDirId: string) => {
+    const onMove = useCallback(async (id: string, newDirId: string) => {
         const oldDir = allItems.find(i => i.id === id)?.directoryId;
         await moveAndReorderContent(feature, id, newDirId);
-        if (oldDir) await loadDir(oldDir, true);
+        if (oldDir) {
+            clearCachedDir(oldDir);
+            await loadDir(oldDir, true);
+        }
+        clearCachedDir(newDirId);
         await loadDir(newDirId, true);
-        setAutoExpandDirs([oldDir, newDirId].filter(Boolean) as string[]);
-        reloadDirs();
-        setSelectedItem(null);
-    };
+    }, [feature, allItems, clearCachedDir, loadDir]);
 
-    const onReorderFile = async (dirId: string, orderedIds: string[]) => {
-        await reorderContent(feature, dirId, orderedIds);
-        await loadDir(dirId, true);
-        setAutoExpandDirs([dirId]);
-        reloadDirs();
-        setSelectedItem(null);
-    };
+    const reloadDirs = useCallback(() => {
+        reloadTree();
+        setReloadTreeFlag(v => v + 1);
+    }, [reloadTree]);
+
+    // -------------------------
+    // 渲染
+    // -------------------------
 
     return (
         <div className="flex h-screen">
@@ -173,23 +162,25 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
                 items={allItems}
                 selectedDirId={currentDir}
                 selectedItemId={selectedItem?.id ?? null}
+
                 onSelectDir={dirId => {
                     setCurrentDir(dirId);
                     setSelectedItem(null);
                 }}
-                onSelectItem={id =>
-                    setSelectedItem(allItems.find(i => i.id === id) ?? null)
-                }
+                onSelectItem={id => {
+                    setSelectedItem(allItems.find(i => i.id === id) ?? null);
+                }}
+
                 onCreateContent={openCreate}
-                onDeleteItem={onDeleteItem}
-                onMoveItem={onMoveItem}
-                onReorderFile={onReorderFile}
+                onDeleteItem={onDelete}
+                onMoveItem={onMove}
+                onReorderFile={onReorder}
+
                 reloadDirs={reloadDirs}
                 tree={tree}
                 addSubDir={addSubDir}
                 renameDir={renameDir}
                 removeDir={removeDir}
-                autoExpandDirs={autoExpandDirs}
             />
 
             <main className="flex-1 bg-white overflow-auto p-4">
@@ -198,12 +189,11 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
                     selectedItem,
                     visibleItems,
                     onSelectItem: id => setSelectedItem(visibleItems.find(i => i.id === id) ?? null),
-                    onCreateItem,
-                    onUpdateItem,
-                    onUpdate: onUpdateItem,
-                    onDeleteItem,
-                    onReorderFile,
-                    onMoveItem,
+                    onCreate,
+                    onUpdate,
+                    onDelete,
+                    onReorder,
+                    onMove,
                     onOpenEdit: openEdit,
                 })}
             </main>

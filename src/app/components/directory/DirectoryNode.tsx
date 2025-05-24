@@ -126,35 +126,56 @@ export default function DirectoryNode(props: Props) {
 
         // folder dragging
         if (srcType === 'dir') {
+            // 同一个节点，不处理
             if (srcId === target.id) return;
+
             const dragRoot = srcParent === null;
             const dropRoot = node.parentId === null;
 
-            // root <-> root reorder
+            // 1. 根目录 <-> 根目录 排序
             if (dragRoot && dropRoot) {
+                // 按 position 排序出当前数组
                 const ordered = [...rootList].sort((a, b) => a.position - b.position);
                 const from = ordered.findIndex(d => d.id === srcId);
-                const to = ordered.findIndex(d => d.id === target.id);
+                const to   = ordered.findIndex(d => d.id === target.id);
                 if (from < 0 || to < 0) return;
+
+                // 用户确认
+                if (!window.confirm('确认要重新排序根目录下的文件夹吗？')) return;
+
+                // 调接口 + 刷新
                 ordered.splice(to, 0, ordered.splice(from, 1)[0]);
                 await reorderDirectoriesApi(feature, null, ordered.map(d => d.id));
                 await reloadDirs();
                 return;
             }
 
-            // drop onto a directory -> change parent
-            if (target.type === 'dir') {
+            // 2. 根目录 → 子目录：禁止操作
+            if (dragRoot && !dropRoot) {
+                // 可以提示用户
+                window.alert('根目录不能直接移动到子目录下');
+                return;
+            }
+
+            // 3. 子目录 → 根目录或子目录：修改 parent
+            if (!dragRoot && target.type === 'dir') {
+                // 拖到某个目录上，变更父目录
+                if (!window.confirm('确认要将此目录移动到目标目录下吗？')) return;
                 await updateDirectoryApi(srcId, undefined, target.id);
                 await reloadDirs();
                 return;
             }
 
-            // siblings reorder within same parent
-            const siblings = rootList.find(p => p.id === srcParent)?.children ?? [];
+            // 4. 同级内重新排序
+            // 找到共同父节点下的孩子列表
+            const siblings = rootList
+                .find(p => p.id === srcParent)?.children ?? [];
             const ordered = [...siblings].sort((a, b) => a.position - b.position);
-            const from = ordered.findIndex(d => d.id === srcId);
-            const to = ordered.findIndex(d => d.id === target.id);
+            const from    = ordered.findIndex(d => d.id === srcId);
+            const to      = ordered.findIndex(d => d.id === target.id);
             if (from < 0 || to < 0) return;
+
+            if (!window.confirm('确认要在当前层级重新排序此目录吗？')) return;
             ordered.splice(to, 0, ordered.splice(from, 1)[0]);
             await reorderDirectoriesApi(feature, srcParent!, ordered.map(d => d.id));
             await reloadDirs();
@@ -166,6 +187,7 @@ export default function DirectoryNode(props: Props) {
             // A. drop onto directory row
             if (target.type === 'dir') {
                 if (srcId !== target.id) {
+                    if (!confirm('确认要移动此文件到该目录吗？')) return;
                     await moveAndReorderContent(feature, srcId, target.id);
                     onSelectDir(target.id);
                 }
@@ -175,6 +197,7 @@ export default function DirectoryNode(props: Props) {
             // B. drop onto file row
             if (target.type === 'file') {
                 const beforeId = target.id;
+                if (!confirm('确认要在当前目录内重新排序文件吗？')) return;
                 await moveAndReorderContent(feature, srcId, undefined, beforeId);
                 const beforeItem = items.find(i => i.id === beforeId)!;
                 onSelectDir(beforeItem.directoryId);

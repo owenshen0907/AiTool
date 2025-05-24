@@ -26,7 +26,10 @@ export default function CaseManagePage() {
                     onCreateItem={() => currentDir && onCreate(currentDir)}
                     onUpdateItem={onUpdate}
                     onDeleteItem={onDelete}
-                    onReorderItems={onReorder}
+                    onReorderItems={(orderedIds: string[]) => {
+                        if (currentDir) {
+                            onReorder(currentDir, orderedIds);
+                        }}}
                 />
             )}
         </DirectoryLayout>
