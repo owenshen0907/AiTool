@@ -9,6 +9,7 @@ import {
     Folder,
     FileText,
     MoreVertical,
+    ArrowUpDown,
 } from 'lucide-react';
 import type { TreeNode } from './types';
 import type { ContentItem } from '@/lib/models/content';
@@ -47,16 +48,27 @@ interface Props {
 
 export default function DirectoryNode(props: Props) {
     const {
-        feature, node, level, items,
-        expand, toggleExpand, collapsed,
-        onSelectDir, onSelectItem,
-        onCreateContent, onDeleteItem,
-        addSubDir, renameDir, removeDir,
-        onMoveItem, onReorderFile,
-        reloadDirs, rootList,
+        feature,
+        node,
+        level,
+        items,
+        expand,
+        toggleExpand,
+        collapsed,
+        onSelectDir,
+        onSelectItem,
+        onCreateContent,
+        onDeleteItem,
+        addSubDir,
+        renameDir,
+        removeDir,
+        onMoveItem,
+        onReorderFile,
+        reloadDirs,
+        rootList,
     } = props;
 
-    // 只显示当前目录下的文件，并按 position/updatedAt 排序
+    // files under this directory
     const files = items
         .filter(i => getDirId(i) === node.id)
         .sort((a, b) => {
@@ -70,8 +82,9 @@ export default function DirectoryNode(props: Props) {
 
     const [dirMenu, setDirMenu] = useState<{ x: number; y: number } | null>(null);
     const [fileMenu, setFileMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+    const [sortAsc, setSortAsc] = useState(false);
 
-    // 点击空白关闭菜单
+    // close menus on outside click
     useEffect(() => {
         const close = (e: MouseEvent) => {
             if (!(e.target as HTMLElement).closest('#dir-menu,#file-menu')) {
@@ -83,7 +96,7 @@ export default function DirectoryNode(props: Props) {
         return () => document.removeEventListener('click', close, true);
     }, []);
 
-    // 开始拖拽
+    // handle drag start
     const onDragStart = (
         e: React.DragEvent,
         id: string,
@@ -96,7 +109,7 @@ export default function DirectoryNode(props: Props) {
         e.dataTransfer.effectAllowed = 'move';
     };
 
-    // 放下处理
+    // handle drop
     const onDrop = async (
         e: React.DragEvent,
         target: { id: string; type: 'dir' | 'file' }
@@ -106,16 +119,18 @@ export default function DirectoryNode(props: Props) {
         const raw = e.dataTransfer.getData('text/plain');
         if (!raw) return;
         const { id: srcId, type: srcType, parentId: srcParent } = JSON.parse(raw) as {
-            id: string; type: 'dir' | 'file'; parentId: string | null;
+            id: string;
+            type: 'dir' | 'file';
+            parentId: string | null;
         };
 
-        // ── 拖拽目录 ──
+        // folder dragging
         if (srcType === 'dir') {
             if (srcId === target.id) return;
             const dragRoot = srcParent === null;
             const dropRoot = node.parentId === null;
-            if (dragRoot && !dropRoot) return;
-            // 根↔根 同级排序
+
+            // root <-> root reorder
             if (dragRoot && dropRoot) {
                 const ordered = [...rootList].sort((a, b) => a.position - b.position);
                 const from = ordered.findIndex(d => d.id === srcId);
@@ -126,13 +141,15 @@ export default function DirectoryNode(props: Props) {
                 await reloadDirs();
                 return;
             }
-            // 放到目录上：改 parentId
+
+            // drop onto a directory -> change parent
             if (target.type === 'dir') {
                 await updateDirectoryApi(srcId, undefined, target.id);
                 await reloadDirs();
                 return;
             }
-            // 子级同父排序
+
+            // siblings reorder within same parent
             const siblings = rootList.find(p => p.id === srcParent)?.children ?? [];
             const ordered = [...siblings].sort((a, b) => a.position - b.position);
             const from = ordered.findIndex(d => d.id === srcId);
@@ -144,28 +161,42 @@ export default function DirectoryNode(props: Props) {
             return;
         }
 
-        // ── 拖拽文件 ──
+        // file dragging
         if (srcType === 'file') {
-            // A. 拖到目录行：移动到末尾并切换视图
+            // A. drop onto directory row
             if (target.type === 'dir') {
                 if (srcId !== target.id) {
                     await moveAndReorderContent(feature, srcId, target.id);
                     onSelectDir(target.id);
                 }
+                // props.reloadDirs();
                 return;
             }
-            // B. 拖到文件行：统一「移动+排序」
+            // B. drop onto file row
             if (target.type === 'file') {
                 const beforeId = target.id;
-                // 调接口一次性完成移动和排序
                 await moveAndReorderContent(feature, srcId, undefined, beforeId);
-                // 后端完成后，本地重新取当前目录列表
                 const beforeItem = items.find(i => i.id === beforeId)!;
                 onSelectDir(beforeItem.directoryId);
+                // props.reloadDirs();
                 return;
             }
         }
     };
+
+    // toggle sort direction for files display
+    const toggleSortOrder = () => {
+        setSortAsc(prev => !prev);
+        const ids = sortAsc
+            ? files.map(f => f.id)            // current asc -> send asc
+            : files.map(f => f.id).reverse(); // current desc -> send reversed
+        onReorderFile(node.id, ids);
+    };
+
+    // apply sortAsc to files for render
+    const sortedFiles = sortAsc
+        ? [...files].reverse()
+        : files;
 
     return (
         <li
@@ -174,9 +205,9 @@ export default function DirectoryNode(props: Props) {
             onDragOver={e => e.preventDefault()}
             onDrop={e => onDrop(e, { id: node.id, type: 'dir' })}
         >
-            {/* 目录行 */}
+            {/* directory row */}
             <div
-                className="group flex items-center pr-2 py-1 rounded hover:bg-gray-100"
+                className="group flex items-center pr-2 py-1 rounded hover:bg-gray-100 cursor-pointer"
                 style={{ paddingLeft: indent }}
                 onClick={() => { onSelectDir(node.id); toggleExpand(node.id); }}
             >
@@ -184,8 +215,7 @@ export default function DirectoryNode(props: Props) {
                     className={`mr-1 transition-transform ${isOpen ? 'rotate-90' : ''}`}
                     onClick={e => {
                         e.stopPropagation();
-                        // onSelectDir(node.id);
-                        props.onSelectDir(node.id);
+                        onSelectDir(node.id);
                         toggleExpand(node.id);
                     }}
                 >
@@ -195,6 +225,13 @@ export default function DirectoryNode(props: Props) {
                     ? <FolderOpen size={16} className="text-gray-600 mr-1" />
                     : <Folder     size={16} className="text-gray-600 mr-1" />}
                 <span className="flex-1 truncate">{node.name}</span>
+                {/* sort button on directory row */}
+                {/*<button*/}
+                {/*    className="opacity-0 group-hover:opacity-100 mr-1"*/}
+                {/*    onClick={e => { e.stopPropagation(); toggleSortOrder(); }}*/}
+                {/*>*/}
+                {/*    <ArrowUpDown size={16} />*/}
+                {/*</button>*/}
                 <button
                     className="opacity-0 group-hover:opacity-100"
                     onClick={e => {
@@ -207,7 +244,7 @@ export default function DirectoryNode(props: Props) {
                 </button>
             </div>
 
-            {/* 目录上下文菜单 */}
+            {/* directory context menu */}
             {dirMenu && createPortal(
                 <div
                     id="dir-menu"
@@ -215,21 +252,43 @@ export default function DirectoryNode(props: Props) {
                     style={{ left: dirMenu.x, top: dirMenu.y }}
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { addSubDir(node.id); setDirMenu(null); }}>新建子目录</div>
-                    <div className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { onCreateContent?.(node.id); setDirMenu(null); }}>创建内容</div>
-                    <div className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { renameDir(node.id, node.name); setDirMenu(null); }}>重命名</div>
-                    <div className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer" onClick={() => { removeDir(node.id, node.name); setDirMenu(null); }}>删除</div>
+                    <div
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => { addSubDir(node.id); setDirMenu(null); }}
+                    >
+                        新建子目录
+                    </div>
+                    <div
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => { onCreateContent?.(node.id); setDirMenu(null); }}
+                    >
+                        创建内容
+                    </div>
+                    <div
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => { renameDir(node.id, node.name); setDirMenu(null); }}
+                    >
+                        重命名
+                    </div>
+                    {!isRoot && (
+                        <div
+                            className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer"
+                            onClick={() => { removeDir(node.id, node.name); setDirMenu(null); }}
+                        >
+                            删除
+                        </div>
+                    )}
                 </div>,
                 document.body
             )}
 
-            {/* 子目录 & 文件 */}
+            {/* children: subdirectories and files */}
             {isOpen && (
                 <ul>
                     {node.children.map(child => (
                         <DirectoryNode key={child.id} {...props} node={child} level={level + 1} />
                     ))}
-                    {files.map(f => (
+                    {sortedFiles.map(f => (
                         <li
                             key={f.id}
                             onDragOver={e => e.preventDefault()}
@@ -238,7 +297,7 @@ export default function DirectoryNode(props: Props) {
                             <div
                                 draggable
                                 onDragStart={e => { e.stopPropagation(); onDragStart(e, f.id, 'file'); }}
-                                className="group flex items-center pr-2 py-1 rounded hover:bg-gray-50"
+                                className="group flex items-center pr-2 py-1 rounded hover:bg-gray-50 cursor-pointer"
                                 style={{ paddingLeft: 12 + (level + 1) * 16 }}
                                 onClick={() => onSelectItem(f.id)}
                             >
@@ -260,7 +319,7 @@ export default function DirectoryNode(props: Props) {
                 </ul>
             )}
 
-            {/* 文件上下文菜单 */}
+            {/* file context menu */}
             {fileMenu && createPortal(
                 <div
                     id="file-menu"
@@ -268,7 +327,12 @@ export default function DirectoryNode(props: Props) {
                     style={{ left: fileMenu.x, top: fileMenu.y }}
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer" onClick={() => { onDeleteItem?.(fileMenu.id); setFileMenu(null); }}>删除</div>
+                    <div
+                        className="px-3 py-2 hover:bg-gray-100 text-red-600 cursor-pointer"
+                        onClick={() => { onDeleteItem?.(fileMenu.id); setFileMenu(null); }}
+                    >
+                        删除
+                    </div>
                 </div>,
                 document.body
             )}

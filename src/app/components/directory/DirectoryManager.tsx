@@ -22,32 +22,60 @@ export interface DirectoryManagerProps {
 
     onCreateContent?: (dirId: string) => void;
     onDeleteItem?:    (itemId: string) => void;
-
-    /* 文件拖拽 */
     onMoveItem:    (id: string, newDir: string) => void;
     onReorderFile: (dirId: string, orderedIds: string[]) => void;
+
+    reloadDirs: () => void;
+    tree: TreeNode[];
+    addSubDir: (parentId?: string) => void;
+    renameDir: (id: string, name: string) => void;
+    removeDir: (id: string, name: string) => void;
+    autoExpandDirs?: string[];
 }
 
 export default function DirectoryManager({
-                                             feature, items,
-                                             selectedDirId, selectedItemId,
-                                             onSelectDir,  onSelectItem,
-                                             onCreateContent, onDeleteItem,
-                                             onMoveItem, onReorderFile,
+                                             feature,
+                                             items,
+                                             selectedDirId,
+                                             selectedItemId,
+                                             onSelectDir,
+                                             onSelectItem,
+                                             onCreateContent,
+                                             onDeleteItem,
+                                             onMoveItem,
+                                             onReorderFile,
+                                             reloadDirs,
+                                             tree,
+                                             addSubDir,
+                                             renameDir,
+                                             removeDir,
+                                             autoExpandDirs = [],
+
                                          }: DirectoryManagerProps) {
 
     /* ---------- 目录树 ---------- */
-    const {
-        tree,               // <TreeNode[]>
-        reload,             // 重新拉取整棵树
-        addSubDir,
-        renameDir,
-        removeDir,
-    } = useDirectories(feature);
+    // const {
+    //     tree,               // <TreeNode[]>
+    //     reload,             // 重新拉取整棵树
+    //     addSubDir,
+    //     renameDir,
+    //     removeDir,
+    // } = useDirectories(feature);
 
     /* ---------- 展开 / 折叠状态 ---------- */
     const [expand,    setExpand]    = useState<Set<string>>(new Set());
     const [collapsed, setCollapsed] = useState(false);
+
+// 外部传来的目录自动展开
+    React.useEffect(() => {
+        if (autoExpandDirs && autoExpandDirs.length) {
+            setExpand(prev => {
+                const next = new Set(prev);
+                autoExpandDirs.forEach(id => id && next.add(id));
+                return next;
+            });
+        }
+    }, [autoExpandDirs]);
 
     const toggle = (id:string)=>
         setExpand(s => { const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n; });
@@ -109,7 +137,7 @@ export default function DirectoryManager({
                             onMoveItem={onMoveItem}
                             onReorderFile={onReorderFile}
                             /* 目录刷新 */
-                            reloadDirs={reload}
+                            reloadDirs={reloadDirs}
                             /* 关键：根级兄弟列表 ➜ 供根目录排序 */
                             rootList={tree}
                         />

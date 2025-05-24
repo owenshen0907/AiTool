@@ -1,40 +1,53 @@
-// File: src/components/directory/useContentCache.ts
 'use client';
 
 import { useState, useCallback } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import { fetchContentByDirectory } from '@/lib/api/content';
 
-
 export function useContentCache(feature: string) {
-    // { [dirId]: ContentItem[] }
     const [cache, setCache] = useState<Record<string, ContentItem[]>>({});
 
-    /** 加载某目录下的内容（force = true 可强制重新拉取） */
+    // loadDir: force=true 强制拉接口；否则用缓存
     const loadDir = useCallback(
         async (dirId: string, force = false): Promise<ContentItem[]> => {
-            if (!force && cache[dirId]) return cache[dirId];
+            if (!dirId) return [];
+            if (!force && cache[dirId]) {
+                // console.log('返回缓存', dirId, cache[dirId]);
+                return cache[dirId];
+            }
             const list = await fetchContentByDirectory(feature, dirId);
+            // console.log('强制刷新API', dirId, list);
             setCache(prev => ({ ...prev, [dirId]: list }));
             return list;
         },
-        [cache, feature],
+        [feature, cache]
     );
 
-    /** 当增删改后，patch 更新某目录的缓存数据 */
+    // 前端同步本地缓存
     const mutateDir = useCallback(
         (dirId: string, updater: (old: ContentItem[]) => ContentItem[]) => {
             setCache(prev => {
                 const oldList = prev[dirId] ?? [];
-                const newList = updater(oldList);
-                return { ...prev, [dirId]: newList };
+                return { ...prev, [dirId]: updater(oldList) };
             });
         },
-        [],
+        []
     );
 
-    /** 所有已加载目录内容的平铺数组，用于 DirectoryManager 渲染 */
+    // 清理缓存
+    const clearCachedDir = useCallback(
+        (dirId: string) => {
+            setCache(prev => {
+                const next = { ...prev };
+                delete next[dirId];
+                return next;
+            });
+        },
+        []
+    );
+
+    // 合并所有内容（树状结构遍历用）
     const allItems = Object.values(cache).flat();
 
-    return { loadDir, mutateDir, allItems };
+    return { loadDir, mutateDir, clearCachedDir, allItems, cache };
 }

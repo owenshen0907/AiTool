@@ -12,8 +12,18 @@ export async function fetchContentByDirectory(
         feature,
         directory_id: directoryId,
     });
-    const res = await fetch(`/api/content?${params.toString()}`);
-    if (!res.ok) throw new Error(`fetchContent failed: ${res.status}`);
+    let res: Response;
+    try {
+        res = await fetch(`/api/content?${params.toString()}`);
+    } catch (e) {
+        console.error('[fetchContent] network error →', e);
+        return [];
+    }
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('[fetchContent] server error →', res.status, text);
+        return [];
+    }
     return res.json();
 }
 

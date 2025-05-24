@@ -24,7 +24,13 @@ export async function createContent(
     feature: string,
     data: { directoryId: string; title: string; summary?: string; body?: string }
 ) {
-    const position = (await repo.listByDirectory(feature, data.directoryId)).length;
+    // 先取出该目录下所有已有内容
+    const siblings = await repo.listByDirectory(feature, data.directoryId);
+
+    // 找到最大 position，然后 +1
+    const maxPos = siblings.reduce((max, item) => Math.max(max, item.position), -1);
+    const position = maxPos + 1;
+
     return repo.insert(feature, {
         id: uuidv4(),
         directoryId: data.directoryId,
