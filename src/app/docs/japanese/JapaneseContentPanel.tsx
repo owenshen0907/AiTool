@@ -17,12 +17,11 @@ export default function JapaneseContentPanel({
                                                  selectedItem,
                                                  onUpdateItem,
                                              }: Props) {
-    // 前端预览 body
+    // 本地预览 state
     const [previewBody, setPreviewBody] = useState<string | null>(null);
 
-    // 当右侧流式或一次性生成时调用
+    // 流式/生成回调
     const handlePreview = (body: string) => {
-        console.log('[JapaneseContentPanel] previewBody set to:', body);
         setPreviewBody(body);
     };
 
@@ -30,14 +29,13 @@ export default function JapaneseContentPanel({
         <div className="flex h-screen">
             <JapaneseContentLeft
                 selectedItem={selectedItem}
-                previewBody={previewBody}    // 传给左侧
+                previewBody={previewBody}
                 onUpdateItem={onUpdateItem}
             />
             <JapaneseContentRight
                 feature={feature}
                 selectedItem={selectedItem}
-                onPreviewItem={handlePreview}  // 接收右侧流式输出
-                onUpdateItem={onUpdateItem}
+                onPreviewItem={handlePreview}
             />
         </div>
     );
