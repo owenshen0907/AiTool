@@ -24,10 +24,10 @@ export default function JapaneseContentRight({
     const lastSupKey   = `lastSupplier_${feature}`;
     const lastModelKey = `lastModel_${feature}`;
 
-    // 1️⃣ 模板选择
+    // 模板
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
-    // 2️⃣ 供应商 & 模型（从 localStorage 恢复）
+    // 供应商 & 模型（从 localStorage 恢复）
     const [supplierId, setSupplierId] = useState(
         () => localStorage.getItem(lastSupKey) || ''
     );
@@ -43,11 +43,12 @@ export default function JapaneseContentRight({
         localStorage.setItem(lastModelKey, name);
     };
 
-    // 3️⃣ 笔记要求、图片和 loading
+    // 笔记要求、图片和 loading
     const [noteRequest, setNoteRequest] = useState('');
-    const [images, setImages]           = useState<ImageEntry[]>([]);
-    const [loading, setLoading]         = useState(false);
-    const [streamed, setStreamed]       = useState(''); // 累积流式文本
+    const [images,       setImages]     = useState<ImageEntry[]>([]);
+    const [loading,      setLoading]    = useState(false);
+    const [streamed,     setStreamed]   = useState('');    // 累积流式文本
+    const [forceBase64,  setForceBase64]= useState(false); // 强制 Base64 开关
 
     const handleGenerate = async () => {
         if (!selectedItem) {
@@ -56,7 +57,7 @@ export default function JapaneseContentRight({
         }
         // 确认覆盖已有内容
         const existing = (selectedItem.body ?? '').trim();
-        if (existing && !window.confirm('当前笔记区已有内容，继续生成将覆盖它？')) {
+        if (existing && !window.confirm('当前笔记区已有内容，继续生成将覆盖？')) {
             return;
         }
         if (!selectedTemplate) {
@@ -70,31 +71,41 @@ export default function JapaneseContentRight({
 
         setLoading(true);
         setStreamed('');
-        onPreviewItem(''); // 清空左侧预览
+        onPreviewItem(''); // 清空预览
 
         try {
-            // 【1】取供应商配置
+            // 1. 获取供应商配置
             const supRes = await fetch('/api/suppliers');
             const sups: any[] = await supRes.json();
             const sup = sups.find(s => s.id === supplierId);
             const apiUrl = sup.apiUrl;
             const apiKey = sup.apiKey;
 
-            // 【2】构造 messages
+            // 2. 构造 messages
             const userMsgs: any[] = [{ type: 'text', text: noteRequest }];
             const isDev = ['localhost','127.0.0.1'].includes(window.location.hostname);
             for (const e of images) {
                 if (e.status !== 'success') continue;
-                if (isDev && e.file) {
+                const useB64 = forceBase64 || (isDev && e.file);
+                if (useB64 && e.file) {
+                    // Base64
                     const b64 = await new Promise<string>((res, rej) => {
                         const rdr = new FileReader();
                         rdr.onload  = () => res(rdr.result as string);
                         rdr.onerror = rej;
                         rdr.readAsDataURL(e.file!);
                     });
-                    userMsgs.push({ type: 'image_url', image_url: { url: b64, detail: 'high' } });
+                    userMsgs.push({
+                        type: 'image_url',
+                        image_url: { url: b64, detail: 'high' },
+                    });
                 } else {
-                    userMsgs.push({ type: 'image_url', image_url: { url: e.url, detail: 'high' } });
+                    // URL（拼接域名）
+                    const absoluteUrl = `${window.location.origin}${e.url}`;
+                    userMsgs.push({
+                        type: 'image_url',
+                        image_url: { url: absoluteUrl, detail: 'high' },
+                    });
                 }
             }
             const messages = [
@@ -102,7 +113,7 @@ export default function JapaneseContentRight({
                 { role: 'user',   content: userMsgs },
             ];
 
-            // 【3】流式调用
+            // 3. 流式调用
             const res = await fetch(`${apiUrl}/chat/completions`, {
                 method: 'POST',
                 headers: {
@@ -122,7 +133,7 @@ export default function JapaneseContentRight({
                 if (done) break;
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');
-                buffer = lines.pop()!; // 留下不完整行
+                buffer = lines.pop()!;
 
                 for (const line of lines) {
                     if (!line.startsWith('data:')) continue;
@@ -132,14 +143,10 @@ export default function JapaneseContentRight({
                         break;
                     }
                     let payload: any;
-                    try {
-                        payload = JSON.parse(jsonStr);
-                    } catch {
-                        continue;
-                    }
+                    try { payload = JSON.parse(jsonStr); }
+                    catch { continue; }
                     const delta = payload.choices?.[0]?.delta?.content;
                     if (delta) {
-                        // 使用函数式更新拿到最新 prev
                         setStreamed(prev => {
                             const next = prev + delta;
                             onPreviewItem(next);
@@ -150,7 +157,7 @@ export default function JapaneseContentRight({
             }
         } catch (err) {
             console.error(err);
-            alert('流式生成失败，请重试');
+            alert('生成失败，请重试');
         } finally {
             setLoading(false);
         }
@@ -158,14 +165,17 @@ export default function JapaneseContentRight({
 
     return (
         <div className="w-1/3 h-full border-l p-4 flex flex-col">
-            {/* 模板选择 */}
+            {/* 模板 */}
             <div className="mb-4 flex items-center space-x-2">
                 <TemplateSelectorModal
                     feature={feature}
                     onSelect={tpl => setSelectedTemplate(tpl)}
                 />
                 {selectedTemplate && (
-                    <span className="text-gray-700 truncate" title={selectedTemplate.name}>
+                    <span
+                        className="text-gray-700 truncate"
+                        title={selectedTemplate.name}
+                    >
             已选模板：{selectedTemplate.name}
           </span>
                 )}
@@ -182,12 +192,26 @@ export default function JapaneseContentRight({
                 />
             </div>
 
-            {/* 一键流式生成 */}
+            {/* 强制 Base64 */}
+            <div className="mb-4 flex items-center space-x-2">
+                <input
+                    type="checkbox"
+                    id="forceBase64"
+                    checked={forceBase64}
+                    onChange={e => setForceBase64(e.target.checked)}
+                    className="h-4 w-4"
+                />
+                <label htmlFor="forceBase64" className="select-none">
+                    强制使用 Base64
+                </label>
+            </div>
+
+            {/* 一键生成 */}
             <div className="mb-4">
                 <button
                     onClick={handleGenerate}
                     disabled={loading}
-                    className={`w-full flex items-center justify-center px-4 py-2 rounded font-semibold transition-colors duration-200 overflow-hidden truncate ${
+                    className={`w-full flex items-center justify-center px-4 py-2 rounded font-semibold transition ${
                         loading
                             ? 'bg-gray-400 cursor-not-allowed text-gray-200'
                             : 'bg-blue-500 hover:bg-blue-600 text-white'
@@ -203,13 +227,17 @@ export default function JapaneseContentRight({
         <textarea
             value={noteRequest}
             onChange={e => setNoteRequest(e.target.value)}
-            placeholder="输入笔记要求 (可选)"
+            placeholder="输入笔记要求（可选）"
             className="w-full border rounded p-2 h-24 resize-none"
         />
             </div>
 
             {/* 图片上传 */}
-            <ImageUploader feature={feature} images={images} setImages={setImages} />
+            <ImageUploader
+                feature={feature}
+                images={images}
+                setImages={setImages}
+            />
         </div>
     );
 }

@@ -1,3 +1,4 @@
+// File: src/app/docs/japanese/ImageUploader.tsx
 'use client';
 
 import React, { useRef } from 'react';
@@ -11,19 +12,41 @@ interface Props {
 
 export default function ImageUploader({ feature, images, setImages }: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const MAX_TOTAL = 50 * 1024 * 1024; // 50 MB
 
-    // 添加本地文件 (去重)
+    // 添加本地文件 (去重 + 累加大小限制)
     const addLocalFiles = (files: File[]) => {
+        // 计算当前已选文件的总大小
+        let currentTotal = images.reduce((sum, e) => sum + (e.file ? e.file.size : 0), 0);
+
+        // 先去重
         const unique = files.filter(
             file => !images.some(e => e.file && e.file.name === file.name && e.file.size === file.size)
         );
-        if (unique.length < files.length) alert('已过滤重复图片');
-        const newEntries = unique.map(file => {
+        let skippedSize = 0;
+        const accepted: File[] = [];
+
+        for (const file of unique) {
+            if (currentTotal + file.size <= MAX_TOTAL) {
+                accepted.push(file);
+                currentTotal += file.size;
+            } else {
+                skippedSize += file.size;
+            }
+        }
+
+        if (skippedSize > 0) {
+            alert(`有 ${ (skippedSize / (1024*1024)).toFixed(1) } MB 的图片超出 50 MB 限制，已被忽略`);
+        }
+        if (accepted.length === 0) return;
+
+        const newEntries = accepted.map(file => {
             const preview = URL.createObjectURL(file);
             const id = 'temp-' + Math.random().toString(36).slice(2, 9);
             return { id, file, url: preview, status: 'uploading' } as const;
         });
-        setImages(prev => [...prev, ...newEntries].slice(0, 10));
+
+        setImages(prev => [...prev, ...newEntries]);
         newEntries.forEach(uploadImage);
     };
 
@@ -38,15 +61,19 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
             const data = await res.json();
             const fileData = Array.isArray(data) ? data[0] : data;
             const remoteUrl = '/' + fileData.file_path;
-            setImages(prev => prev.map(e =>
-                e.id === entry.id
-                    ? { ...e, url: remoteUrl, status: 'success', file_id: fileData.file_id }
-                    : e
-            ));
+            setImages(prev =>
+                prev.map(e =>
+                    e.id === entry.id
+                        ? { ...e, url: remoteUrl, status: 'success', file_id: fileData.file_id }
+                        : e
+                )
+            );
         } catch {
-            setImages(prev => prev.map(e =>
-                e.id === entry.id ? { ...e, status: 'error' } : e
-            ));
+            setImages(prev =>
+                prev.map(e =>
+                    e.id === entry.id ? { ...e, status: 'error' } : e
+                )
+            );
         } finally {
             if (entry.file) URL.revokeObjectURL(entry.url);
         }
@@ -55,9 +82,11 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
     const retryUpload = (id: string) => {
         const entry = images.find(e => e.id === id);
         if (entry?.file) {
-            setImages(prev => prev.map(e =>
-                e.id === id ? { ...e, status: 'uploading' } : e
-            ));
+            setImages(prev =>
+                prev.map(e =>
+                    e.id === id ? { ...e, status: 'uploading' } : e
+                )
+            );
             uploadImage(entry);
         }
     };
@@ -99,7 +128,7 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
             {images.length === 0 ? (
                 <div className="h-full w-full text-center text-gray-500 flex flex-col items-center justify-center">
                     <p>点击或拖拽上传图片</p>
-                    <p>最多 10 张</p>
+                    <p>最多 10 张，总大小 ≤ 50 MB</p>
                 </div>
             ) : (
                 <div className="relative">
@@ -134,7 +163,9 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
                         ))}
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="bg-white bg-opacity-75 px-2 py-1 rounded text-gray-600">点击或拖拽上传更多图片</span>
+            <span className="bg-white bg-opacity-75 px-2 py-1 rounded text-gray-600">
+              点击或拖拽上传更多图片
+            </span>
                     </div>
                 </div>
             )}
