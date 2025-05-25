@@ -9,11 +9,13 @@ import { marked } from 'marked';
 
 interface Props {
     selectedItem: ContentItem | null;
+    previewBody: string | null;
     onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => void;
 }
 
 export default function JapaneseContentLeft({
                                                 selectedItem,
+                                                previewBody,
                                                 onUpdateItem,
                                             }: Props) {
     const [title, setTitle] = useState('');
@@ -22,6 +24,7 @@ export default function JapaneseContentLeft({
     const [orig, setOrig] = useState({ title: '', summary: '', body: '' });
     const [editHeader, setEditHeader] = useState(false);
 
+    // 1) 只有在选中项改变时，才重置 orig 和编辑器内容
     useEffect(() => {
         if (selectedItem) {
             const t = selectedItem.title ?? '';
@@ -34,6 +37,12 @@ export default function JapaneseContentLeft({
             setEditHeader(false);
         }
     }, [selectedItem?.id]);
+    // 2) 当 previewBody 变化（流式或预览生成），更新 editor 但不改 orig
+    useEffect(() => {
+        if (previewBody !== null) {
+            setBody(previewBody);
+        }
+    }, [previewBody]);
 
     if (!selectedItem) {
         return (

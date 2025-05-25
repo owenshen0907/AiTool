@@ -86,6 +86,27 @@ CREATE TABLE IF NOT EXISTS directories (
 CREATE INDEX IF NOT EXISTS idx_directories_feature       ON directories(feature);
 CREATE INDEX IF NOT EXISTS idx_directories_parent_pos     ON directories(feature, parent_id, position);
 
+
+CREATE TABLE IF NOT EXISTS file_uploads (
+  file_id        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),  -- 文件主键
+  user_id        VARCHAR(50) NOT NULL,                              -- 文件所属/上传用户
+  module_name    TEXT        NOT NULL,                              -- 上传的模块或业务场景
+  file_category  TEXT        NOT NULL,                              -- 文件分类，如 'img' / 'video' / 'audio'
+  mime_type      TEXT        NOT NULL,                              -- 文件 MIME 类型
+  original_name  TEXT        NOT NULL,                              -- 上传时的原始文件名
+  file_path      TEXT        NOT NULL,                              -- 存储在服务器上的相对路径或 URL
+  file_size      BIGINT      NOT NULL,                              -- 文件大小（字节）
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),                -- 上传时间
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),                -- 最近更新时间
+
+  CONSTRAINT fk_file_user FOREIGN KEY (user_id) REFERENCES user_info(user_id)
+);
+
+-- 常用查询索引
+CREATE INDEX IF NOT EXISTS idx_file_uploads_user     ON file_uploads(user_id);
+CREATE INDEX IF NOT EXISTS idx_file_uploads_module   ON file_uploads(module_name);
+CREATE INDEX IF NOT EXISTS idx_file_uploads_category ON file_uploads(file_category);
+
 -- prompts 表
 CREATE TABLE IF NOT EXISTS prompts (
     id           UUID PRIMARY KEY,
