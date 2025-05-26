@@ -12,6 +12,7 @@ import type { FileUpload } from '@/lib/models/file';
 export const uploadFilesWithDb = async (
     user_id: string,
     module_name: string,
+    form_id: string | null,
     entries: Array<{
         original_name: string;
         mime_type: string;
@@ -29,8 +30,9 @@ export const uploadFilesWithDb = async (
             e.mime_type,
             e.original_name,
             e.file_path,
-            e.file_size
-        );
+            e.file_size,
+            form_id
+    );
         results.push(record);
     }
     return results;

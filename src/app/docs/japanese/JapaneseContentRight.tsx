@@ -1,120 +1,140 @@
 // File: src/app/docs/japanese/JapaneseContentRight.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ContentItem } from '@/lib/models/content';
-import TemplateSelectorModal, { Template } from './TemplateSelectorModal';
-import SupplierModelSelector from './SupplierModelSelector';
+import GenerateSection from './GenerateSection';
 import ImageUploader from './ImageUploader';
-import { Send } from 'lucide-react';
 import type { ImageEntry } from './types';
+import type { Template } from './TemplateSelectorModal';
 
 interface Props {
     feature: string;
+    formId: string;
     selectedItem: ContentItem | null;
-    /** 前端预览生成的内容 */
     onPreviewItem: (body: string) => void;
 }
 
 export default function JapaneseContentRight({
                                                  feature,
+                                                 formId,
                                                  selectedItem,
                                                  onPreviewItem,
                                              }: Props) {
-    const lastSupKey   = `lastSupplier_${feature}`;
-    const lastModelKey = `lastModel_${feature}`;
-
-    // 模板
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+    const [supplierId, setSupplierId]              = useState('');
+    const [model, setModel]                        = useState('');
+    const [noteRequest, setNoteRequest]            = useState('');
+    const [includeExisting, setIncludeExisting]    = useState(false);
+    const [forceBase64, setForceBase64]            = useState(false);
+    const [images, setImages]                      = useState<ImageEntry[]>([]);
+    const [loading, setLoading]                    = useState(false);
+    const [streamed, setStreamed]                  = useState(''); // 流式拼接内容
 
-    // 供应商 & 模型（从 localStorage 恢复）
-    const [supplierId, setSupplierId] = useState(
-        () => localStorage.getItem(lastSupKey) || ''
-    );
-    const [model, setModel] = useState(
-        () => localStorage.getItem(lastModelKey) || ''
-    );
-    const handleSupplierChange = (id: string) => {
-        setSupplierId(id);
-        localStorage.setItem(lastSupKey, id);
-    };
-    const handleModelChange = (name: string) => {
-        setModel(name);
-        localStorage.setItem(lastModelKey, name);
-    };
+    // —— 加载历史图片 ——
+    useEffect(() => {
+        if (!formId) {
+            setImages([]);
+            return;
+        }
+        (async () => {
+            try {
+                const res = await fetch(`/api/files?form_id=${formId}`);
+                if (!res.ok) throw new Error();
+                const files: Array<{ file_id: string; file_path: string }> = await res.json();
+                setImages(files.map(f => ({
+                    id: f.file_id,
+                    url: `${window.location.origin}/${f.file_path}`,
+                    status: 'success',
+                    file_id: f.file_id,
+                })));
+            } catch (err) {
+                console.error('加载历史图片失败', err);
+            }
+        })();
+    }, [formId]);
 
-    // 笔记要求、图片和 loading
-    const [noteRequest, setNoteRequest] = useState('');
-    const [images,       setImages]     = useState<ImageEntry[]>([]);
-    const [loading,      setLoading]    = useState(false);
-    const [streamed,     setStreamed]   = useState('');    // 累积流式文本
-    const [forceBase64,  setForceBase64]= useState(false); // 强制 Base64 开关
-
+    // —— 核心：流式调用 & Base64 逻辑修复 ——
     const handleGenerate = async () => {
         if (!selectedItem) {
             alert('请先选择一个文档');
             return;
         }
-        // 确认覆盖已有内容
         const existing = (selectedItem.body ?? '').trim();
-        if (existing && !window.confirm('当前笔记区已有内容，继续生成将覆盖？')) {
-            return;
-        }
+        if (existing && !window.confirm('覆盖已有内容？')) return;
         if (!selectedTemplate) {
             alert('请先选择模板');
             return;
         }
-        if (images.length === 0) {
-            alert('请上传至少一张图片');
-            return;
-        }
 
         setLoading(true);
+        onPreviewItem(''); // 清空编辑区
         setStreamed('');
-        onPreviewItem(''); // 清空预览
+
+        const isDev = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
         try {
-            // 1. 获取供应商配置
+            // 1. 取供应商配置
             const supRes = await fetch('/api/suppliers');
             const sups: any[] = await supRes.json();
             const sup = sups.find(s => s.id === supplierId);
-            const apiUrl = sup.apiUrl;
-            const apiKey = sup.apiKey;
+            const apiUrl = sup.apiUrl, apiKey = sup.apiKey;
 
-            // 2. 构造 messages
+            // 2. 构造 user 消息数组
             const userMsgs: any[] = [{ type: 'text', text: noteRequest }];
-            const isDev = ['localhost','127.0.0.1'].includes(window.location.hostname);
-            for (const e of images) {
-                if (e.status !== 'success') continue;
-                const useB64 = forceBase64 || (isDev && e.file);
-                if (useB64 && e.file) {
-                    // Base64
-                    const b64 = await new Promise<string>((res, rej) => {
-                        const rdr = new FileReader();
-                        rdr.onload  = () => res(rdr.result as string);
-                        rdr.onerror = rej;
-                        rdr.readAsDataURL(e.file!);
-                    });
+
+            for (const entry of images) {
+                if (entry.status !== 'success') continue;
+
+                const useB64 = forceBase64 || isDev;
+                if (useB64) {
+                    let b64: string;
+                    if (entry.file) {
+                        // 新上传的 File
+                        b64 = await new Promise<string>((res, rej) => {
+                            const reader = new FileReader();
+                            reader.onload  = () => res(reader.result as string);
+                            reader.onerror = rej;
+                            reader.readAsDataURL(entry.file!);
+                        });
+                    } else {
+                        // 历史 URL -> fetch blob -> to Base64
+                        const resp = await fetch(entry.url);
+                        const blob = await resp.blob();
+                        b64 = await new Promise<string>((res, rej) => {
+                            const reader = new FileReader();
+                            reader.onload  = () => res(reader.result as string);
+                            reader.onerror = rej;
+                            reader.readAsDataURL(blob);
+                        });
+                    }
                     userMsgs.push({
                         type: 'image_url',
                         image_url: { url: b64, detail: 'high' },
                     });
                 } else {
-                    // URL（拼接域名）
-                    const absoluteUrl = `${window.location.origin}${e.url}`;
+                    // 直接 URL
+                    const absoluteUrl = entry.url.startsWith('http')
+                        ? entry.url
+                        : `${window.location.origin}${entry.url}`;
                     userMsgs.push({
                         type: 'image_url',
                         image_url: { url: absoluteUrl, detail: 'high' },
                     });
                 }
             }
-            const messages = [
-                { role: 'system', content: selectedTemplate.content },
-                { role: 'user',   content: userMsgs },
-            ];
 
-            // 3. 流式调用
-            const res = await fetch(`${apiUrl}/chat/completions`, {
+            // 3. 构建完整 messages
+            const messages: any[] = [
+                { role: 'system', content: selectedTemplate.content },
+            ];
+            if (includeExisting && existing) {
+                messages.push({ role: 'assistant', content: existing });
+            }
+            messages.push({ role: 'user', content: userMsgs });
+
+            // 4. 流式调用大模型
+            const upstream = await fetch(`${apiUrl}/chat/completions`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -122,9 +142,9 @@ export default function JapaneseContentRight({
                 },
                 body: JSON.stringify({ model, stream: true, messages }),
             });
-            if (!res.ok) throw new Error('流式接口调用失败');
+            if (!upstream.ok) throw new Error('接口调用失败');
 
-            const reader  = res.body!.getReader();
+            const reader  = upstream.body!.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
 
@@ -133,7 +153,7 @@ export default function JapaneseContentRight({
                 if (done) break;
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');
-                buffer = lines.pop()!;
+                buffer = lines.pop()!; // 留下最后可能不完整的一行
 
                 for (const line of lines) {
                     if (!line.startsWith('data:')) continue;
@@ -143,8 +163,11 @@ export default function JapaneseContentRight({
                         break;
                     }
                     let payload: any;
-                    try { payload = JSON.parse(jsonStr); }
-                    catch { continue; }
+                    try {
+                        payload = JSON.parse(jsonStr);
+                    } catch {
+                        continue;
+                    }
                     const delta = payload.choices?.[0]?.delta?.content;
                     if (delta) {
                         setStreamed(prev => {
@@ -165,79 +188,32 @@ export default function JapaneseContentRight({
 
     return (
         <div className="w-1/3 h-full border-l p-4 flex flex-col">
-            {/* 模板 */}
-            <div className="mb-4 flex items-center space-x-2">
-                <TemplateSelectorModal
-                    feature={feature}
-                    onSelect={tpl => setSelectedTemplate(tpl)}
-                />
-                {selectedTemplate && (
-                    <span
-                        className="text-gray-700 truncate"
-                        title={selectedTemplate.name}
-                    >
-            已选模板：{selectedTemplate.name}
-          </span>
-                )}
-            </div>
-
-            {/* 供应商 & 模型 */}
-            <div className="mb-4">
-                <SupplierModelSelector
-                    className="w-full"
-                    supplierId={supplierId}
-                    onSupplierChange={handleSupplierChange}
-                    model={model}
-                    onModelChange={handleModelChange}
-                />
-            </div>
-
-            {/* 强制 Base64 */}
-            <div className="mb-4 flex items-center space-x-2">
-                <input
-                    type="checkbox"
-                    id="forceBase64"
-                    checked={forceBase64}
-                    onChange={e => setForceBase64(e.target.checked)}
-                    className="h-4 w-4"
-                />
-                <label htmlFor="forceBase64" className="select-none">
-                    强制使用 Base64
-                </label>
-            </div>
-
-            {/* 一键生成 */}
-            <div className="mb-4">
-                <button
-                    onClick={handleGenerate}
-                    disabled={loading}
-                    className={`w-full flex items-center justify-center px-4 py-2 rounded font-semibold transition ${
-                        loading
-                            ? 'bg-gray-400 cursor-not-allowed text-gray-200'
-                            : 'bg-blue-500 hover:bg-blue-600 text-white'
-                    }`}
-                >
-                    <Send size={16} className="mr-2 flex-shrink-0" />
-                    {loading ? '生成中...' : '一键生成笔记'}
-                </button>
-            </div>
-
-            {/* 笔记要求 */}
-            <div className="mb-4">
-        <textarea
-            value={noteRequest}
-            onChange={e => setNoteRequest(e.target.value)}
-            placeholder="输入笔记要求（可选）"
-            className="w-full border rounded p-2 h-24 resize-none"
-        />
-            </div>
-
-            {/* 图片上传 */}
-            <ImageUploader
+            <GenerateSection
                 feature={feature}
-                images={images}
-                setImages={setImages}
+                selectedTemplate={selectedTemplate!}
+                setSelectedTemplate={setSelectedTemplate!}
+                noteRequest={noteRequest}
+                setNoteRequest={setNoteRequest}
+                includeExisting={includeExisting}
+                setIncludeExisting={setIncludeExisting}
+                forceBase64={forceBase64}
+                setForceBase64={setForceBase64}
+                supplierId={supplierId}
+                handleSupplierChange={setSupplierId}
+                model={model}
+                handleModelChange={setModel}
+                loading={loading}
+                onGenerate={handleGenerate}
             />
+
+            <div className="flex-1 overflow-auto mt-4">
+                <ImageUploader
+                    feature={feature}
+                    formId={formId}
+                    images={images}
+                    setImages={setImages}
+                />
+            </div>
         </div>
     );
 }

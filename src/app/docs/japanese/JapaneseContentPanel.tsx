@@ -34,6 +34,7 @@ export default function JapaneseContentPanel({
             />
             <JapaneseContentRight
                 feature={feature}
+                formId={selectedItem?.id ?? ''}
                 selectedItem={selectedItem}
                 onPreviewItem={handlePreview}
             />

@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS file_uploads (
   original_name  TEXT        NOT NULL,                              -- 上传时的原始文件名
   file_path      TEXT        NOT NULL,                              -- 存储在服务器上的相对路径或 URL
   file_size      BIGINT      NOT NULL,                              -- 文件大小（字节）
+  form_id        TEXT,                                              -- 关联业务表单的 ID
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),                -- 上传时间
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),                -- 最近更新时间
 

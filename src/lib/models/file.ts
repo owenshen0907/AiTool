@@ -8,6 +8,7 @@ export interface FileUpload {
     original_name: string;
     file_path: string;
     file_size: number;
+    form_id: string;
     created_at: string;
     updated_at: string;
 }

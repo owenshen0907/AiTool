@@ -6,20 +6,28 @@ import type { ImageEntry } from './types';
 
 interface Props {
     feature: string;
+    formId: string;
     images: ImageEntry[];
     setImages: React.Dispatch<React.SetStateAction<ImageEntry[]>>;
 }
 
-export default function ImageUploader({ feature, images, setImages }: Props) {
+export default function ImageUploader({
+                                          feature,
+                                          formId,
+                                          images,
+                                          setImages,
+                                      }: Props) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const MAX_TOTAL = 50 * 1024 * 1024; // 50 MB
 
     // 添加本地文件 (去重 + 累加大小限制)
     const addLocalFiles = (files: File[]) => {
-        // 计算当前已选文件的总大小
+        if (!formId) {
+            alert('请先选择或创建对应的业务内容，再上传图片');
+            return;
+        }
         let currentTotal = images.reduce((sum, e) => sum + (e.file ? e.file.size : 0), 0);
 
-        // 先去重
         const unique = files.filter(
             file => !images.some(e => e.file && e.file.name === file.name && e.file.size === file.size)
         );
@@ -34,9 +42,8 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
                 skippedSize += file.size;
             }
         }
-
         if (skippedSize > 0) {
-            alert(`有 ${ (skippedSize / (1024*1024)).toFixed(1) } MB 的图片超出 50 MB 限制，已被忽略`);
+            alert(`有 ${(skippedSize / (1024 * 1024)).toFixed(1)} MB 的图片超出 50 MB 限制，已被忽略`);
         }
         if (accepted.length === 0) return;
 
@@ -45,7 +52,6 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
             const id = 'temp-' + Math.random().toString(36).slice(2, 9);
             return { id, file, url: preview, status: 'uploading' } as const;
         });
-
         setImages(prev => [...prev, ...newEntries]);
         newEntries.forEach(uploadImage);
     };
@@ -55,6 +61,7 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
         try {
             const form = new FormData();
             form.append('module', feature);
+            form.append('form_id', formId);
             form.append('file0', entry.file!);
             const res = await fetch('/api/files', { method: 'POST', body: form });
             if (!res.ok) throw new Error('上传失败');
@@ -91,11 +98,29 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
         }
     };
 
-    const removeImage = (id: string) => {
-        setImages(prev => prev.filter(e => e.id !== id));
+    // 删除单张：调后端，然后更新前端列表
+    const handleDelete = async (entry: ImageEntry) => {
+        // 如果本地临时文件，直接移除
+        if (!entry.file_id) {
+            setImages(prev => prev.filter(e => e.id !== entry.id));
+            return;
+        }
+        if (!window.confirm('确认删除这张图片？')) return;
+        try {
+            const res = await fetch('/api/files', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_id: entry.file_id }),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            // 成功后移出
+            setImages(prev => prev.filter(e => e.id !== entry.id));
+        } catch (err) {
+            console.error(err);
+            alert('删除失败，请稍后重试');
+        }
     };
 
-    // 拖拽/点击上传
     const handleDragOver = (e: React.DragEvent) => e.preventDefault();
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
@@ -140,6 +165,7 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
                                     alt=""
                                     className="w-full h-24 object-cover rounded"
                                 />
+
                                 {entry.status === 'uploading' && (
                                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white text-sm">
                                         上传中
@@ -153,9 +179,11 @@ export default function ImageUploader({ feature, images, setImages }: Props) {
                                         上传失败，点击重试
                                     </div>
                                 )}
+
                                 <button
-                                    onClick={e => { e.stopPropagation(); removeImage(entry.id); }}
+                                    onClick={e => { e.stopPropagation(); handleDelete(entry); }}
                                     className="absolute top-1 right-1 bg-white rounded-full p-1 text-gray-700 hover:bg-gray-200"
+                                    title="删除此图"
                                 >
                                     ×
                                 </button>
