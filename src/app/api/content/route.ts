@@ -40,20 +40,46 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
     return NextResponse.json(created, { status: 201 });
 });
 
+
 export const PUT = withUser(async (req: NextRequest, userId: string) => {
     const body = await req.json();
-    const { feature, id, directory_id, title, summary, body: content } = body;
-    if (!feature || !id || !title) {
-        return NextResponse.json({ error: 'feature, id and title are required' }, { status: 400 });
+    const {
+        feature,
+        id,
+        directory_id,
+        title,
+        summary,
+        body: content,
+        position,        // ← 新增
+    } = body;
+
+    if (
+        !feature ||
+        !id ||
+        (
+            title    === undefined &&
+            summary  === undefined &&
+            content  === undefined &&
+            position === undefined
+        )
+    ) {
+        return NextResponse.json(
+            { error: 'feature 和 id 必须，且至少要更新 title/summary/body/position 其中一项' },
+            { status: 400 }
+        );
     }
+
     const updated = await service.updateContent(userId, feature, {
         id,
         directoryId: directory_id,
         title,
         summary,
         body: content,
+        position,       // ← 新增
     });
-    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!updated) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     return NextResponse.json(updated);
 });
 

@@ -69,11 +69,11 @@ export async function getById(
     return rows[0] ?? null;
 }
 
-/** 更新部分字段 */
+/** 更新部分字段，包括 position */
 export async function update(
     feature: string,
     id: string,
-    changes: Partial<Pick<ContentItem, 'directoryId' | 'title' | 'summary' | 'body'>>
+    changes: Partial<Pick<ContentItem, 'directoryId' | 'title' | 'summary' | 'body' | 'position'>>
 ): Promise<void> {
     const tbl = tableName(feature);
     const sets: string[] = [];
@@ -91,6 +91,7 @@ export async function update(
 
     // 始终更新 updated_at
     sets.push(`updated_at = NOW()`);
+    // 最后一个参数留给 WHERE id
     vals.push(id);
 
     await pool.query(

@@ -47,7 +47,6 @@ export async function createContent(
     return res.json();
 }
 
-/* 更新（仅发送存在的字段） */
 export async function updateContent(
     feature: string,
     data: {
@@ -56,9 +55,10 @@ export async function updateContent(
         title?: string;
         summary?: string;
         body?: string;
+        position?: number; // ← 新增
     }
 ): Promise<ContentItem> {
-    const payload: Record<string, any> = {          // ← 先建可变对象
+    const payload: Record<string, any> = {
         feature,
         id: data.id,
     };
@@ -66,13 +66,13 @@ export async function updateContent(
     if (data.title        !== undefined) payload.title       = data.title;
     if (data.summary      !== undefined) payload.summary     = data.summary;
     if (data.body         !== undefined) payload.body        = data.body;
+    if (data.position     !== undefined) payload.position    = data.position;  // ← 新增
 
     const res = await fetch('/api/content', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
-
     if (!res.ok) throw new Error(`updateContent failed: ${res.status}`);
     return res.json();
 }
