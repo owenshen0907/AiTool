@@ -1,14 +1,19 @@
-version: '3.8'
+version: "3.8"
 
 services:
   aitool:
-    image: aitool-runtime
+    build:            # 也可以直接 image: aitool-runtime:latest
+      context: .
+      dockerfile: Dockerfile
     container_name: aitool
     ports:
-      - "3000:3000"
+      - "3000:3000"   # Next.js
+      - "3001:3001"   # WS-Proxy
+    env_file:
+      - .env.local    # Next.js、proxy 共用的 Key 等
     volumes:
-      - ./.env.local:/app/.env.local:ro
+      # 挂代码方便热更新；生产可去掉
       - ./src:/app/src
       - ./public:/app/public
-    working_dir: /app
-    command: npm run start
+      - ./ecosystem.config.js:/app/ecosystem.config.js
+    restart: unless-stopped

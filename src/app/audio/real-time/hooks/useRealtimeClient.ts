@@ -82,7 +82,7 @@ export function useRealtimeClient({
         if (!wsUrl) { setConnectionError('wsUrl 不能为空'); return; }
 // ① 固定写死本机的 wsOrigin，别再 replace
         const wsOrigin =
-            process.env.NEXT_PUBLIC_NODE_ENV === 'production'
+            process.env.NODE_ENV === 'production'
                 ? 'wss://owenshen.top'     // ★ 生产
                 : 'ws://localhost:3001';   // ★ 本地开发
 

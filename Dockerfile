@@ -1,26 +1,37 @@
+# ─────────────────────────────────────────────────
+# 基础镜像
+# ─────────────────────────────────────────────────
 FROM node:18.20.7-alpine
-LABEL authors="owenshen"
+LABEL maintainer="owenshen"
 
 WORKDIR /app
 
-# 使用阿里源加速（可选）
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# ①（可选）替换 Alpine 镜像源
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' \
+    /etc/apk/repositories
 
-# 安装依赖工具
-RUN apk add --no-cache python3 make g++ openssl libpq postgresql-libs git bash
+# ② 安装系统依赖
+RUN apk add --no-cache python3 make g++ git bash openssl libpq postgresql-libs
 
-# 复制依赖声明并安装
-COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps
+# ③ 仅复制依赖声明，做缓存层
+COPY package*.json ./
+RUN npm ci --legacy-peer-deps
 
-# 复制全部代码
+# ④ 复制全部源码
 COPY . .
 
-# 构建生产版本（如果是 next.js）
+# ⑤ 构建 Next.js 产物
 RUN npm run build
 
-# 切换为生产模式
+# ⑥ 安装 PM2 全局
+RUN npm i -g pm2
+
+# ⑦ 生产环境变量
 ENV NODE_ENV=production
 
-# 启动命令
-CMD ["npm", "run", "start"]
+# ⑧ 暴露 Next.js (3000) + WS-Proxy (3001)
+EXPOSE 3000 3001
+
+# ⑨ 启动两个进程：web / proxy
+#    pm2-runtime 会阻塞 PID=1，Docker 可感知健康
+CMD ["pm2-runtime", "ecosystem.config.js"]
