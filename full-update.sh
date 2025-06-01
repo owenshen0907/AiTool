@@ -1,49 +1,39 @@
 #!/usr/bin/env bash
-# ---------------------------------------------------------------------------
-# deploy.sh – one-shot 部署 / 升级脚本
-# 要求：
-#   • 已安装 docker / docker-compose
-#   • 运行用户可直接执行 docker 命令（或加 sudo）
-# ---------------------------------------------------------------------------
-
 set -Eeuo pipefail
 
-# === 可调参数 ===============================================================
-PROJECT_NAME="aitool"          # 容器名 / docker-compose project
-IMAGE_NAME="aitool-runtime"    # Dockerfile 构建出的镜像名
-TAG="${1:-latest}"             # 允许 ./deploy.sh v1.2.3 指定 tag；默认为 latest
+PROJECT="aitool"          # compose project name
+IMAGE="aitool-runtime"    # Dockerfile 生成的镜像 tag
 COMPOSE_FILE="docker-compose.yml"
-BUILD_ARGS=()                  # 比如 "--build-arg NODE_ENV=production"
-# ===========================================================================
 
-main() {
-  log "🔄  拉取最新代码…"
-  git pull --rebase --autostash || true
+log(){ printf '\e[32m%s\e[0m\n' "$*"; }
 
-  log "🛑  关闭旧容器…"
-  docker compose -p "$PROJECT_NAME" -f "$COMPOSE_FILE" down || true
+##############################################################################
+# 1. 拉代码 —— 兼容低版本 Git（无 autostash）
+##############################################################################
+log "📥  git pull (with manual stash)…"
+if ! git diff --quiet; then
+  git stash push -m "auto-stash-before-update"
+  STASHED=1
+fi
+git pull --rebase
+[[ ${STASHED:-0} == 1 ]] && git stash pop || true
 
-  log "🧹  清理旧镜像（同名同 tag）…"
-  docker image rm "${IMAGE_NAME}:${TAG}" 2>/dev/null || true
+##############################################################################
+# 2. 停 & 删旧容器（不会删镜像层，重建快）
+##############################################################################
+log "🛑  docker compose down…"
+docker compose -p "$PROJECT" -f "$COMPOSE_FILE" down
 
-  log "🔨  重新 build 镜像…"
-  docker build \
-    --pull \                       # 每次拉最新基础镜像
-    --no-cache \
-    -t "${IMAGE_NAME}:${TAG}" \
-    "${BUILD_ARGS[@]}" \
-    .
+##############################################################################
+# 3. Build 镜像（这里一定要把 build context 指向当前目录 . ）
+##############################################################################
+log "🔨  docker build --no-cache -t $IMAGE ."
+docker build --no-cache -t "$IMAGE" .   # 注意最后的 DOT ！
 
-  log "🚀  启动/滚动更新服务…"
-  docker compose \
-    -p "$PROJECT_NAME" \
-    -f "$COMPOSE_FILE" \
-    up -d --no-deps --build          # 只重建改动过的 service
+##############################################################################
+# 4. 启动新容器
+##############################################################################
+log "🚀  docker compose up -d"
+docker compose -p "$PROJECT" -f "$COMPOSE_FILE" up -d --build
 
-  log "✅  Done! 服务已就绪 👉  http(s)://<你的域名>"
-}
-
-# === 小工具 ================================================================
-log() { printf '\e[32m%s\e[0m\n' "$*"; }
-trap 'log "❌  出错，退出码 $?"' ERR
-main "$@"
+log "✅  完整更新完成！"
