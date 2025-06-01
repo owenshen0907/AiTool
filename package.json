@@ -5,7 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npm run init-db && next dev",
+    "dev:next": "npm run init-db && next dev",
+    "dev:relay": "cross-env PORT=3001 node server/real-time.cjs",
+    "dev": "npm-run-all -p dev:next dev:relay",
     "build": "next build",
     "start": "next start",
     "init-db": "DB_INIT=true node --loader ts-node/esm src/lib/db/initDb.ts"
@@ -21,6 +23,7 @@
     "@uiw/react-markdown-preview": "^5.1.4",
     "@uiw/react-md-editor": "^4.0.6",
     "casdoor-js-sdk": "^0.16.0",
+    "daisyui": "^5.0.43",
     "dotenv": "^16.4.7",
     "file-saver": "^2.0.5",
     "formidable": "^3.5.4",
@@ -46,6 +49,7 @@
     "remark-gfm": "^4.0.1",
     "swr": "^2.3.3",
     "uuid": "^11.1.0",
+    "wavesurfer.js": "^7.9.5",
     "ws": "^8.18.2",
     "xlsx": "^0.18.5",
     "zod": "^3.24.3"
@@ -61,9 +65,11 @@
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.0.0",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
     "eslint": "^8.0.0",
     "eslint-config-next": "^13.5.8",
+    "npm-run-all": "^4.1.5",
     "postcss": "^8.5.3",
     "style-loader": "^4.0.0",
     "tailwindcss": "^3.4.17",

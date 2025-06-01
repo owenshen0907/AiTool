@@ -3,14 +3,13 @@
 
 import React, { useEffect, useState } from 'react';
 import TableToolbar                      from './TableToolbar';
-import BottomTable, { CaseItem }         from './BottomTable';
+import BottomTable, { CaseItem, BottomTableProps }         from './BottomTable';
 import DataImportManager, { ColumnDef }  from '@/components/common/DataImport/DataImportManager';
 
 import {
     generateCSV,
     parseExcel,
     generateExcel,
-    // generatePDF   // 若需 PDF 导出，取消注释并确保已安装 jspdf & jspdf-autotable
 } from '@/lib/utils/fileUtils';
 import type { Supplier } from '@/lib/models/model';
 
@@ -43,7 +42,11 @@ export default function TTSTestPage() {
 
     const currentSupplier = () =>
         suppliers.find(s => s.id === supplierId || s.wssUrl === supplierId);
-
+    /* ---------------- 更新单条 Case 文本 ---------------- */
+    const handleUpdateCaseText = (id: string, newText: string) =>
+        setCases(prev =>
+            prev.map(c => (c.id === id ? { ...c, text: newText } : c))
+        );
     /* ------------------------------------------------------------------ */
     /*                         导入 / 导出 csv 模板                       */
     /* ------------------------------------------------------------------ */
@@ -116,18 +119,6 @@ export default function TTSTestPage() {
             `tts_results_${Date.now()}.xlsx`
         );
 
-        // generatePDF(
-        //   cases.map(c => ({
-        //     Text: c.text,
-        //     SessionId: c.sessionId,
-        //     Connect: c.connectAt ? new Date(c.connectAt).toLocaleTimeString() : '',
-        //     Done:    c.doneAt    ? new Date(c.doneAt).toLocaleTimeString()    : '',
-        //     Intervals: (c.intervals ?? []).join(', ')
-        //   })),
-        //   undefined,
-        //   'TTS 测试结果',
-        //   `tts_results_${Date.now()}.pdf`
-        // );
 
     }
 
@@ -271,6 +262,7 @@ export default function TTSTestPage() {
                 onSelectionChange={setSelected}
                 onRemoveCase={removeCase}
                 onRunCase={row => runMany([row])}
+                onUpdateCaseText={handleUpdateCaseText}
             />
         </div>
     );

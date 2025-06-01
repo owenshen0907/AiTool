@@ -22,6 +22,7 @@ export interface BottomTableProps {
     onSelectionChange: (ids: string[]) => void;
     onRemoveCase: (id: string) => void;
     onRunCase: (item: CaseItem) => void;
+    onUpdateCaseText: (id: string, newText: string) => void;
 }
 
 /** 每页行数 */
@@ -46,7 +47,8 @@ const CaseRow: FC<{
     onToggle: () => void;
     onRemove: () => void;
     onRun: () => void;
-}> = ({ item, index, startIndex, selected, onToggle, onRemove, onRun }) => {
+    onTextChange: (newText: string) => void;
+}> = ({ item, index, startIndex, selected, onToggle, onRemove, onRun, onTextChange }) => {
     /* -------- 把所有 base64 片段拼成 Blob URL -------- */
     const audioUrl = useMemo(() => {
         if (!item.chunks?.length) return '';
@@ -77,7 +79,7 @@ const CaseRow: FC<{
             <td className="border p-2 w-1/5">
         <textarea
             value={item.text}
-            readOnly
+            onChange={(e) => onTextChange(e.target.value)}
             className="w-full h-16 border rounded p-1 resize-none"
         />
             </td>
@@ -133,6 +135,7 @@ const BottomTable: FC<BottomTableProps> = ({
                                                onSelectionChange,
                                                onRemoveCase,
                                                onRunCase,
+                                               onUpdateCaseText,
                                            }) => {
     /* 分页 */
     const [page, setPage] = React.useState(1);
@@ -186,6 +189,7 @@ const BottomTable: FC<BottomTableProps> = ({
                         }}
                         onRemove={() => onRemoveCase(row.id)}
                         onRun={() => onRunCase(row)}
+                        onTextChange={(newText) => onUpdateCaseText(row.id, newText)}
                     />
                 ))}
                 </tbody>
