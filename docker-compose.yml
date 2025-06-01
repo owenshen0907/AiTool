@@ -15,5 +15,5 @@ services:
       # 挂代码方便热更新；生产可去掉
       - ./src:/app/src
       - ./public:/app/public
-      - ./ecosystem.config.js:/app/ecosystem.config.js
+      - ./ecosystem.config.cjs:/app/ecosystem.config.cjs
     restart: unless-stopped

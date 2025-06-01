@@ -34,4 +34,4 @@ EXPOSE 3000 3001
 
 # ⑨ 启动两个进程：web / proxy
 #    pm2-runtime 会阻塞 PID=1，Docker 可感知健康
-CMD ["pm2-runtime", "ecosystem.config.js"]
+CMD ["pm2-runtime", "ecosystem.config.cjs"]
