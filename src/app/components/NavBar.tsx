@@ -35,7 +35,11 @@ function HoverMenu({ item, level = 0 }: { item: MenuItem; level?: number }) {
     return (
         <li className="relative" onMouseEnter={enter} onMouseLeave={leave}>
             {item.href ? (
-                <Link href={item.href} className="block px-3 py-2 hover:bg-gray-100 rounded">
+                <Link
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block px-3 py-2 hover:bg-gray-100 rounded">
                     {item.title}
                 </Link>
             ) : (

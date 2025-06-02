@@ -6,6 +6,7 @@ import type { ContentItem } from '@/lib/models/content';
 import MarkdownEditor from '@/components/common/MarkdownEditor';
 import { Save, Printer, RefreshCw, MoreVertical } from 'lucide-react';
 import { marked } from 'marked';
+import { parseSSEStream } from '@/lib/utils/sse';
 
 interface Props {
     selectedItem: ContentItem | null;
@@ -24,6 +25,7 @@ export default function JapaneseContentLeft({
     const [summary, setSummary] = useState('');
     const [orig, setOrig] = useState({ title: '', summary: '', body: '' });
     const [editHeader, setEditHeader] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // 选中项切换：重置 header 和 orig
     useEffect(() => {
@@ -48,8 +50,7 @@ export default function JapaneseContentLeft({
         );
     }
 
-    const dirtyHeader =
-        title !== orig.title || summary !== orig.summary;
+    const dirtyHeader = title !== orig.title || summary !== orig.summary;
     const dirtyBody = body !== orig.body;
     const dirty = dirtyHeader || dirtyBody;
 
@@ -99,6 +100,50 @@ export default function JapaneseContentLeft({
         win.close();
     };
 
+    const handleGenerateSummary = async () => {
+        if (isGenerating) return;
+        // 弹框提示并让用户输入附加要求
+        const userReq = window.prompt(
+            'AI 自动生成摘要。如果对生成的摘要有要求，请在此输入；否则留空。',
+            ''
+        );
+        if (userReq === null) return; // 用户取消
+        setIsGenerating(true);
+        setSummary(''); // 清空当前摘要，开始接收新摘要
+        try {
+            const combinedContent = [
+                `【主体内容开始】：\n${body}【主体内容结束】`,
+                userReq.trim() ? `\n\n【附加要求】：\n${userReq.trim()}` : ''
+            ].join('');
+            const payload = {
+                scene: 'SUMMARY_GEN',
+                messages: [
+                    { role: 'user', content: combinedContent }
+                ]
+            };
+            const res = await fetch('/api/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok || !res.body) {
+                console.error('生成摘要时接口返回错误');
+                setIsGenerating(false);
+                return;
+            }
+            await parseSSEStream(res.body, ({ type, text }) => {
+                if (type === 'content') {
+                    setSummary(prev => prev + text);
+                }
+                // 对于 reasoning 片段可根据需要处理，例如在控制台输出
+            });
+        } catch (e) {
+            console.error('生成摘要过程中发生异常：', e);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <div className="w-2/3 flex flex-col h-screen p-4">
             {/* Header 编辑区 */}
@@ -119,6 +164,15 @@ export default function JapaneseContentLeft({
                                 onChange={(e) => setSummary(e.target.value)}
                                 placeholder="输入摘要"
                             />
+                            <button
+                                className={`mt-2 px-2 py-1 text-blue-600 hover:underline ${
+                                    isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                                onClick={handleGenerateSummary}
+                                disabled={isGenerating}
+                            >
+                                {isGenerating ? '生成中...' : '重新生成摘要'}
+                            </button>
                         </>
                     ) : (
                         <>
@@ -128,12 +182,24 @@ export default function JapaneseContentLeft({
                             >
                                 {title || '（无标题）'}
                             </h1>
-                            <p
-                                className="text-gray-600 cursor-pointer"
-                                onClick={() => setEditHeader(true)}
-                            >
-                                {summary || '（无摘要）'}
-                            </p>
+                            {summary ? (
+                                <p
+                                    className="text-gray-600 cursor-pointer"
+                                    onClick={() => setEditHeader(true)}
+                                >
+                                    {summary}
+                                </p>
+                            ) : (
+                                <button
+                                    className={`px-2 py-1 text-blue-600 hover:underline ${
+                                        isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
+                                    onClick={handleGenerateSummary}
+                                    disabled={isGenerating}
+                                >
+                                    {isGenerating ? '生成中...' : 'AI生成摘要'}
+                                </button>
+                            )}
                         </>
                     )}
                 </div>

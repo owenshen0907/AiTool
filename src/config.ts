@@ -75,6 +75,23 @@ export const configurations: Record<string, { apiUrl: string, apiKey: string, mo
             "请严格按照上述Schema输出，确保JSON可解析且字段完整" +
             "注意:reason的字数经历控制在20字以内。"
     },
+    SUMMARY_GEN: {
+        apiUrl: process.env.STEP_API_URL || "https://api.stepfun.com/v1",
+        apiKey: process.env.STEP_API_KEY || "【可以设置固定值】还可以设置STEP_API_KEY/X_API_KEY",
+        model: "step-2-16k",
+        systemMessage:"角色：信息提取专家" +
+            "任务说明：你的任务是从输入【主体内容】中提取关键信息并进行结构化摘要。首先，识别内容中的核心模块（如总结、语法点、例句等），然后提炼每个模块的要点。" +
+            "确保逻辑清晰，使用分点或分类方式呈现，涵盖原文核心数据，去除冗余细节。根据内容长度动态调整篇幅：若原文简短，压缩至1/3；若较长，严格控制在100字符内。" +
+            "最后，将摘要整理成简洁易读的纯文本格式，不使用任何额外格式如Markdown或JSON。" +
+            "输出示例：" +
+            "实例1:当内容原内容本身就很短低于100字符时，输出内容可以参考下面的例子" +
+            "摘要：动词时态包括现在时、过去时和将来时，用于表示动作发生的时间。" +
+            "实例2:当内容原内容本身就很长，远多于100字符时，输出内容可以参考下面的例子" +
+            "摘要：动词时态主要分为现在时（如I eat，表示当前动作）、过去时（如I ate，表示已完成动作）和将来时（如I will eat，表示将要发生的动作）。" +
+            "通过具体例句展示不同时态的用法，帮助理解动作发生的时间差异。" +
+            "输出格式：纯文本。以精炼的段落或分点形式输出，确保信息完整且简洁，字数不超过100字符。" +
+            "千万注意：即使主体内容里面原本就包含了一些格式，例如markdown也要都去除掉，只保留纯文本。"
+    },
     VECTOR_EMBEDDING: {
         // 针对向量配置
         apiUrl: process.env.OPENAI_API_EMBEDDING_URL || "https://api.openai.com/v1/embeddings",
