@@ -244,7 +244,7 @@ export default function JapaneseContentLeft({
             </div>
 
             {/* Markdown 编辑器，value=body，onChange=onChangeBody */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-auto">
                 <MarkdownEditor value={body} onChange={onChangeBody} />
             </div>
         </div>

@@ -1,8 +1,8 @@
 // File: src/app/docs/japanese/ImageUploader.tsx
 'use client';
 
-import React, { useRef } from 'react';
-import type { ImageEntry } from './types';
+import React, { useRef, useEffect } from 'react';
+import type { ImageEntry } from '../types';
 
 interface Props {
     feature: string;
@@ -86,6 +86,7 @@ export default function ImageUploader({
         }
     };
 
+    // 重试上传
     const retryUpload = (id: string) => {
         const entry = images.find(e => e.id === id);
         if (entry?.file) {
@@ -98,9 +99,9 @@ export default function ImageUploader({
         }
     };
 
-    // 删除单张：调后端，然后更新前端列表
+    // 删除图片
     const handleDelete = async (entry: ImageEntry) => {
-        // 如果本地临时文件，直接移除
+        // 本地临时文件直接移除
         if (!entry.file_id) {
             setImages(prev => prev.filter(e => e.id !== entry.id));
             return;
@@ -113,7 +114,6 @@ export default function ImageUploader({
                 body: JSON.stringify({ file_id: entry.file_id }),
             });
             if (!res.ok) throw new Error(await res.text());
-            // 成功后移出
             setImages(prev => prev.filter(e => e.id !== entry.id));
         } catch (err) {
             console.error(err);
@@ -121,18 +121,41 @@ export default function ImageUploader({
         }
     };
 
+    // 拖拽上传
     const handleDragOver = (e: React.DragEvent) => e.preventDefault();
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
         addLocalFiles(files);
     };
+
+    // 选择文件上传
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
         const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
         addLocalFiles(files);
         e.target.value = '';
     };
+
+    // 支持粘贴上传
+    useEffect(() => {
+        const handlePaste = (e: ClipboardEvent) => {
+            if (!e.clipboardData?.items) return;
+            const files: File[] = [];
+            for (const item of Array.from(e.clipboardData.items)) {
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) files.push(file);
+                }
+            }
+            if (files.length > 0) {
+                e.preventDefault();
+                addLocalFiles(files);
+            }
+        };
+        window.addEventListener('paste', handlePaste);
+        return () => window.removeEventListener('paste', handlePaste);
+    }, [addLocalFiles]);
 
     return (
         <div
@@ -152,7 +175,7 @@ export default function ImageUploader({
 
             {images.length === 0 ? (
                 <div className="h-full w-full text-center text-gray-500 flex flex-col items-center justify-center">
-                    <p>点击或拖拽上传图片</p>
+                    <p>点击或拖拽上传图片，或粘贴图片</p>
                     <p>最多 10 张，总大小 ≤ 50 MB</p>
                 </div>
             ) : (
@@ -191,9 +214,9 @@ export default function ImageUploader({
                         ))}
                     </div>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="bg-white bg-opacity-75 px-2 py-1 rounded text-gray-600">
-              点击或拖拽上传更多图片
-            </span>
+                        <span className="bg-white bg-opacity-75 px-2 py-1 rounded text-gray-600">
+                            点击或拖拽上传更多图片，或粘贴图片
+                        </span>
                     </div>
                 </div>
             )}

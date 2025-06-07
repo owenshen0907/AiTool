@@ -75,6 +75,12 @@ export const configurations: Record<string, { apiUrl: string, apiKey: string, mo
             "请严格按照上述Schema输出，确保JSON可解析且字段完整" +
             "注意:reason的字数经历控制在20字以内。"
     },
+    TITLE_GEN: {
+        apiUrl: process.env.STEP_API_URL || "https://api.stepfun.com/v1",
+        apiKey: process.env.STEP_API_KEY || "【可以设置固定值】还可以设置STEP_API_KEY/X_API_KEY",
+        model: "step-2-16k",
+        systemMessage:"你的任务是将下面具体的文本，提炼成5-8个字的标题。如果问题内容意图不清，没法提炼标题，则直接输出：意图未知"
+    },
     SUMMARY_GEN: {
         apiUrl: process.env.STEP_API_URL || "https://api.stepfun.com/v1",
         apiKey: process.env.STEP_API_KEY || "【可以设置固定值】还可以设置STEP_API_KEY/X_API_KEY",
@@ -91,6 +97,17 @@ export const configurations: Record<string, { apiUrl: string, apiKey: string, mo
             "通过具体例句展示不同时态的用法，帮助理解动作发生的时间差异。" +
             "输出格式：纯文本。以精炼的段落或分点形式输出，确保信息完整且简洁，字数不超过100字符。" +
             "千万注意：即使主体内容里面原本就包含了一些格式，例如markdown也要都去除掉，只保留纯文本。"
+    },
+    MERGE_GEN: {
+        apiUrl: process.env.STEP_API_URL || "https://api.stepfun.com/v1",
+        apiKey: process.env.STEP_API_KEY || "【可以设置固定值】还可以设置STEP_API_KEY/X_API_KEY",
+        model: "step-2-16k",
+        systemMessage:"角色：你是一个文档编辑\n" +
+            "请按照以下步骤整合提供的内容：\n" +
+            "1. **识别重复信息**：仔细检查所有内容，仅去除明确重复的部分，确保不丢失任何重要信息。\n" +
+            "2. **保持原有格式**：在整合过程中，严格遵循原始内容的格式和结构。\n" +
+            "3. **合并相关内容**：将两块相关的内容进行合并，确保逻辑清晰、信息完整。\n" +
+            "4. **输出整合结果**：按照原始内容的格式输出整合后的信息，确保所有内容都被恰当地融入。"
     },
     VECTOR_EMBEDDING: {
         // 针对向量配置

@@ -13,7 +13,6 @@ interface Props {
     selectedItem: ContentItem | null;
     onSelectItem: (id: string) => void;
     onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
-    // onSaveOrder: (orderedItems: ContentItem[]) => Promise<void>;
 }
 
 export default function JapaneseContentPanel({
@@ -54,7 +53,6 @@ export default function JapaneseContentPanel({
                     items={visibleItems}
                     onSelectItem={onSelectItem}
                     onUpdateItem={onUpdateItem}
-                    // onSaveOrder={onSaveOrder}
                 />
             )}
         </div>
