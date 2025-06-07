@@ -11,11 +11,14 @@ interface Props {
     userSuggestion: string;
     previewContent: string;
     visible: boolean;
+    /** 只是触发一次流式合并，模型结果会反馈到 previewContent */
+    onMerge: (editedSuggestion: string) => void;
+    /** 合并完成后，用户点击“替换”时，把 localContent 传回父组件覆盖正文 */
+    onReplace: (finalContent: string) => void;
     onClose: () => void;
-    onReplace: () => void;
-    onMerge: () => void;
     onTitleChange: (title: string) => void;
     onTitleComplete: (title: string) => void;
+    onContentChange: (editedContent: string) => void;
 }
 
 export default function OptimizePreviewModal({
@@ -23,24 +26,30 @@ export default function OptimizePreviewModal({
                                                  userSuggestion,
                                                  previewContent,
                                                  visible,
-                                                 onClose,
                                                  onReplace,
                                                  onMerge,
+                                                 onClose,
                                                  onTitleChange,
                                                  onTitleComplete,
+                                                 onContentChange,
                                              }: Props) {
     if (!visible) return null;
 
     const [title, setTitle] = useState(suggestionTitle);
+    const [localContent, setLocalContent] = useState(previewContent);
     const [generating, setGenerating] = useState(false);
 
-    /* ---------------- 自动生成（首次打开且无标题） ---------------- */
+    // 每次打开或 previewContent 改变时，重置 localContent
+    useEffect(() => {
+        setLocalContent(previewContent);
+    }, [previewContent]);
+
+    // 首次打开且无 title 时自动生成
     useEffect(() => {
         if (!title && previewContent) generateTitle();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [previewContent]);
 
-    /* ---------------- 生成标题（自动/手动） ---------------- */
     const generateTitle = async () => {
         if (generating) return;
         setGenerating(true);
@@ -68,7 +77,6 @@ export default function OptimizePreviewModal({
                 }
             });
 
-            // 生成完毕 -> 回写缓存
             onTitleComplete(acc);
         } catch (e) {
             console.error('生成标题失败：', e);
@@ -77,19 +85,34 @@ export default function OptimizePreviewModal({
         }
     };
 
-    /* ---------------- 手动输入标题 ---------------- */
-    const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleTitleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setTitle(val);
         onTitleChange(val);
-        // 用户手动编辑后立即更新缓存
         onTitleComplete(val);
     };
 
-    /* ---------------- 复制正文 ---------------- */
+    // 编辑器变化只更新本地，不触发合并或替换
+    const handleContentChange = (val: string) => {
+        setLocalContent(val);
+        onContentChange(val);
+    };
+
+    // 点击合并：把本地内容传给 onMerge
+    const handleMergeClick = () => {
+        // 调用父组件的流式合并
+        onMerge(localContent);
+    };
+
+    // 点击替换：把编辑后的本地内容传给 onReplace
+    const handleReplaceClick = () => {
+        // 把合并／编辑后的本地内容传给父组件
+        onReplace(localContent);
+    };
+
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(previewContent);
+            await navigator.clipboard.writeText(localContent);
             alert('已复制到剪贴板');
         } catch {
             alert('复制失败，请手动复制');
@@ -99,13 +122,13 @@ export default function OptimizePreviewModal({
     return (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
             <div className="bg-white rounded p-6 w-full max-w-3xl max-h-[95vh] overflow-auto">
-                {/* -------- 标题 & 建议 -------- */}
+                {/* 标题 & 建议 */}
                 <div className="mb-4">
                     <div className="flex items-center space-x-2 mb-2">
                         <input
                             className="flex-1 border rounded px-2 py-1"
                             value={title}
-                            onChange={handleInput}
+                            onChange={handleTitleInput}
                             placeholder="输入标题"
                         />
                         <button
@@ -121,24 +144,24 @@ export default function OptimizePreviewModal({
                     <p className="mt-2 text-gray-700 whitespace-pre-wrap">{userSuggestion}</p>
                 </div>
 
-                {/* -------- 正文预览 -------- */}
+                {/* 正文预览/编辑 */}
                 <div className="mb-4 flex-1">
                     <h4 className="font-medium mb-2">预览内容</h4>
                     <div className="border rounded p-2 h-64 overflow-auto">
-                        <MarkdownEditor value={previewContent} onChange={onMerge} />
+                        <MarkdownEditor value={localContent} onChange={handleContentChange} />
                     </div>
                 </div>
 
-                {/* -------- 操作 -------- */}
+                {/* 操作 按钮 */}
                 <div className="mt-4 flex justify-end space-x-2">
                     <button onClick={handleCopy} className="px-4 py-2 border rounded hover:bg-gray-100">
                         复制
                     </button>
-                    <button onClick={onMerge} className="px-4 py-2 border rounded hover:bg-gray-100">
+                    <button onClick={handleMergeClick} className="px-4 py-2 border rounded hover:bg-gray-100">
                         合并
                     </button>
                     <button
-                        onClick={onReplace}
+                        onClick={handleReplaceClick}
                         className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                     >
                         替换

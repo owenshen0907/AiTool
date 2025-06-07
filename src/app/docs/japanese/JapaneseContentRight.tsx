@@ -74,11 +74,11 @@ export default function JapaneseContentRight({
         if (!selectedItem) return;
         const key = selectedItem.id;
         const idx = cacheList.findIndex(
-            i => i.key === key && i.suggestion === noteRequest && i.content === previewContent,
+            i => i.key === key && i.suggestion === noteRequest ,
         );
         if (idx >= 0) {
             const updated = [...cacheList];
-            updated[idx] = { ...updated[idx], title };
+            updated[idx] = { ...updated[idx], title ,content: previewContent };
             saveCache(updated);
         } else {
             const newItem: CacheItem = {
@@ -93,6 +93,21 @@ export default function JapaneseContentRight({
             saveCache([...other, newItem, ...same].slice(0, MAX_CACHE));
         }
     };
+        const updateCacheContent = (newContent: string) => {
+                if (!selectedItem) return;
+                const key = selectedItem.id;
+                let modified = false;
+                const updated = cacheList.map(item => {
+                        if (item.key === key && item.suggestion === noteRequest) {
+                                modified = true;
+                                return { ...item, content: newContent };
+                            }
+                        return item;
+                    });
+                if (modified) {
+                        saveCache(updated);
+                    }
+            };
 
     const removeFromCache = (id: string) => saveCache(cacheList.filter(i => i.id !== id));
 
@@ -176,6 +191,10 @@ export default function JapaneseContentRight({
                     }
                 }
             }
+             // 流式结束：若非覆盖模式，把最终内容写入缓存
+                 if (!overwriteExisting) {
+                   upsertCache(suggestionTitle || '(未命名)');
+                 }
             /* 若为替换模式，正文已直接写入；否则预览已显示 */
         } catch (e) {
             console.error('生成失败', e);
@@ -190,16 +209,16 @@ export default function JapaneseContentRight({
 
         const key = selectedItem.id;
         const newList = cacheList.filter(
-            i => !(i.key === key && i.suggestion === noteRequest && i.content === previewContent)
+            i => !(i.key === key && i.suggestion === noteRequest)
         );
         saveCache(newList);
     };
     /* 放在组件内部，跟 handleGenerate 平级 */
-    const handleMerge = async () => {
+    const handleMerge = async (editedSuggestion: string) => {
         if (!selectedItem) return;
         const original = existingBody.trim();
-        const suggestion = previewContent.trim();
-        if (!original || !suggestion) {
+        const trimmedSuggestion = editedSuggestion.trim();
+        if (!original || !editedSuggestion) {
             alert('缺少原始笔记或建议内容，无法合并');
             return;
         }
@@ -215,7 +234,7 @@ export default function JapaneseContentRight({
                         role: 'user',
                         content:
                             `【原始笔记】\n${original}\n\n` +
-                            `【AI 建议】\n${suggestion}`,
+                            `【AI 建议】\n${trimmedSuggestion}`,
                     },
                 ],
             };
@@ -234,8 +253,10 @@ export default function JapaneseContentRight({
                 }
             });
 
-            upsertCache(suggestionTitle || '(未命名)'); // 更新缓存
+            // upsertCache(suggestionTitle || '(未命名)'); // 更新缓存
+            updateCacheContent(acc);
         } catch (e) {
+
             console.error('合并失败', e);
             alert('合并失败，请重试');
         } finally {
@@ -316,14 +337,15 @@ export default function JapaneseContentRight({
                 previewContent={previewContent}
                 visible={showPreview}
                 onClose={() => setShowPreview(false)}
-                onReplace={() => {
-                    removeCurrentCache();          // ① 清理这条缓存
-                    onChangeBody(previewContent);  // ② 把正文写入左侧
-                    setShowPreview(false);         // ③ 关闭弹窗
+                onMerge={(editedSuggestion)=> {handleMerge(editedSuggestion);}}                         // <— 流式调用模型，更新 previewContent
+                onReplace={(finalContent: string) => {        // <— 用最新内容替换正文
+                    removeCurrentCache();
+                    onChangeBody(finalContent);
+                    setShowPreview(false);
                 }}
-                onMerge={handleMerge}
                 onTitleChange={setSuggestionTitle}
                 onTitleComplete={upsertCache}
+                onContentChange={(editedContent) => {setPreviewContent(editedContent);updateCacheContent(editedContent);}}
             />
         </div>
     );
