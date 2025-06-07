@@ -50,6 +50,31 @@ export default function JapaneseContentRight({
     const [previewContent, setPreviewContent] = useState('');
     const [showPreview, setShowPreview] = useState(false);
     const [suggestionTitle, setSuggestionTitle] = useState('');
+    // 加载数据库已上传图片
+    useEffect(() => {
+        if (!formId) {
+            setImages([]);
+            return;
+        }
+        (async () => {
+            try {
+                const res = await fetch(`/api/files?form_id=${formId}`);
+                if (!res.ok) throw new Error('接口错误');
+                const files: Array<{ file_id: string; file_path: string }> = await res.json();
+                // 把每条记录映射成 ImageEntry 并标记为 success
+                setImages(
+                    files.map(f => ({
+                        id: f.file_id,
+                        url: `${window.location.origin}/${f.file_path}`,
+                        status: 'success',
+                        file_id: f.file_id,
+                    }))
+                );
+            } catch (e) {
+                console.error('加载历史图片失败：', e);
+            }
+        })();
+    }, [formId]);
 
     /* 缓存列表 */
     const [cacheList, setCacheList] = useState<CacheItem[]>([]);
