@@ -60,9 +60,15 @@ export default function DirectoryManager({
     /* 点击目录：更新当前页的 currentDir + 修改 URL，但不新开标签页 */
     const handleSelectDir = (dirId: string) => {
         _onSelectDir(dirId);
-        const params = new URLSearchParams(window.location.search);
-        params.set('dir', dirId);
-        router.replace(`?${params.toString()}`, { scroll: false });
+        // const params = new URLSearchParams(window.location.search);
+        // params.set('dir', dirId);
+        // router.replace(`?${params.toString()}`, { scroll: false });
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('dir', dirId);
+        url.searchParams.delete('doc');
+        window.history.replaceState(null, '', url.toString());
+
     };
 
     return (
