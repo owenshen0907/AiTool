@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import {
     ChevronRight,
@@ -67,6 +68,7 @@ export default function DirectoryNode(props: Props) {
         reloadDirs,
         rootList,
     } = props;
+    const router = useRouter();
 
     // files under this directory
     const files = items
@@ -315,14 +317,15 @@ export default function DirectoryNode(props: Props) {
                                 onDragStart={e => { e.stopPropagation(); onDragStart(e, f.id, 'file'); }}
                                 className="group flex items-center pr-2 py-1 rounded hover:bg-gray-50 cursor-pointer"
                                 style={{ paddingLeft: 12 + (level + 1) * 16 }}
-                                onClick={() =>
-                                    // onSelectItem(f.id)
-                                                                        window.open(
-                                                                                `/docs/${feature}?dir=${node.id}&doc=${f.id}`,
-                                                                                '_blank',
-                                                                                'noopener'
-                                                                            )
-                            }
+                                onClick={() =>{
+                                    // 1) 更新当前页选中状态
+                                    onSelectItem(f.id);
+                                    // 2) 同步修改 URL query
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('dir', node.id);
+                                    url.searchParams.set('doc', f.id);
+                                    window.history.replaceState(null, '', url.toString());
+                            }}
                             >
                                 <FileText size={15} className="text-gray-500 mr-1" />
                                 <span className="flex-1 truncate">{f.title}</span>

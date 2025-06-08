@@ -1,7 +1,7 @@
 // File: src/components/directory/DirectoryLayout.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, ReactNode } from 'react';
 import DirectoryManager from './DirectoryManager';
 import ContentModal     from './CreateContentModal';
 
@@ -34,8 +34,12 @@ export interface DirectoryLayoutProps {
     }) => React.ReactNode;
 }
 
-export default function DirectoryLayout({ feature,    initialDirId,
-                                            initialItemId, children }: DirectoryLayoutProps) {
+export default function DirectoryLayout({
+                                            feature,
+                                            initialDirId,
+                                            initialItemId,
+                                            children,
+}: DirectoryLayoutProps) {
     const [currentDir,    setCurrentDir]    = useState<string | null>(null);
     const [selectedItem,  setSelectedItem]  = useState<ContentItem | null>(null);
     const [reloadTreeFlag, setReloadTreeFlag] = useState(0);
@@ -51,6 +55,50 @@ export default function DirectoryLayout({ feature,    initialDirId,
 
     // 内容缓存
     const { cache, loadDir, mutateDir, clearCachedDir, allItems } = useContentCache(feature);
+    /* ─── 展开状态 ★ 提升到此处 ─── */
+    const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
+    /** 切换展开/折叠 */
+    const toggleExpandDir = useCallback((id: string) => {
+        setExpandedDirs((prev) => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    }, []);
+    /* ─── 打开指定目录（初次 & URL 变化）─── */
+    useEffect(() => {
+        if (initialDirId) setCurrentDir(initialDirId);
+    }, [initialDirId]);
+
+
+    /* 把祖先链全部加入展开集合 */
+    useEffect(() => {
+        if (!initialDirId || tree.length === 0) return;
+
+        const path: string[] = [];
+        const dfs = (nodes: any[]): boolean => {
+            for (const n of nodes) {
+                if (n.id === initialDirId) {
+                    path.push(n.id);
+                    return true;
+                }
+                if (n.children && dfs(n.children)) {
+                    path.push(n.id);
+                    return true;
+                }
+            }
+            return false;
+        };
+        dfs(tree);
+
+        if (path.length) {
+            setExpandedDirs((prev) => {
+                const next = new Set(prev);
+                path.forEach((id) => next.add(id));
+                return next;
+            });
+        }
+    }, [initialDirId, tree]);
 
     // 当前目录下可见 items
     const visibleItems = currentDir ? (cache[currentDir] ?? []) : [];
@@ -61,32 +109,49 @@ export default function DirectoryLayout({ feature,    initialDirId,
             loadDir(currentDir, true).catch(console.error);
         }
     }, [currentDir, cache, loadDir]);
-
-    // 1) 初始时如果 URL 中带了 dir，就打开它
-    useEffect(() => {
-        if (initialDirId) {
-            setCurrentDir(initialDirId);
-        }
-    }, [initialDirId]);
-
-    // 2) 目录加载完后，如果带了 doc，就选中那条
+    /* ─── 根据 initialItemId 选中文档 ─── */
     useEffect(() => {
         if (!initialItemId || !currentDir) return;
 
-        // 如果缓存里已经有
-        const cached = cache[currentDir]?.find(i => i.id === initialItemId);
+        const cached = cache[currentDir]?.find((i) => i.id === initialItemId);
         if (cached) {
             setSelectedItem(cached);
         } else {
-            // 否则强制加载一遍目录，或者单独拉取该文档
             loadDir(currentDir, true)
                 .then(() => {
-                    const found = cache[currentDir]?.find(i => i.id === initialItemId);
+                    const found = cache[currentDir]?.find(
+                        (i) => i.id === initialItemId
+                    );
                     if (found) setSelectedItem(found);
                 })
                 .catch(console.error);
         }
     }, [initialItemId, currentDir, cache, loadDir]);
+    // 1) 初始时如果 URL 中带了 dir，就打开它
+    // useEffect(() => {
+    //     if (initialDirId) {
+    //         setCurrentDir(initialDirId);
+    //     }
+    // }, [initialDirId]);
+
+    // 2) 目录加载完后，如果带了 doc，就选中那条
+    // useEffect(() => {
+    //     if (!initialItemId || !currentDir) return;
+    //
+    //     // 如果缓存里已经有
+    //     const cached = cache[currentDir]?.find(i => i.id === initialItemId);
+    //     if (cached) {
+    //         setSelectedItem(cached);
+    //     } else {
+    //         // 否则强制加载一遍目录，或者单独拉取该文档
+    //         loadDir(currentDir, true)
+    //             .then(() => {
+    //                 const found = cache[currentDir]?.find(i => i.id === initialItemId);
+    //                 if (found) setSelectedItem(found);
+    //             })
+    //             .catch(console.error);
+    //     }
+    // }, [initialItemId, currentDir, cache, loadDir]);
 
     // 新建 / 编辑 弹框
     const [modalVisible, setModalVisible] = useState(false);
@@ -108,6 +173,11 @@ export default function DirectoryLayout({ feature,    initialDirId,
         setModalVisible(false);
         setEditingItem(null);
     };
+    // /* ---------------- 目录刷新 ---------------- */
+    // const reloadDirs = useCallback(() => {
+    //     reloadTree();
+    //     setReloadTreeFlag((v) => v + 1);
+    // }, [reloadTree]);
 
     const handleModalSubmit = async (data: { title: string; summary?: string; body?: string }) => {
         if (!currentDir) return;
@@ -189,6 +259,8 @@ export default function DirectoryLayout({ feature,    initialDirId,
                 key={reloadTreeFlag}
                 feature={feature}
                 items={allItems}
+                expand={expandedDirs}           /* ★ 由父控制 */
+                toggleExpand={toggleExpandDir}  /* ★ 由父控制 */
                 selectedDirId={currentDir}
                 selectedItemId={selectedItem?.id ?? null}
 

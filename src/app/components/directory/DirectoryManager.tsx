@@ -1,27 +1,30 @@
+// File: src/components/directory/DirectoryManager.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { ContentItem } from '@/lib/models/content';
-import type { TreeNode }    from './types';
-
-
+import type { TreeNode } from './types';
 import DirectoryNode from './DirectoryNode';
 
 export interface DirectoryManagerProps {
     feature: string;
-    items:   ContentItem[];
+    items: ContentItem[];
 
-    selectedDirId:  string | null;
+    /** ★ 由父组件控制的展开状态 */
+    expand: Set<string>;
+    toggleExpand: (id: string) => void;
+
+    selectedDirId: string | null;
     selectedItemId: string | null;
 
-    onSelectDir:   (id: string) => void;
-    onSelectItem:  (id: string) => void;
+    onSelectDir: (id: string) => void;
+    onSelectItem: (id: string) => void;
 
     onCreateContent?: (dirId: string) => void;
-    onDeleteItem?:    (itemId: string) => void;
-    onMoveItem:    (id: string, newDir: string) => void;
+    onDeleteItem?: (itemId: string) => void;
+    onMoveItem: (id: string, newDir: string) => void;
     onReorderFile: (dirId: string, orderedIds: string[]) => void;
 
     reloadDirs: () => void;
@@ -34,6 +37,9 @@ export interface DirectoryManagerProps {
 export default function DirectoryManager({
                                              feature,
                                              items,
+                                             expand,             // ← 来自父组件
+                                             toggleExpand,       // ← 来自父组件
+
                                              selectedDirId,
                                              selectedItemId,
                                              onSelectDir: _onSelectDir,
@@ -48,56 +54,24 @@ export default function DirectoryManager({
                                              renameDir,
                                              removeDir,
                                          }: DirectoryManagerProps) {
-    const [expand,    setExpand]    = useState<Set<string>>(new Set());
     const [collapsed, setCollapsed] = useState(false);
     const router = useRouter();
 
-    // Helper: 查找某个目录及其所有祖先节点的路径
-    const findPath = (
-        nodes: TreeNode[],
-        targetId: string
-    ): string[] | null => {
-        for (const node of nodes) {
-            if (node.id === targetId) return [node.id];
-            if (node.children) {
-                const childPath = findPath(node.children, targetId);
-                if (childPath) return [node.id, ...childPath];
-            }
-        }
-        return null;
-    };
-
-    // 当 selectedDirId 改变时，自动展开该目录及其所有祖先
-    useEffect(() => {
-        if (selectedDirId) {
-            const path = findPath(tree, selectedDirId);
-            if (path) {
-                setExpand(prev => {
-                    const next = new Set(prev);
-                    path.forEach(id => next.add(id));
-                    return next;
-                });
-            }
-        }
-    }, [selectedDirId, tree]);
-
-    const toggleExpand = (id: string) =>
-        setExpand(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-
-    // 点击目录：更新当前页状态 + 在新标签页打开带参数 URL
+    /* 点击目录：更新当前页的 currentDir + 修改 URL，但不新开标签页 */
     const handleSelectDir = (dirId: string) => {
         _onSelectDir(dirId);
-        router.push(`/docs/${feature}?dir=${dirId}`);
+        const params = new URLSearchParams(window.location.search);
+        params.set('dir', dirId);
+        router.replace(`?${params.toString()}`, { scroll: false });
     };
 
     return (
-        <aside className={`flex flex-col h-full bg-white border-r transition-all
-            ${collapsed ? 'w-12' : 'w-56'}`}
+        <aside
+            className={`flex flex-col h-full bg-white border-r transition-all ${
+                collapsed ? 'w-12' : 'w-56'
+            }`}
         >
+            {/* ── 顶栏 ── */}
             <div className="flex items-center justify-between px-2 py-1 border-b">
                 {!collapsed && <span className="font-semibold">目录</span>}
                 <div className="flex items-center space-x-1">
@@ -110,32 +84,34 @@ export default function DirectoryManager({
                         </button>
                     )}
                     <button
-                        onClick={() => setCollapsed(c => !c)}
+                        onClick={() => setCollapsed((c) => !c)}
                         className="p-1 hover:bg-gray-100 rounded"
                     >
-                        {collapsed ? <ChevronRight size={18}/> : <ChevronLeft size={18}/>}
+                        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                     </button>
                 </div>
             </div>
+
+            {/* ── 树形区域 ── */}
             <div className="flex-1 overflow-auto text-sm select-none px-1 pt-1">
                 <ul>
-                    {tree.map(node => (
+                    {tree.map((node) => (
                         <DirectoryNode
                             key={node.id}
                             feature={feature}
                             node={node}
                             level={0}
                             items={items}
-
+                            /* 展开状态来自父组件 */
                             expand={expand}
                             toggleExpand={toggleExpand}
                             collapsed={collapsed}
-
+                            /* 选中信息 */
                             selectedDirId={selectedDirId}
                             selectedItemId={selectedItemId}
                             onSelectDir={handleSelectDir}
                             onSelectItem={onSelectItem}
-
+                            /* 目录 / 文件操作 */
                             onCreateContent={onCreateContent}
                             onDeleteItem={onDeleteItem}
                             addSubDir={addSubDir}
