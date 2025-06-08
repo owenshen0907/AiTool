@@ -9,6 +9,7 @@ import OptimizePreviewModal from './right/OptimizePreviewModal';
 import type { ImageEntry } from './types';
 import type { Template } from './right/TemplateSelectorModal';
 import { parseSSEStream } from '@/lib/utils/sse';
+import { urlToBase64 } from '@/lib/utils/imageToBase64';
 
 interface CacheItem {
     id: string;
@@ -28,6 +29,7 @@ interface Props {
 
 const CACHE_KEY = 'optimize_previews';
 const MAX_CACHE = 10;
+
 
 export default function JapaneseContentRight({
                                                  feature,
@@ -142,46 +144,55 @@ export default function JapaneseContentRight({
         [cacheList, selectedItem],
     );
 
+    /* ---------------- 生成正文 / 优化 ---------------- */
     const handleGenerate = async () => {
         if (!selectedItem || !selectedTemplate) return;
 
         setLoading(true);
-        setSuggestionTitle('');
+        setSuggestionTitle(''); // 清空标题以触发自动生成（若需要）
         let acc = '';
 
-        if (overwriteExisting) {
+        const hasExisting = !!existingBody.trim();
+        if (!hasExisting) {
+            // 无原始正文：直接写入正文区
             onChangeBody('');
-        } else {
+            setPreviewContent('');
+            setShowPreview(false);
+        } else if (!overwriteExisting) {
+            // 有正文且不覆盖：打开预览
             setPreviewContent('');
             setShowPreview(true);
         }
 
         try {
-            /* 1. 获取供应商配置 */
-            const supRes = await fetch('/api/suppliers');
-            const sups: Array<{ id: string; apiUrl: string; apiKey: string }> = await supRes.json();
-            const sup = sups.find(s => s.id === supplierId);
+            /* 1. 供应商 */
+            const sups = await (await fetch('/api/suppliers')).json();
+            const sup = sups.find((s: any) => s.id === supplierId);
             if (!sup) throw new Error('无效 supplierId');
             const { apiUrl, apiKey } = sup;
 
             /* 2. 组装 messages */
             const userMsgs: any[] = [{ type: 'text', text: noteRequest }];
-            images.forEach(e => {
-                if (e.status === 'success')
-                    userMsgs.push({ type: 'image_url', image_url: { url: e.url, detail: forceBase64 ? 'auto' : 'high' } });
-            });
+
+            /** decide base64 or url */
+            const shouldBase64 = forceBase64 || ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            for (const img of images) {
+                if (img.status !== 'success') continue;
+                let url = img.url;
+                if (shouldBase64) {
+                    url = await urlToBase64(img.url);
+                }
+                userMsgs.push({ type: 'image_url', image_url: { url, detail: 'auto' } });
+            }
 
             const messages: any[] = [{ role: 'system', content: selectedTemplate.content }];
-            if (includeExisting && existingBody.trim()) messages.push({ role: 'assistant', content: existingBody.trim() });
+            if (includeExisting && hasExisting) messages.push({ role: 'assistant', content: existingBody.trim() });
             messages.push({ role: 'user', content: userMsgs });
 
-            /* 3. 上游流式调用 */
+            /* 3. SSE */
             const upstream = await fetch(`${apiUrl}/chat/completions`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${apiKey}`,
-                },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
                 body: JSON.stringify({ model, stream: true, messages }),
             });
             if (!upstream.ok || !upstream.body) throw new Error('接口调用失败');
@@ -198,35 +209,28 @@ export default function JapaneseContentRight({
                 for (const line of lines) {
                     if (!line.startsWith('data:')) continue;
                     const jsonStr = line.replace(/^data:\s*/, '').trim();
-                    if (jsonStr === '[DONE]') {
-                        reader.cancel();
-                        break;
-                    }
+                    if (jsonStr === '[DONE]') { reader.cancel(); break; }
                     let payload: any;
-                    try {
-                        payload = JSON.parse(jsonStr);
-                    } catch {
-                        continue;
-                    }
+                    try { payload = JSON.parse(jsonStr); } catch { continue; }
                     const delta = payload.choices?.[0]?.delta?.content;
                     if (delta) {
                         acc += delta;
-                        if (overwriteExisting) onChangeBody(acc);
-                        else setPreviewContent(acc);
+                        if (!hasExisting || overwriteExisting) {
+                            onChangeBody(acc);               // 直接写正文
+                        } else {
+                            setPreviewContent(acc);          // 更新预览
+                        }
                     }
                 }
             }
-             // 流式结束：若非覆盖模式，把最终内容写入缓存
-                 if (!overwriteExisting) {
-                   upsertCache(suggestionTitle || '(未命名)');
-                 }
-            /* 若为替换模式，正文已直接写入；否则预览已显示 */
+
+            // 结束：若是预览模式，写入缓存
+            if (hasExisting && !overwriteExisting) upsertCache(suggestionTitle || '(未命名)');
         } catch (e) {
             console.error('生成失败', e);
             alert('生成失败，请重试');
         } finally {
             setLoading(false);
-
         }
     };
     const removeCurrentCache = () => {
