@@ -37,17 +37,14 @@ export default function DirectoryInfoView({
     const [orderedItems, setOrderedItems] = useState<ContentItem[]>([]);
     const initialRef = useRef<Record<string, number>>({});
 
-    // sensors
     const sensors = useSensors(useSensor(PointerSensor));
 
-    // 初始化
     useEffect(() => {
         const sorted = [...items].sort((a, b) => b.position - a.position);
         setOrderedItems(sorted);
         initialRef.current = Object.fromEntries(sorted.map(i => [i.id, i.position]));
     }, [items]);
 
-    // 拖拽结束自动保存
     const handleDragEnd = async (e: DragEndEvent) => {
         const { active, over } = e;
         if (active.id === over?.id) return;
@@ -57,7 +54,6 @@ export default function DirectoryInfoView({
         const newOrder = arrayMove(orderedItems, oldIndex, newIndex);
         setOrderedItems(newOrder);
 
-        // 计算新 position 并仅更新变化的
         const total = newOrder.length;
         const patched = newOrder.map((item, idx) => ({
             id: item.id,
@@ -66,33 +62,32 @@ export default function DirectoryInfoView({
         const toUpdate = patched.filter(it => it.position !== initialRef.current[it.id]);
 
         if (toUpdate.length) {
-            await Promise.all(toUpdate.map(({ id, position }) =>
-                apiUpdate(feature, { id, position })
-            ));
-            // 更新缓存
+            await Promise.all(
+                toUpdate.map(({ id, position }) => apiUpdate(feature, { id, position }))
+            );
             toUpdate.forEach(({ id, position }) => {
                 initialRef.current[id] = position;
             });
         }
     };
 
-    // 拆成两列
+    // 拆成两列展示，但拖拽逻辑由外层统一管理
     const firstCol = orderedItems.slice(0, 10);
     const secondCol = orderedItems.slice(10);
 
     return (
-        <div className="flex h-full">
-            {[firstCol, secondCol].map((colItems, colIdx) => (
-                <div key={colIdx} className="w-1/2 p-4 overflow-auto space-y-2">
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                    >
-                        <SortableContext
-                            items={colItems.map(i => i.id)}
-                            strategy={verticalListSortingStrategy}
-                        >
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+        >
+            <SortableContext
+                items={orderedItems.map(i => i.id)}
+                strategy={verticalListSortingStrategy}
+            >
+                <div className="flex h-full">
+                    {[firstCol, secondCol].map((colItems, colIdx) => (
+                        <div key={colIdx} className="w-1/2 p-4 overflow-auto space-y-2">
                             {colItems.map(item => (
                                 <SortableItem
                                     key={item.id}
@@ -101,11 +96,11 @@ export default function DirectoryInfoView({
                                     onUpdateItem={onUpdateItem}
                                 />
                             ))}
-                        </SortableContext>
-                    </DndContext>
+                        </div>
+                    ))}
                 </div>
-            ))}
-        </div>
+            </SortableContext>
+        </DndContext>
     );
 }
 
@@ -145,7 +140,6 @@ function SortableItem({ item, onSelectItem, onUpdateItem }: SortableItemProps) {
             style={style}
             className="flex items-start justify-between bg-white rounded-xl shadow p-3"
         >
-            {/* 左侧标题/摘要 或 编辑框 */}
             <div className="flex-1 cursor-pointer" onClick={() => !editing && onSelectItem(item.id)}>
                 {editing ? (
                     <>
@@ -167,12 +161,12 @@ function SortableItem({ item, onSelectItem, onUpdateItem }: SortableItemProps) {
                 ) : (
                     <>
                         <h3 className="text-base font-semibold">{item.title}</h3>
-                        <p className="text-sm text-gray-500 line-clamp-2">{item.summary || '（无摘要）'}</p>
+                        <p className="text-sm text-gray-500 line-clamp-2">
+                            {item.summary || '（无摘要）'}
+                        </p>
                     </>
                 )}
             </div>
-
-            {/* 右侧操作区 */}
             <div className="flex flex-col items-center ml-2 space-y-1">
                 <GripVertical
                     {...attributes}
