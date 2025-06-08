@@ -18,6 +18,8 @@ import {
 
 export interface DirectoryLayoutProps {
     feature: string;
+    initialDirId?: string;
+    initialItemId?: string;
     children: (props: {
         currentDir:   string | null;
         selectedItem: ContentItem | null;
@@ -32,7 +34,8 @@ export interface DirectoryLayoutProps {
     }) => React.ReactNode;
 }
 
-export default function DirectoryLayout({ feature, children }: DirectoryLayoutProps) {
+export default function DirectoryLayout({ feature,    initialDirId,
+                                            initialItemId, children }: DirectoryLayoutProps) {
     const [currentDir,    setCurrentDir]    = useState<string | null>(null);
     const [selectedItem,  setSelectedItem]  = useState<ContentItem | null>(null);
     const [reloadTreeFlag, setReloadTreeFlag] = useState(0);
@@ -58,6 +61,32 @@ export default function DirectoryLayout({ feature, children }: DirectoryLayoutPr
             loadDir(currentDir, true).catch(console.error);
         }
     }, [currentDir, cache, loadDir]);
+
+    // 1) 初始时如果 URL 中带了 dir，就打开它
+    useEffect(() => {
+        if (initialDirId) {
+            setCurrentDir(initialDirId);
+        }
+    }, [initialDirId]);
+
+    // 2) 目录加载完后，如果带了 doc，就选中那条
+    useEffect(() => {
+        if (!initialItemId || !currentDir) return;
+
+        // 如果缓存里已经有
+        const cached = cache[currentDir]?.find(i => i.id === initialItemId);
+        if (cached) {
+            setSelectedItem(cached);
+        } else {
+            // 否则强制加载一遍目录，或者单独拉取该文档
+            loadDir(currentDir, true)
+                .then(() => {
+                    const found = cache[currentDir]?.find(i => i.id === initialItemId);
+                    if (found) setSelectedItem(found);
+                })
+                .catch(console.error);
+        }
+    }, [initialItemId, currentDir, cache, loadDir]);
 
     // 新建 / 编辑 弹框
     const [modalVisible, setModalVisible] = useState(false);

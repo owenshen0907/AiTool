@@ -248,13 +248,6 @@ export default function DirectoryNode(props: Props) {
                     ? <FolderOpen size={16} className="text-gray-600 mr-1" />
                     : <Folder     size={16} className="text-gray-600 mr-1" />}
                 <span className="flex-1 truncate">{node.name}</span>
-                {/* sort button on directory row */}
-                {/*<button*/}
-                {/*    className="opacity-0 group-hover:opacity-100 mr-1"*/}
-                {/*    onClick={e => { e.stopPropagation(); toggleSortOrder(); }}*/}
-                {/*>*/}
-                {/*    <ArrowUpDown size={16} />*/}
-                {/*</button>*/}
                 <button
                     className="opacity-0 group-hover:opacity-100"
                     onClick={e => {
@@ -322,7 +315,14 @@ export default function DirectoryNode(props: Props) {
                                 onDragStart={e => { e.stopPropagation(); onDragStart(e, f.id, 'file'); }}
                                 className="group flex items-center pr-2 py-1 rounded hover:bg-gray-50 cursor-pointer"
                                 style={{ paddingLeft: 12 + (level + 1) * 16 }}
-                                onClick={() => onSelectItem(f.id)}
+                                onClick={() =>
+                                    // onSelectItem(f.id)
+                                                                        window.open(
+                                                                                `/docs/${feature}?dir=${node.id}&doc=${f.id}`,
+                                                                                '_blank',
+                                                                                'noopener'
+                                                                            )
+                            }
                             >
                                 <FileText size={15} className="text-gray-500 mr-1" />
                                 <span className="flex-1 truncate">{f.title}</span>

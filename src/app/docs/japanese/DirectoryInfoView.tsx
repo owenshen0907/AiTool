@@ -140,7 +140,18 @@ function SortableItem({ item, onSelectItem, onUpdateItem }: SortableItemProps) {
             style={style}
             className="flex items-start justify-between bg-white rounded-xl shadow p-3"
         >
-            <div className="flex-1 cursor-pointer" onClick={() => !editing && onSelectItem(item.id)}>
+            <div className="flex-1 cursor-pointer"
+                 // onClick={() => !editing && onSelectItem(item.id)}
+                            onClick={() => {
+                                if (!editing) {
+                                        // 在新标签页打开当前目录+doc 参数
+                                            const params = new URLSearchParams(window.location.search);
+                                        params.set('doc', item.id);
+                                        const url = window.location.pathname + '?' + params.toString();
+                                        window.open(url, '_blank', 'noopener');
+                                    }
+                            }}
+            >
                 {editing ? (
                     <>
                         <input
