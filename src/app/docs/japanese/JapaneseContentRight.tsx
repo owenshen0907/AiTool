@@ -52,7 +52,7 @@ export default function JapaneseContentRight({
     const [previewContent, setPreviewContent] = useState('');
     const [showPreview, setShowPreview] = useState(false);
     const [suggestionTitle, setSuggestionTitle] = useState('');
-    // 加载数据库已上传图片
+    // 加载数据库已上传图片，按照时间排序，时间早的排在前面
     useEffect(() => {
         if (!formId) {
             setImages([]);
@@ -62,13 +62,23 @@ export default function JapaneseContentRight({
             try {
                 const res = await fetch(`/api/files?form_id=${formId}`);
                 if (!res.ok) throw new Error('接口错误');
-                const files: Array<{ file_id: string; file_path: string }> = await res.json();
-                // 把每条记录映射成 ImageEntry 并标记为 success
+                const files: Array<{
+                    file_id: string;
+                    file_path: string;
+                    created_at: string;
+                }> = await res.json();
+
+                // 1. 按 created_at 升序排序
+                files.sort((a, b) =>
+                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                );
+
+                // 2. 再映射成 ImageEntry
                 setImages(
                     files.map(f => ({
                         id: f.file_id,
                         url: `${window.location.origin}/${f.file_path}`,
-                        status: 'success',
+                        status: 'success' as const,
                         file_id: f.file_id,
                     }))
                 );
