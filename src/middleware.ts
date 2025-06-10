@@ -28,8 +28,9 @@ export function middleware(request: NextRequest) {
         pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon.ico') ||
         pathname.startsWith('/public') ||
-        pathname.startsWith('/login-confirm')              // 新增：确认页本身也要放行
-    ) {
+        pathname.startsWith('/login-confirm')||               // 新增：确认页本身也要放行
+        pathname.startsWith('/stepfun')
+) {
         return NextResponse.next();
     }
 

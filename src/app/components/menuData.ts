@@ -38,6 +38,12 @@ export const menuData: MenuItem[] = [
                     { title: '图片生成', href: '/image/generate' },
                 ],
             },
+            {
+                title: '阶跃小工具',
+                children: [
+                    { title: '文件管理', href: '/stepfun/file' },
+                ],
+            },
         ],
     },
     {
