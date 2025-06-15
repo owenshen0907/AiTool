@@ -62,6 +62,7 @@ export const menuData: MenuItem[] = [
                     { title: '视频总结', href: '/agent/video/summary' },
                     { title: '剪辑脚本生成', href: '/agent/video/script' },
                     { title: '文案撰写', href: '/agent/video/copy' },
+                    { title: '配音生成', href: '/agent/video/dubbing' },
                 ],
             },
             {

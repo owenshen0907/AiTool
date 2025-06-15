@@ -2,7 +2,7 @@
 import { pool } from './client.js';
 import { migrateCaseContent } from './migrations/caseContentMigration.js';
 import {docsJapaneseContent} from "./migrations/docsJapaneseMigration.js";
-
+import {dubbingContent} from "./migrations/dubbingMigration.js";
 
 export async function initDb() {
     if (process.env.DB_INIT !== 'true') {
@@ -215,6 +215,7 @@ CREATE INDEX IF NOT EXISTS idx_bad_cases_videos_gin
         // 执行 case_content 的迁移
         await migrateCaseContent(client);
         await docsJapaneseContent(client);
+        await dubbingContent(client);
         console.log('Database initialized successfully.');
     } catch (err) {
         console.error('Error initializing DB:', err);

@@ -43,7 +43,9 @@ export default function handler(req, res) {
             sessionId = msg.data.session_id;
             ws.send(JSON.stringify({
                 type: 'tts.create',
-                data: { session_id: sessionId, voice_id: 'voice-tone-Eog0tIPGwy' },
+                // Tim的音色 voice-tone-I7HRR6S7dI
+                // 我的音色 voice-tone-I7I22wOwnQ
+                data: { session_id: sessionId, voice_id: 'voice-tone-I7HRR6S7dI' },
             }));
         }
 

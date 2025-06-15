@@ -1,11 +1,10 @@
-// File: src/app/docs/japanese/ContentPanel.tsx
+// File: src/app/video/dubbin/ContentPanel.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import type { ContentItem } from '@/lib/models/content';
-import JapaneseContentLeft from './JapaneseContentLeft';
-import JapaneseContentRight from './JapaneseContentRight';
 import DirectoryInfoView from './DirectoryInfoView';
+import DubbinContent from './DubbinContent';
 
 interface Props {
     feature: string;
@@ -15,7 +14,7 @@ interface Props {
     onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
 }
 
-export default function JapaneseContentPanel({
+export default function ContentPanel({
                                                  feature,
                                                  visibleItems,
                                                  selectedItem,
@@ -32,21 +31,10 @@ export default function JapaneseContentPanel({
     return (
         <div className="flex h-screen">
             {selectedItem ? (
-                <>
-                    <JapaneseContentLeft
-                        selectedItem={selectedItem}
-                        body={body}
-                        onChangeBody={setBody}
-                        onUpdateItem={onUpdateItem}
-                    />
-                    <JapaneseContentRight
-                        feature={feature}
-                        formId={selectedItem.id}
-                        selectedItem={selectedItem}
-                        existingBody={body}
-                        onChangeBody={setBody}
-                    />
-                </>
+                <DubbinContent
+                    selectedItem={selectedItem}
+                    onUpdateItem={onUpdateItem}
+                />
             ) : (
                 <DirectoryInfoView
                     feature={feature}
