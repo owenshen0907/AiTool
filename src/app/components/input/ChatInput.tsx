@@ -71,8 +71,8 @@ export default function ChatInput<CTX = any>({
             }
         }
         fetchSuppliers();
-    }, [selectedSupplierId]);
-
+    // }, [selectedSupplierId]);
+    }, []);
     useEffect(() => {
         async function fetchModels() {
             if (!selectedSupplierId) return;
@@ -82,7 +82,13 @@ export default function ChatInput<CTX = any>({
                     const data: Model[] = await res.json();
                     data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
                     setModels(data);
-                    setModel(data.find(m => m.isDefault)?.name || data[0]?.name || '');
+                    // setModel(data.find(m => m.isDefault)?.name || data[0]?.name || '');
+                    setModel(prev => {
+                        if (!prev || !data.some(m=>m.name===prev)) {
+                            return data.find(m=>m.isDefault)?.name || data[0].name || '';
+                        }
+                        return prev;
+                    });
                 }
             } catch (err) {
                 console.error('获取模型失败', err);
