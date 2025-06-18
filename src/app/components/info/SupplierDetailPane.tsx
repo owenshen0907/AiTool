@@ -1,4 +1,4 @@
-// File: src/app/components/SupplierDetailPane.tsx
+// File: src/app/components/info/SupplierDetailPane.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,8 +8,9 @@ interface DetailProps {
     supplier: Supplier | null;
     models: Model[];
     onEditSupplier: (s: Supplier) => void;
-    onAddModel: () => void;
+    onAddModel: (type: Model['modelType']) => void;
     onEditModel: (m: Model) => void;
+    onManageTones: () => void;
 }
 
 type ModelType = Model['modelType'];
@@ -21,7 +22,7 @@ const TABS: Array<{ key: ModelType; title: string }> = [
     { key: 'other', title: 'Other 模型' },
 ];
 
-export default function SupplierDetailPane({ supplier, models, onEditSupplier, onAddModel, onEditModel }: DetailProps) {
+export default function SupplierDetailPane({ supplier, models, onEditSupplier, onAddModel, onEditModel,onManageTones }: DetailProps) {
     const [activeTab, setActiveTab] = useState<ModelType>('chat');
     const [testModel, setTestModel] = useState<string>('');
     const [testing, setTesting] = useState(false);
@@ -170,7 +171,19 @@ export default function SupplierDetailPane({ supplier, models, onEditSupplier, o
                         {TABS.map(tab=>(<button key={tab.key} onClick={()=>setActiveTab(tab.key)} className={`px-3 py-1 ${activeTab===tab.key?'border-b-2 border-blue-600 text-blue-600':'text-gray-600 hover:text-gray-800'}`}>{tab.title}</button>))}
                     </div>
                     <div className="flex-1 overflow-auto">{renderTable(models.filter(m=>m.modelType===activeTab), activeTab)}</div>
-                    <div className="flex justify-end mt-4"><button onClick={onAddModel} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">新增模型</button></div>
+                    <div className="flex justify-end mt-4 space-x-2">
+                        {/*<button onClick={onManageTones} className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded">音色管理</button>*/}
+                        {activeTab === 'audio' && (
+                            <button
+                                onClick={onManageTones}
+                                className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded"
+                            >
+                                音色管理
+                            </button>
+                        )}
+                        <button onClick={() => onAddModel(activeTab)}  className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">新增模型</button>
+                    </div>
+                    {/*<div className="flex justify-end mt-4"><button onClick={onAddModel} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">新增模型</button></div>*/}
                 </>
             ) : (<div className="flex-1 flex items-center justify-center text-gray-400">请选择一个供应商查看详情</div>)}
         </div>

@@ -1,4 +1,4 @@
-// src/app/components/AddSupplierModal.tsx
+// src/app/components/info/AddSupplierModal.tsx
 'use client';
 
 import React, { useState } from 'react';

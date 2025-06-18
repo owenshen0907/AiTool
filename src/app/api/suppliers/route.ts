@@ -5,7 +5,7 @@ import {
     getSuppliersByUser,
     createSupplier,
     updateSupplier,
-} from '@/lib/repositories/supplierRepository';
+} from '@/lib/repositories/suppliers/supplierRepository';
 
 /** GET /api/suppliers */
 export const GET = withUser(async (req: NextRequest, userId: string) => {

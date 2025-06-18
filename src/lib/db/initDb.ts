@@ -70,6 +70,32 @@ CREATE TABLE IF NOT EXISTS models (
 CREATE INDEX IF NOT EXISTS idx_models_supplier_id ON models(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_models_model_type   ON models(model_type);
 
+-- 音色主表
+CREATE TABLE IF NOT EXISTS voice_tones (
+    id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),  -- 内部主键
+    supplier_id          UUID        NOT NULL
+                                     REFERENCES ai_suppliers(id) ON DELETE CASCADE,  -- 所属供应商
+    tone_id              TEXT        NOT NULL,       -- 供应商接口生成的音色 ID
+    name                 TEXT        NOT NULL,       -- 音色名称
+    description          TEXT,                        -- 音色描述
+    available_model_ids  UUID[]      NOT NULL DEFAULT '{}',  -- 绑定模型列表，空数组表示全局可用
+    sample_audio_path TEXT,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 唯一约束：同一供应商下 tone_id 唯一
+CREATE UNIQUE INDEX IF NOT EXISTS idx_voice_tones_supplier_toneid
+  ON voice_tones(supplier_id, tone_id);
+
+-- 可选：加速按供应商查询
+CREATE INDEX IF NOT EXISTS idx_voice_tones_supplier_id
+  ON voice_tones(supplier_id);
+
+-- GIN 索引：加速按模型 ID 在 available_model_ids 中搜索
+CREATE INDEX IF NOT EXISTS idx_voice_tones_available_models_gin
+  ON voice_tones USING GIN (available_model_ids);
+
 -- 数据库迁移脚本示例
 CREATE TABLE IF NOT EXISTS directories (
   id          UUID          PRIMARY KEY,

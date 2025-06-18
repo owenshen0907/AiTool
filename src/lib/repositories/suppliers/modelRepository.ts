@@ -1,4 +1,4 @@
-// File: src/lib/repositories/modelRepository.ts
+// File: src/lib/repositories/suppliers/modelRepository.ts
 import { pool } from '@/lib/db/client';
 import type { Model } from '@/lib/models/model';
 

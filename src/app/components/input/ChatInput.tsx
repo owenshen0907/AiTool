@@ -77,7 +77,7 @@ export default function ChatInput<CTX = any>({
         async function fetchModels() {
             if (!selectedSupplierId) return;
             try {
-                const res = await fetch(`/api/models?supplier_id=${selectedSupplierId}`);
+                const res = await fetch(`/api/suppliers/models?supplier_id=${selectedSupplierId}`);
                 if (res.ok) {
                     const data: Model[] = await res.json();
                     data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));

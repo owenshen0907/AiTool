@@ -65,7 +65,7 @@ export default function LeftBottomTable({ contentId, prompt }: Props) {
     // 拉取模型
     useEffect(() => {
         if (!supplierId) return setModels([]);
-        fetch(`/api/models?supplier_id=${supplierId}`)
+        fetch(`/api/suppliers/models?supplier_id=${supplierId}`)
             .then(r => r.json())
             .then((data: Model[]) => {
                 setModels(data);

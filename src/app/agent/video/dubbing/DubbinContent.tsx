@@ -65,7 +65,7 @@ export default function DubbingContent({ selectedItem, onUpdateItem }: Props) {
     /* ② 拉模型 (依赖 supplierId) ---------------------------------------- */
     useEffect(() => {
         if (!supplierId) return;
-        fetch(`/api/models?supplier_id=${supplierId}`)
+        fetch(`/api/suppliers/models?supplier_id=${supplierId}`)
             .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
             .then((data: Model[]) => {
                 const audio = data.filter(m => m.supportsAudioOutput);

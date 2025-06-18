@@ -30,7 +30,7 @@ export default function SupplierModelSelector({ supplierId, onSupplierChange, mo
 
     useEffect(() => {
         if (!supplierId) return setModels([]);
-        fetch(`/api/models?supplier_id=${supplierId}`)
+        fetch(`/api/suppliers/models?supplier_id=${supplierId}`)
             .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
             .then((data: ModelItem[]) => {
                 const filtered = data.filter(m => m.modelType==='chat' && m.supportsImageInput);

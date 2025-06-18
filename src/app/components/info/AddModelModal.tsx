@@ -1,4 +1,4 @@
-// File: src/app/components/AddModelModal.tsx
+// File: src/app/components/info/AddModelModal.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -6,6 +6,7 @@ import type { Model } from '@/lib/models/model';
 
 interface Props {
   supplierId: string;
+  defaultModelType: Model['modelType'];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -49,9 +50,10 @@ const OPTION_MAP: Record<ModelType, Array<{ key: keyof Omit<Required<Model>, 'id
   ],
 };
 
-export default function AddModelModal({ supplierId, onClose, onSaved }: Props) {
+export default function AddModelModal({ supplierId,defaultModelType, onClose, onSaved }: Props) {
   const [name, setName] = useState('');
-  const [modelType, setModelType] = useState<ModelType>('chat');
+  const [modelType, setModelType] = useState<ModelType>(defaultModelType);
+  // const [modelType, setModelType] = useState<ModelType>('chat');
   const [supportsAudioInput, setSupportsAudioInput] = useState(false);
   const [supportsImageInput, setSupportsImageInput] = useState(false);
   const [supportsVideoInput, setSupportsVideoInput] = useState(false);
@@ -87,7 +89,7 @@ export default function AddModelModal({ supplierId, onClose, onSaved }: Props) {
         supports_websocket: supportsWebsocket,
         is_default: isDefault,
       };
-      const res = await fetch('/api/models', {
+      const res = await fetch('/api/suppliers/models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

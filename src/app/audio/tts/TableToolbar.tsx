@@ -78,7 +78,7 @@ const TableToolbar: FC<TableToolbarProps> = ({
         );
         const idParam = sup ? sup.id : supplierId;
 
-        fetch(`/api/models?supplier_id=${idParam}`)
+        fetch(`/apisuppliers//models?supplier_id=${idParam}`)
             .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
             .then((data: Model[]) => {
                 data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));

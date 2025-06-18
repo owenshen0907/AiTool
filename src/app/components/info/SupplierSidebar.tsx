@@ -1,5 +1,5 @@
 
-// File: src/app/components/SupplierSidebar.tsx
+// File: src/app/components/info/SupplierSidebar.tsx
 'use client';
 
 import React from 'react';

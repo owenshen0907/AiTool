@@ -1,7 +1,7 @@
 // File: src/app/api/completions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { withUser } from '@/lib/api/auth';
-import { getSupplierById } from '@/lib/repositories/supplierRepository';
+import { getSupplierById } from '@/lib/repositories/suppliers/supplierRepository';
 import configurations from '@/config';
 
 interface ChatRequest {

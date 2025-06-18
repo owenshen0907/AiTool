@@ -1,4 +1,4 @@
-// File: app/api/models/route.ts
+// File: app/api/suppliers/models/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import {
     getModelsBySupplier,
@@ -6,7 +6,7 @@ import {
     updateModel,
     clearDefaultModelForSupplierAndType,
     clearDefaultModelForSupplierByModel,
-} from '@/lib/repositories/modelRepository';
+} from '@/lib/repositories/suppliers/modelRepository';
 import { withUser } from '@/lib/api/auth';
 
 interface ModelRequestBody {
@@ -29,7 +29,7 @@ interface ModelRequestBody {
 }
 
 /**
- * GET /api/models?supplier_id=...  返回指定供应商下的模型列表
+ * GET /api/suppliers/models?supplier_id=...  返回指定供应商下的模型列表
  */
 export const GET = withUser(async (req: NextRequest) => {
     const supplierId = req.nextUrl.searchParams.get('supplier_id');
@@ -46,7 +46,7 @@ export const GET = withUser(async (req: NextRequest) => {
 });
 
 /**
- * POST /api/models  新增模型
+ * POST /api/suppliers/models  新增模型
  */
 export const POST = withUser(async (req: NextRequest) => {
     const body = (await req.json()) as ModelRequestBody;
@@ -101,7 +101,7 @@ export const POST = withUser(async (req: NextRequest) => {
 });
 
 /**
- * PATCH /api/models  修改模型
+ * PATCH /api/suppliers/models  修改模型
  */
 export const PATCH = withUser(async (req: NextRequest) => {
     const body = (await req.json()) as ModelRequestBody;

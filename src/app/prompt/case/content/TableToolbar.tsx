@@ -67,7 +67,7 @@ const TableToolbar: FC<TableToolbarProps> = ({
             setModels([]);
             return;
         }
-        fetch(`/api/models?supplier_id=${supplierId}`)
+        fetch(`/api/suppliers/models?supplier_id=${supplierId}`)
             .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
             .then((data: Model[]) => {
                 data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));

@@ -28,3 +28,28 @@ export interface Model {
     supportsWebsocket: boolean;
     isDefault: boolean;
 }
+
+export interface VoiceTone {
+    /** 与 voice_tones.id 对应 */
+    id: string;
+    /** 供应商 ID */
+    supplierId: string;
+    /** 供应商接口生成的音色 ID */
+    toneId: string;
+    /** 音色名称 */
+    name: string;
+    /** 音色描述 */
+    description: string | null;
+    /**
+     * 可用模型列表
+     * - 空数组表示对所有 supportsAudioOutput = true 的模型全局可用
+     * - 否则只对数组中指定的模型 ID 可用
+     */
+    availableModelIds: string[];
+    /** 试听文件路径 */
+    sampleAudioPath: string;
+    /** 创建时间 */
+    createdAt: string;
+    /** 最后更新时间 */
+    updatedAt: string;
+}

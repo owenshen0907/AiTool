@@ -1,4 +1,4 @@
-// src/lib/repositories/supplierRepository.ts
+// src/lib/repositories/suppliers/supplierRepository.ts
 import { pool } from '@/lib/db/client';
 import type { Supplier } from '@/lib/models/model';
 

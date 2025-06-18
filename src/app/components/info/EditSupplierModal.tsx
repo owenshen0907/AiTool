@@ -1,4 +1,4 @@
-// src/app/components/EditSupplierModal.tsx
+// src/app/components/info/EditSupplierModal.tsx
 'use client';
 
 import React, { useState } from 'react';

@@ -1,16 +1,16 @@
-// src/lib/api/models.ts
+// src/lib/api/suppliers/models.ts
 import type { Model } from '@/lib/models/model';
 import type {
     CreateModelPayload as RepoCreatePayload,
     UpdateModelPayload as RepoUpdatePayload
-} from '@/lib/repositories/modelRepository';
+} from '@/lib/repositories/suppliers/modelRepository';
 
 /**
  * 获取某供应商下的模型列表
  * @param supplierId 供应商 ID
  */
 export async function fetchModels(supplierId: string): Promise<Model[]> {
-    const res = await fetch(`/api/models?supplier_id=${supplierId}`);
+    const res = await fetch(`/api/suppliers/models?supplier_id=${supplierId}`);
     if (!res.ok) {
         throw new Error(await res.text());
     }
@@ -26,7 +26,7 @@ export async function createModel(
     supplierId: string,
     payload: Omit<RepoCreatePayload, 'supplierId'>
 ): Promise<Model> {
-    const res = await fetch('/api/models', {
+    const res = await fetch('/api/suppliers/models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ supplierId, ...payload }),
@@ -48,7 +48,7 @@ export async function updateModel(
     id: string,
     updates: RepoUpdatePayload
 ): Promise<Model> {
-    const res = await fetch(`/api/models/${id}`, {
+    const res = await fetch(`/api/suppliers/models/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ supplierId, ...updates }),
@@ -68,7 +68,7 @@ export async function deleteModel(
     supplierId: string,
     id: string
 ): Promise<void> {
-    const res = await fetch(`/api/models/${id}?supplier_id=${supplierId}`, {
+    const res = await fetch(`/api/suppliers/models/${id}?supplier_id=${supplierId}`, {
         method: 'DELETE',
     });
     if (!res.ok) {

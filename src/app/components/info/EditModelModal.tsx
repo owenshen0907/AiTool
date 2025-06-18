@@ -1,4 +1,4 @@
-// File: src/app/components/EditModelModal.tsx
+// File: src/app/components/info/EditModelModal.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -89,7 +89,7 @@ export default function EditModelModal({ model, onClose, onSaved }: Props) {
                 supports_websocket: supportsWebsocket,
                 is_default: isDefault,
             };
-            const res = await fetch('/api/models', {
+            const res = await fetch('/api/suppliers/models', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
