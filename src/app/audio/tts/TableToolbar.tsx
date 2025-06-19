@@ -3,7 +3,6 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { Plus, Download } from 'lucide-react';
-
 import SupplierModelSelector from '@/app/components/info/SupplierModelSelector';
 import type { Supplier, Model } from '@/lib/models/model';
 
@@ -11,26 +10,15 @@ import type { Supplier, Model } from '@/lib/models/model';
 /*                                    Props                                   */
 /* -------------------------------------------------------------------------- */
 export interface TableToolbarProps {
-    /** 新增一条 Case 行 */
     onAddCase: () => void;
-
-    /** 供应商（或 wssUrl，取决于 connectViaWSS） */
     supplierId: string;
     onSupplierChange: (value: string) => void;
-
-    /** 模型 */
     model: string;
     onModelChange: (name: string) => void;
-
-    /** 并发数 */
     concurrency: number;
     onConcurrencyChange: (n: number) => void;
-
-    /** 开始测试 */
     onStartTest: () => void;
     testing: boolean;
-
-    /** 导出结果（PDF / Excel 等） */
     onExportResults: () => void;
 }
 
@@ -49,56 +37,54 @@ const TableToolbar: FC<TableToolbarProps> = ({
                                                  testing,
                                                  onExportResults,
                                              }) => {
-    /* ------------- 本地状态 ------------- */
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-    const [models, setModels] = useState<Model[]>([]);
+    const [models, setModels]       = useState<Model[]>([]);
+    // 如果要通过 WSS URL 连接，就设为 true
+    const connectViaWSS = true;
 
-    /* ------------- 拉供应商列表 ------------- */
+    /* 拉供应商列表（挂载时） */
     useEffect(() => {
         fetch('/api/suppliers')
-            .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
+            .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
             .then((data: Supplier[]) => {
+                // 按 isDefault 排序，把默认放前面
                 data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
                 setSuppliers(data);
 
-                /* 默认选中 */
+                // 只在初次挂载时设默认
                 if (!supplierId && data.length) {
-                    const def = data.find((s) => s.isDefault) || data[0];
-                    onSupplierChange(def.id);
+                    const def = data.find(s => s.isDefault) || data[0];
+                    // 优先用 wssUrl，否则用 id
+                    const val = connectViaWSS
+                        ? (def.wssUrl || def.id)
+                        : def.id;
+                    onSupplierChange(val);
+                }
+            })
+            .catch(console.error);
+    }, []);
+
+    /* 拉模型列表（依赖 supplierId） */
+    useEffect(() => {
+        if (!supplierId) return;
+        fetch(`/api/suppliers/models?supplier_id=${encodeURIComponent(supplierId)}`)
+            .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+            .then((data: Model[]) => {
+                data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+                setModels(data);
+
+                // 如果当前 model 不在新列表里，重置一个默认模型
+                if (!data.some(m => m.name === model) && data.length) {
+                    const defM = data.find(m => m.isDefault) || data[0];
+                    onModelChange(defM.name);
                 }
             })
             .catch(console.error);
     }, [supplierId]);
 
-    /* ------------- 拉模型列表 ------------- */
-    useEffect(() => {
-        if (!supplierId) return;
-        const sup = suppliers.find(
-            (s) => s.id === supplierId || s.wssUrl === supplierId
-        );
-        const idParam = sup ? sup.id : supplierId;
-
-        fetch(`/apisuppliers//models?supplier_id=${idParam}`)
-            .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
-            .then((data: Model[]) => {
-                data.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
-                setModels(data);
-
-                /* 默认模型 */
-                if (!data.some((m) => m.name === model) && data.length) {
-                    const defM = data.find((m) => m.isDefault) || data[0];
-                    onModelChange(defM.name);
-                }
-            })
-            .catch(console.error);
-    }, [supplierId, suppliers]);
-
-    /* ---------------------------------------------------------------------- */
-    /*                                 Render                                 */
-    /* ---------------------------------------------------------------------- */
     return (
         <div className="flex flex-wrap items-center gap-4 mb-4">
-            {/* -------- 添加 Case -------- */}
+            {/* 添加 Case */}
             <button
                 onClick={onAddCase}
                 className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded"
@@ -106,19 +92,22 @@ const TableToolbar: FC<TableToolbarProps> = ({
                 <Plus size={16} /> 添加 Case
             </button>
 
-            {/* -------- 供应商 & 模型选择 -------- */}
+            {/* 供应商 & 模型 选择 */}
             <SupplierModelSelector
-                suppliers={suppliers}
+                // 只显示带 wssUrl 的供应商
+                suppliers={connectViaWSS
+                    ? suppliers.filter(s => !!s.wssUrl)
+                    : suppliers}
                 selectedSupplierId={supplierId}
                 onSupplierChange={onSupplierChange}
                 models={models}
                 selectedModelName={model}
                 onModelChange={onModelChange}
                 filterModelType="audio"
-                connectViaWSS={true}
+                connectViaWSS={connectViaWSS}
             />
 
-            {/* -------- 并发输入 -------- */}
+            {/* 并发数 */}
             <div className="flex items-center">
                 <label className="text-sm mr-1">并发</label>
                 <input
@@ -126,12 +115,12 @@ const TableToolbar: FC<TableToolbarProps> = ({
                     min={1}
                     max={50}
                     value={concurrency}
-                    onChange={(e) => onConcurrencyChange(+e.target.value)}
+                    onChange={e => onConcurrencyChange(+e.target.value)}
                     className="w-16 border rounded p-1"
                 />
             </div>
 
-            {/* -------- 开始测试 -------- */}
+            {/* 开始测试 */}
             <button
                 onClick={onStartTest}
                 disabled={testing}
@@ -140,7 +129,7 @@ const TableToolbar: FC<TableToolbarProps> = ({
                 {testing ? '测试中…' : '开始测试'}
             </button>
 
-            {/* -------- 导出结果 -------- */}
+            {/* 导出结果 */}
             <div className="ml-auto">
                 <button
                     onClick={onExportResults}

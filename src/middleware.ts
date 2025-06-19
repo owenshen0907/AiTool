@@ -3,12 +3,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /* ────────────────────────────── 工具函数 ────────────────────────────── */
+// function decodeJwtPayload(token: string) {
+//     const [, b64] = token.split('.');
+//     const json = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+//     return JSON.parse(json);
+// }
 function decodeJwtPayload(token: string) {
     const [, b64] = token.split('.');
-    const json = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
+    const json = Buffer.from(
+        b64.replace(/-/g, '+').replace(/_/g, '/'),
+        'base64'
+    ).toString('utf8');
     return JSON.parse(json);
 }
-
 function isExpired(payload: any) {
     return typeof payload.exp === 'number' && payload.exp * 1000 < Date.now();
 }
@@ -16,6 +23,10 @@ function isExpired(payload: any) {
 /* ────────────────────────────── 中间件主体 ────────────────────────────── */
 export function middleware(request: NextRequest) {
     const { pathname, origin, hostname } = request.nextUrl;
+
+    // —— 日志开始 ——
+    console.log(`[middleware] → 请求 path: ${pathname}`);
+    console.log(`  Cookies:`, request.cookies.getAll());
 
     /* 0️⃣ 放行  ── 登录域名（Casdoor 自己的页面） */
     const loginHost = process.env.NEXT_PUBLIC_LOGIN_URL!.replace(/^https?:\/\//, '');
@@ -39,6 +50,7 @@ export function middleware(request: NextRequest) {
     if (token) {
         try {
             const payload = decodeJwtPayload(token);
+            console.log('JWT payload:', payload);
             if (!isExpired(payload)) {
                 const userId = payload.sub ?? payload.username;
                 if (userId) {

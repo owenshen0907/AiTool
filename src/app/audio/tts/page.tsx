@@ -2,9 +2,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import TableToolbar                      from './TableToolbar';
-import BottomTable, { CaseItem, BottomTableProps }         from './BottomTable';
-import DataImportManager, { ColumnDef }  from '@/components/common/DataImport/DataImportManager';
+import TableToolbar from './TableToolbar';
+import BottomTable, { CaseItem, BottomTableProps } from './BottomTable';
+import DataImportManager, { ColumnDef } from '@/components/common/DataImport/DataImportManager';
 
 import {
     generateCSV,
@@ -14,19 +14,19 @@ import {
 import type { Supplier } from '@/lib/models/model';
 
 /* ---------------- 导入模板行类型 ---------------- */
-interface CaseImportRow { id: string; text: string; selected?: boolean }
+interface CaseImportRow { id: string; text: string }
 
 /* ---------------- 主组件 ---------------- */
 export default function TTSTestPage() {
     /* 核心状态 */
-    const [cases,       setCases]    = useState<CaseItem[]>([]);
-    const [selectedIds, setSelected] = useState<string[]>([]);
-    const [testing,     setTesting]  = useState(false);
+    const [cases, setCases]           = useState<CaseItem[]>([]);
+    const [selectedIds, setSelected]  = useState<string[]>([]);
+    const [testing, setTesting]       = useState(false);
 
     /* 供应商 / 模型 / 并发 */
-    const [suppliers,   setSuppliers]   = useState<Supplier[]>([]);
-    const [supplierId,  setSupplierId]  = useState('');
-    const [model,       setModel]       = useState('');
+    const [suppliers, setSuppliers]   = useState<Supplier[]>([]);
+    const [supplierId, setSupplierId] = useState('');
+    const [model, setModel]           = useState('');
     const [concurrency, setConcurrency] = useState(1);
 
     /* -------- 供应商列表 -------- */
@@ -35,21 +35,17 @@ export default function TTSTestPage() {
             .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
             .then((data: Supplier[]) => {
                 setSuppliers(data);
-                if (!supplierId && data.length) setSupplierId(data[0].id);
+                if (!supplierId && data.length) {
+                    setSupplierId(data.find(s => s.isDefault)?.id || data[0].id);
+                }
             })
             .catch(console.error);
-    }, [supplierId]);
+    }, []);
 
     const currentSupplier = () =>
         suppliers.find(s => s.id === supplierId || s.wssUrl === supplierId);
-    /* ---------------- 更新单条 Case 文本 ---------------- */
-    const handleUpdateCaseText = (id: string, newText: string) =>
-        setCases(prev =>
-            prev.map(c => (c.id === id ? { ...c, text: newText } : c))
-        );
-    /* ------------------------------------------------------------------ */
-    /*                         导入 / 导出 csv 模板                       */
-    /* ------------------------------------------------------------------ */
+
+    /* ---------------- 导出 / 导入 CSV 模板 ---------------- */
     const exportTemplate = () =>
         generateCSV(
             [['说明：请在此行编辑 Case 文本，然后保存上传'], ['Case 文本']],
@@ -76,13 +72,12 @@ export default function TTSTestPage() {
                 .filter(Boolean)
                 .map((t, i) => ({ id: `${Date.now()}-${i}`, text: t }));
         }
-        /* XLSX */
         const sheets = await parseExcel(f);
         const first  = sheets[Object.keys(sheets)[0]];
         return first
             .filter((r: any) => (r['Case 文本'] ?? '').trim())
             .slice(0, 1000)
-            .map((r: any, i: number) => ({ id: `${Date.now()}-${i}`, text: r['Case 文本'] }));
+            .map((r: any, i: number) => ({ id: `${Date.now()}-${i}`, text: r['Case 文本'].trim() }));
     };
 
     const columns: ColumnDef<CaseImportRow>[] = [
@@ -93,21 +88,18 @@ export default function TTSTestPage() {
         setCases(prev => [
             ...prev,
             ...rows.map(r => ({
-                id: r.id,
-                text: r.text,
-                chunks: [],
-                intervals: [],
-                sessionId: '',
-                connectAt: undefined,
-                doneAt: undefined,
+                id:         r.id,
+                text:       r.text,
+                chunks:     [],
+                intervals:  [],
+                sessionId:  '',
+                connectAt:  undefined,
+                doneAt:     undefined,
             })),
         ]);
 
-    /* ------------------------------------------------------------------ */
-    /*                            导出结果函数                            */
-    /* ------------------------------------------------------------------ */
+    /* ---------------- 导出结果 ---------------- */
     function exportResults() {
-        /* ---- Excel 示例 ---- */
         generateExcel(
             cases.map(c => ({
                 Text:        c.text,
@@ -118,8 +110,6 @@ export default function TTSTestPage() {
             })),
             `tts_results_${Date.now()}.xlsx`
         );
-
-
     }
 
     /* ------------------------------------------------------------------ */
@@ -225,6 +215,13 @@ export default function TTSTestPage() {
 
     const removeCase = (id: string) =>
         setCases(p => p.filter(c => c.id !== id));
+
+    const handleUpdateCaseText = (id: string, newText: string) =>
+        setCases(p =>
+            p.map(c =>
+                c.id === id ? { ...c, text: newText } : c
+            )
+        );
 
     /* ---------------- 渲染 ---------------- */
     return (

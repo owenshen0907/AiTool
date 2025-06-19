@@ -37,23 +37,23 @@ export default function SupplierModelSelector({
             {/* 供应商下拉，value 由父组件的 selectedSupplierId 决定 */}
             <select
                 value={selectedSupplierId}
-                onChange={e => {
-                    const sup = suppliers.find(s => s.id === e.target.value);
-                    if (!sup) return;
-                    const val = connectViaWSS
-                        ? (sup.wssUrl || sup.id)
-                        : sup.id;
-                    onSupplierChange(val);
-                }}
+                // onChange={e => {
+                //     const sup = suppliers.find(s => s.id === e.target.value);
+                //     if (!sup) return;
+                //     const val = connectViaWSS
+                //         ? (sup.wssUrl || sup.id)
+                //         : sup.id;
+                //     onSupplierChange(val);
+                // }}
+                onChange={e => onSupplierChange(e.target.value)}
                 className="border rounded px-3 py-1"
             >
                 <option value="" disabled>
                     选择供应商
                 </option>
                 {suppliers.map(s => (
-                    <option key={s.id} value={connectViaWSS ? (s.wssUrl || s.id) : s.id}>
-                        {s.name}
-                        {connectViaWSS && s.wssUrl ? ' (WSS)' : ''}
+                    <option key={s.id} value={s.id}>
+                        {s.name}{s.wssUrl ? ' (WSS)' : ''}
                     </option>
                 ))}
             </select>
