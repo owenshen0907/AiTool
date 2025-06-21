@@ -13,7 +13,10 @@ export async function getVoiceTonesByUser(userId: string): Promise<VoiceTone[]> 
         name: string;
         description: string | null;
         available_model_ids: string[];
-        sample_audio_path: string;
+        original_audio_file_id: string | null;
+        original_audio_file_path: string | null;
+        preview_audio_file_id: string | null;
+        sample_audio_path: string | null;
         created_at: string;
         updated_at: string;
     }>(`
@@ -24,6 +27,9 @@ export async function getVoiceTonesByUser(userId: string): Promise<VoiceTone[]> 
       vt.name,
       vt.description,
       vt.available_model_ids,
+      vt.original_audio_file_id,
+      vt.original_audio_file_path,
+      vt.preview_audio_file_id,
       vt.sample_audio_path,
       vt.created_at,
       vt.updated_at
@@ -41,6 +47,9 @@ export async function getVoiceTonesByUser(userId: string): Promise<VoiceTone[]> 
         name: r.name,
         description: r.description,
         availableModelIds: r.available_model_ids,
+        originalAudioFileId: r.original_audio_file_id,
+        originalAudioFilePath: r.original_audio_file_path,
+        previewAudioFileId: r.preview_audio_file_id,
         sampleAudioPath: r.sample_audio_path,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
@@ -57,7 +66,10 @@ export async function createVoiceTone(
         name: string;
         description?: string | null;
         availableModelIds?: string[];
-        sampleAudioPath?: string;
+        originalAudioFileId?: string | null;
+        originalAudioFilePath?: string | null;
+        previewAudioFileId?: string | null;
+        sampleAudioPath?: string | null;
     },
     userId: string
 ): Promise<VoiceTone> {
@@ -73,7 +85,10 @@ export async function createVoiceTone(
         name,
         description = null,
         availableModelIds = [],
-        sampleAudioPath = '',
+        originalAudioFileId = null,
+        originalAudioFilePath = null,
+        previewAudioFileId = null,
+        sampleAudioPath = null,
     } = payload;
 
     const res = await pool.query<{
@@ -83,23 +98,33 @@ export async function createVoiceTone(
         name: string;
         description: string | null;
         available_model_ids: string[];
-        sample_audio_path: string;
+        original_audio_file_id: string | null;
+        original_audio_file_path: string | null;
+        preview_audio_file_id: string | null;
+        sample_audio_path: string | null;
         created_at: string;
         updated_at: string;
     }>(`
-    INSERT INTO voice_tones
-      (supplier_id, tone_id, name, description, available_model_ids, sample_audio_path)
-    VALUES ($1,$2,$3,$4,$5,$6)
-    RETURNING
-      id, supplier_id, tone_id, name, description, available_model_ids,
-      sample_audio_path, created_at, updated_at
-  `, [
+        INSERT INTO voice_tones
+        (supplier_id, tone_id, name, description, available_model_ids,
+         sample_audio_path,
+         original_audio_file_id, original_audio_file_path, preview_audio_file_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            RETURNING
+    id, supplier_id, tone_id, name, description,
+    available_model_ids, sample_audio_path,
+    original_audio_file_id, original_audio_file_path, preview_audio_file_id,
+    created_at, updated_at
+    `, [
         supplierId,
         toneId,
         name,
         description,
         availableModelIds,
-        sampleAudioPath,
+        sampleAudioPath,       // ← 位置 6
+        originalAudioFileId,   // ← 7
+        originalAudioFilePath, // ← 8
+        previewAudioFileId,    // ← 9
     ]);
 
     const r = res.rows[0];
@@ -110,6 +135,9 @@ export async function createVoiceTone(
         name: r.name,
         description: r.description,
         availableModelIds: r.available_model_ids,
+        originalAudioFileId: r.original_audio_file_id,
+        originalAudioFilePath: r.original_audio_file_path,
+        previewAudioFileId: r.preview_audio_file_id,
         sampleAudioPath: r.sample_audio_path,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
@@ -125,7 +153,10 @@ export async function updateVoiceTone(
         name?: string;
         description?: string | null;
         availableModelIds?: string[];
-        sampleAudioPath?: string;
+        originalAudioFileId?: string | null;
+        originalAudioFilePath?: string | null;
+        previewAudioFileId?: string | null;
+        sampleAudioPath?: string | null;
     },
     userId: string
 ): Promise<VoiceTone | null> {
@@ -137,7 +168,10 @@ export async function updateVoiceTone(
         name: string;
         description: string | null;
         available_model_ids: string[];
-        sample_audio_path: string;
+        original_audio_file_id: string | null;
+        original_audio_file_path: string | null;
+        preview_audio_file_id: string | null;
+        sample_audio_path: string | null;
         created_at: string;
         updated_at: string;
         user_id: string;
@@ -170,6 +204,18 @@ export async function updateVoiceTone(
         sets.push(`available_model_ids = $${idx++}`);
         values.push(payload.availableModelIds);
     }
+    if (payload.originalAudioFileId !== undefined) {
+        sets.push(`original_audio_file_id = $${idx++}`);
+        values.push(payload.originalAudioFileId);
+    }
+    if (payload.originalAudioFilePath !== undefined) {
+        sets.push(`original_audio_file_path = $${idx++}`);
+        values.push(payload.originalAudioFilePath);
+    }
+    if (payload.previewAudioFileId !== undefined) {
+        sets.push(`preview_audio_file_id = $${idx++}`);
+        values.push(payload.previewAudioFileId);
+    }
     if (payload.sampleAudioPath !== undefined) {
         sets.push(`sample_audio_path = $${idx++}`);
         values.push(payload.sampleAudioPath);
@@ -183,6 +229,9 @@ export async function updateVoiceTone(
             name: ex.name,
             description: ex.description,
             availableModelIds: ex.available_model_ids,
+            originalAudioFileId: ex.original_audio_file_id,
+            originalAudioFilePath: ex.original_audio_file_path,
+            previewAudioFileId: ex.preview_audio_file_id,
             sampleAudioPath: ex.sample_audio_path,
             createdAt: ex.created_at,
             updatedAt: ex.updated_at,
@@ -199,6 +248,9 @@ export async function updateVoiceTone(
         name: string;
         description: string | null;
         available_model_ids: string[];
+        original_audio_file_id: string;
+        original_audio_file_path: string;
+        preview_audio_file_id: string;
         sample_audio_path: string;
         created_at: string;
         updated_at: string;
@@ -208,7 +260,9 @@ export async function updateVoiceTone(
     WHERE id = $${idx}
     RETURNING
       id, supplier_id, tone_id, name, description,
-      available_model_ids, sample_audio_path,
+      available_model_ids,      original_audio_file_id,
+      original_audio_file_path,
+      preview_audio_file_id, sample_audio_path,
       created_at, updated_at
   `, values);
 
@@ -220,6 +274,9 @@ export async function updateVoiceTone(
         name: r.name,
         description: r.description,
         availableModelIds: r.available_model_ids,
+        originalAudioFileId: r.original_audio_file_id,
+        originalAudioFilePath: r.original_audio_file_path,
+        previewAudioFileId: r.preview_audio_file_id,
         sampleAudioPath: r.sample_audio_path,
         createdAt: r.created_at,
         updatedAt: r.updated_at,

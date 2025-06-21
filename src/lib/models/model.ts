@@ -46,8 +46,14 @@ export interface VoiceTone {
      * - 否则只对数组中指定的模型 ID 可用
      */
     availableModelIds: string[];
-    /** 试听文件路径 */
-    sampleAudioPath: string;
+    /** 原始音频文件 ID */
+    originalAudioFileId: string | null;
+    /** 原始音频文件路径 */
+    originalAudioFilePath: string | null;
+    /** 预览音色音频文件 ID */
+    previewAudioFileId: string | null;
+    /** 预览音色音频文件路径 */
+    sampleAudioPath: string | null;
     /** 创建时间 */
     createdAt: string;
     /** 最后更新时间 */

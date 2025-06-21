@@ -79,7 +79,10 @@ CREATE TABLE IF NOT EXISTS voice_tones (
     name                 TEXT        NOT NULL,       -- 音色名称
     description          TEXT,                        -- 音色描述
     available_model_ids  UUID[]      NOT NULL DEFAULT '{}',  -- 绑定模型列表，空数组表示全局可用
-    sample_audio_path TEXT,
+    original_audio_file_id      UUID,                          -- 原始音频文件 ID
+    original_audio_file_path    TEXT,                          -- 原始音频文件路径
+    preview_audio_file_id       UUID,                          -- 预览音色音频文件 ID
+    sample_audio_path           TEXT,                          -- 预览音色音频文件路径
     created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -31,10 +31,12 @@ export default function ContentPanel({
     return (
         <div className="flex h-screen">
             {selectedItem ? (
+                <div className="flex-1 w-full">
                 <DubbinContent
                     selectedItem={selectedItem}
                     onUpdateItem={onUpdateItem}
                 />
+                </div>
             ) : (
                 <DirectoryInfoView
                     feature={feature}

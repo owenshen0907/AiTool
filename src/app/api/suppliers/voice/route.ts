@@ -21,6 +21,9 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
         name,
         description,
         available_model_ids,
+        original_audio_file_id,
+        original_audio_file_path,
+        preview_audio_file_id,
         sample_audio_path,
     } = await req.json();
 
@@ -35,7 +38,10 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
             name,
             description,
             availableModelIds: Array.isArray(available_model_ids) ? available_model_ids : [],
-            sampleAudioPath: sample_audio_path ?? '',
+            originalAudioFileId: original_audio_file_id ?? null,
+            originalAudioFilePath: original_audio_file_path ?? null,
+            previewAudioFileId: preview_audio_file_id ?? null,
+            sampleAudioPath: sample_audio_path ?? null,
         },
         userId
     );
@@ -50,6 +56,9 @@ export const PATCH = withUser(async (req: NextRequest, userId: string) => {
         name,
         description,
         available_model_ids,
+        original_audio_file_id,
+        original_audio_file_path,
+        preview_audio_file_id,
         sample_audio_path,
     } = await req.json();
 
@@ -63,7 +72,10 @@ export const PATCH = withUser(async (req: NextRequest, userId: string) => {
             name,
             description,
             availableModelIds: Array.isArray(available_model_ids) ? available_model_ids : undefined,
-            sampleAudioPath: sample_audio_path,
+            originalAudioFileId: original_audio_file_id ?? null,
+            originalAudioFilePath: original_audio_file_path ?? null,
+            previewAudioFileId: preview_audio_file_id ?? null,
+            sampleAudioPath: sample_audio_path ?? null,
         },
         userId
     );
