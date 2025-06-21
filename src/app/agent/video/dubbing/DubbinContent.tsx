@@ -28,6 +28,7 @@ interface DubbingBody {
 }
 
 interface Props {
+    feature: string;
     selectedItem: ContentItem;
     onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
 }
@@ -54,10 +55,10 @@ async function deleteServerFile(fileId?: string | null) {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file_id: fileId }),
-    });
+    }).catch(() => {});
 }
 
-export default function DubbingContent({ selectedItem, onUpdateItem }: Props) {
+export default function DubbingContent({ feature,selectedItem, onUpdateItem }: Props) {
     /* ───────── 供应商 / 模型 / 音色 ───────── */
     const [suppliers,  setSuppliers]  = useState<Supplier[]>([]);
     const [voiceTones, setVoiceTones] = useState<VoiceTone[]>([]);
@@ -230,19 +231,28 @@ export default function DubbingContent({ selectedItem, onUpdateItem }: Props) {
 
         // ④ 上传到文件服务
         const up = await uploadBlobToServer(blob, `${c.id}.${format}`, selectedItem.id);
-        /* ⑤ 更新行（⚠️ audioUrl 自己拼） */
+
         const patchRow = {
-            audioUrl: '/' + up.file_path,
+            audioUrl      : '/' + up.file_path,
             audioFileId: up.file_id,
             audioFilePath: up.file_path,
             doneAt: Date.now(),
         };
+
+// ① 先更新本地 UI
         updateCase(c.id, patchRow);
-        /* ⑥ 再次写回 ContentItem（行内带新文件信息） */
-        await onUpdateItem(selectedItem, {
+
+// ② 调用后端 Patch-Case 接口，只改这一行
+        await fetch('/api/content/patch-case', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
-                ...origBody,
-                cases: cases.map(x => x.id === c.id ? { ...x, ...patchRow } : x),
+                feature,
+                contentId: selectedItem.id,
+                caseId: c.id,
+                patch: patchRow,
             }),
         });
     };

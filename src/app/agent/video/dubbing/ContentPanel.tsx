@@ -33,6 +33,7 @@ export default function ContentPanel({
             {selectedItem ? (
                 <div className="flex-1 w-full">
                 <DubbinContent
+                    feature={feature}
                     selectedItem={selectedItem}
                     onUpdateItem={onUpdateItem}
                 />
