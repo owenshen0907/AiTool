@@ -53,6 +53,7 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
 export const PATCH = withUser(async (req: NextRequest, userId: string) => {
     const {
         id,
+        tone_id,
         name,
         description,
         available_model_ids,
@@ -69,6 +70,7 @@ export const PATCH = withUser(async (req: NextRequest, userId: string) => {
     const updated = await updateVoiceTone(
         id,
         {
+            tone_id,
             name,
             description,
             availableModelIds: Array.isArray(available_model_ids) ? available_model_ids : undefined,

@@ -150,6 +150,7 @@ export async function createVoiceTone(
 export async function updateVoiceTone(
     id: string,
     payload: {
+        tone_id?: string;
         name?: string;
         description?: string | null;
         availableModelIds?: string[];
@@ -192,6 +193,10 @@ export async function updateVoiceTone(
     const values: any[] = [];
     let idx = 1;
 
+    if (payload.tone_id !== undefined) {
+        sets.push(`tone_id = $${idx++}`);
+        values.push(payload.tone_id);
+    }
     if (payload.name !== undefined) {
         sets.push(`name = $${idx++}`);
         values.push(payload.name);
