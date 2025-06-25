@@ -158,6 +158,7 @@ export default function DubbingContent({ feature,selectedItem, onUpdateItem }: P
     const updateCase = (id: string, patch: Partial<DubCase>) =>
         setCases(p => p.map(c => c.id === id ? { ...c, ...patch } : c));
     const removeCase = (id: string) => setCases(p => p.filter(c => c.id !== id));
+    const reorderCases = (next: DubCase[]) => setCases(next);
 
     /* ⑦ 文件导入 / 导出 */
     const parseImportFile = async (f: File) => {
@@ -331,6 +332,7 @@ export default function DubbingContent({ feature,selectedItem, onUpdateItem }: P
                 exportTemplate       ={exportTemplate}
                 exportWithData       ={exportWithData}
                 parseImportFile      ={parseImportFile}
+                onReorder            ={reorderCases}
             />
         </div>
     );
