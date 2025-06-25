@@ -78,14 +78,8 @@ function SortableRow({
     caseItem: DubCase;
     children: React.ReactNode;
 }) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: caseItem.id });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging }
+        = useSortable({ id: caseItem.id });
 
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
@@ -93,16 +87,25 @@ function SortableRow({
         ...(isDragging ? { opacity: 0.6 } : {}),
     };
 
+
     return (
         <tr
             ref={setNodeRef}
-            {...attributes}
-            {...listeners}
             style={style}
             className={`hover:bg-gray-50 ${
                 isDragging ? 'ring-2 ring-indigo-400' : ''
             }`}
         >
+            {/* drag handle 列 */}
+            <td
+                className="border p-2 text-center cursor-grab select-none w-[28px]"
+                {...attributes}
+                {...listeners}
+            >
+                <svg width="14" height="14" viewBox="0 0 20 20" className="mx-auto">
+                    <path d="M7 2h2v2H7zm0 6h2v2H7zm0 6h2v2H7zm4-12h2v2h-2zm0 6h2v2h-2zm0 6h2v2h-2z" />
+                </svg>
+            </td>
             {children}
         </tr>
     );
@@ -245,6 +248,7 @@ export default function DubbingTable(props: Props) {
 
         onReorder(arrayMove(cases, oldIdx, newIdx));
     };
+
 
     /* ============== 渲染 ============== */
     return (
@@ -435,13 +439,14 @@ export default function DubbingTable(props: Props) {
                 >
                     <table className="min-w-full table-auto border-collapse">
                         <colgroup>
-                            <col style={{ width: '4%' }} />
-                            <col style={{ width: '5%' }} />
+                            <col style={{ width: '2%' }} />
+                            <col style={{ width: '2%' }} />
+                            <col style={{ width: '2%' }} />
                             <col style={{ width: '28%' }} />
                             <col style={{ width: '10%' }} />
                             <col style={{ width: '5%' }} />
-                            <col style={{ width: '5%' }} />
-                            <col style={{ width: '5%' }} />
+                            <col style={{ width: '3%' }} />
+                            <col style={{ width: '3%' }} />
                             <col style={{ width: '20%' }} />
                             <col style={{ width: '5%' }} />
                             <col style={{ width: '5%' }} />
@@ -449,6 +454,7 @@ export default function DubbingTable(props: Props) {
                         </colgroup>
                         <thead>
                         <tr className="bg-gray-100">
+                            <th className="border p-2 text-center w-[28px]">⇅</th>
                             <th className="border p-2 text-center">#</th>
                             <th className="border p-2 text-center">
                                 <input
@@ -489,7 +495,6 @@ export default function DubbingTable(props: Props) {
                             const globalIdx = (currentPage - 1) * pageSize + idx + 1;
                             return (
                                 <SortableRow key={c.id} caseItem={c}>
-                                    {/* # */}
                                     <td className="border p-2 text-center">{globalIdx}</td>
 
                                     {/* 选择框 */}
