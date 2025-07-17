@@ -15,6 +15,7 @@ export default function DubbingPageLayout() {
     return (
         <DirectoryLayout
             feature="dubbing"
+            modelName="agent/视频/配音"
             initialDirId={dirId}
             initialItemId={docId}
         >

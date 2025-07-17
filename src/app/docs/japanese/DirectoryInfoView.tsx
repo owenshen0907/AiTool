@@ -85,7 +85,7 @@ export default function DirectoryInfoView({
                 items={orderedItems.map(i => i.id)}
                 strategy={verticalListSortingStrategy}
             >
-                <div className="flex h-full">
+                <div className="flex-1 flex h-full">
                     {[firstCol, secondCol].map((colItems, colIdx) => (
                         <div key={colIdx} className="w-1/2 p-4 overflow-auto space-y-2">
                             {colItems.map(item => (

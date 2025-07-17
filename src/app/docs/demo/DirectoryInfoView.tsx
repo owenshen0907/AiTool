@@ -1,4 +1,4 @@
-// File: src/app/video/dubbing/DirectoryInfoView.tsx
+// File: src/app/docs/demo/DirectoryInfoView.tsx
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';

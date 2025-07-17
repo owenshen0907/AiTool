@@ -1,13 +1,13 @@
 // File: src/components/directory/DirectoryLayout.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback, ReactNode } from 'react';
+import React, {useState, useEffect, useCallback, ReactNode} from 'react';
 import DirectoryManager from './DirectoryManager';
-import ContentModal     from './CreateContentModal';
+import ContentModal from './CreateContentModal';
 
-import type { ContentItem } from '@/lib/models/content';
-import { useContentCache }  from '@/hooks/useContentCache';
-import { useDirectories }   from './useDirectories';
+import type {ContentItem} from '@/lib/models/content';
+import {useContentCache} from '@/hooks/useContentCache';
+import {useDirectories} from './useDirectories';
 import {
     createContent,
     updateContent,
@@ -17,21 +17,22 @@ import {
 } from '@/lib/api/content';
 
 export interface DirectoryLayoutProps {
-    feature: string;
-    initialDirId?: string;
-    initialItemId?: string;
+    feature: string,
+    modelName: string,
+    initialDirId?: string,
+    initialItemId?: string,
     children: (props: {
-        currentDir:   string | null;
+        currentDir: string | null;
         selectedItem: ContentItem | null;
         visibleItems: ContentItem[];
         onSelectItem: (id: string) => void;
-        onCreate:     (dirId: string) => Promise<void>;
-        onUpdate:     (item: ContentItem, patch: { title?: string; summary?: string; body?: string }) => Promise<void>;
-        onDelete:     (id: string) => Promise<void>;
-        onReorder:    (dirId: string, orderedIds: string[]) => Promise<void>;
-        onMove:       (id: string, newDirId: string) => Promise<void>;
-        onOpenEdit:   (item: ContentItem) => void;
-    }) => React.ReactNode;
+        onCreate: (dirId: string) => Promise<void>;
+        onUpdate: (item: ContentItem, patch: { title?: string; summary?: string; body?: string }) => Promise<void>;
+        onDelete: (id: string) => Promise<void>;
+        onReorder: (dirId: string, orderedIds: string[]) => Promise<void>;
+        onMove: (id: string, newDirId: string) => Promise<void>;
+        onOpenEdit: (item: ContentItem) => void;
+    }) => React.ReactNode,
 }
 
 export default function DirectoryLayout({
@@ -39,9 +40,10 @@ export default function DirectoryLayout({
                                             initialDirId,
                                             initialItemId,
                                             children,
-}: DirectoryLayoutProps) {
-    const [currentDir,    setCurrentDir]    = useState<string | null>(null);
-    const [selectedItem,  setSelectedItem]  = useState<ContentItem | null>(null);
+                                            modelName
+                                        }: DirectoryLayoutProps) {
+    const [currentDir, setCurrentDir] = useState<string | null>(null);
+    const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
     const [reloadTreeFlag, setReloadTreeFlag] = useState(0);
 
     // 目录树增删改查
@@ -54,7 +56,7 @@ export default function DirectoryLayout({
     } = useDirectories(feature);
 
     // 内容缓存
-    const { cache, loadDir, mutateDir, clearCachedDir, allItems } = useContentCache(feature);
+    const {cache, loadDir, mutateDir, clearCachedDir, allItems} = useContentCache(feature);
     /* ─── 展开状态 ★ 提升到此处 ─── */
     const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
     /** 切换展开/折叠 */
@@ -155,7 +157,7 @@ export default function DirectoryLayout({
 
     // 新建 / 编辑 弹框
     const [modalVisible, setModalVisible] = useState(false);
-    const [editingItem,  setEditingItem]  = useState<ContentItem | null>(null);
+    const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
 
     const openCreate = useCallback((dirId: string) => {
         setEditingItem(null);
@@ -183,12 +185,12 @@ export default function DirectoryLayout({
         if (!currentDir) return;
         try {
             if (editingItem) {
-                await updateContent(feature, { id: editingItem.id, ...data });
+                await updateContent(feature, {id: editingItem.id, ...data});
                 mutateDir(currentDir, list =>
-                    list.map(i => i.id === editingItem.id ? { ...i, ...data } : i)
+                    list.map(i => i.id === editingItem.id ? {...i, ...data} : i)
                 );
             } else {
-                const created = await createContent(feature, { directoryId: currentDir, ...data });
+                const created = await createContent(feature, {directoryId: currentDir, ...data});
                 mutateDir(currentDir, list => [...list, created]);
             }
             await loadDir(currentDir, true);
@@ -208,10 +210,10 @@ export default function DirectoryLayout({
     }, [openCreate]);
 
     const onUpdate = useCallback(async (item: ContentItem, patch: any) => {
-        await updateContent(feature, { id: item.id, ...patch });
+        await updateContent(feature, {id: item.id, ...patch});
         if (currentDir) {
             mutateDir(currentDir, list =>
-                list.map(i => i.id === item.id ? { ...i, ...patch } : i)
+                list.map(i => i.id === item.id ? {...i, ...patch} : i)
             );
             await loadDir(currentDir, true);
         }
@@ -258,6 +260,7 @@ export default function DirectoryLayout({
             <DirectoryManager
                 key={reloadTreeFlag}
                 feature={feature}
+                modelName={modelName}
                 items={allItems}
                 expand={expandedDirs}           /* ★ 由父控制 */
                 toggleExpand={toggleExpandDir}  /* ★ 由父控制 */
@@ -304,8 +307,8 @@ export default function DirectoryLayout({
                 title={editingItem ? '编辑内容' : '新建内容'}
                 initialData={
                     editingItem
-                        ? { title: editingItem.title, summary: editingItem.summary, body: editingItem.body }
-                        : { title: '', summary: '', body: '' }
+                        ? {title: editingItem.title, summary: editingItem.summary, body: editingItem.body}
+                        : {title: '', summary: '', body: ''}
                 }
                 onCancel={closeModal}
                 onSubmit={handleModalSubmit}

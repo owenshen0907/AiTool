@@ -7,7 +7,10 @@ import CaseContentPanel from './CaseContentPanel';
 
 export default function CaseManagePage() {
     return (
-        <DirectoryLayout feature="case">
+        <DirectoryLayout
+            feature="case"
+            modelName="prompt/调试"
+        >
             {({
                   currentDir,
                   selectedItem,

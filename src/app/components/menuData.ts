@@ -68,6 +68,7 @@ export const menuData: MenuItem[] = [
             {
                 title: '图片 Agent',
                 children: [
+                    { title: '图片生成', href: '/agent/image/generate' },
                     { title: '批量分析', href: '/agent/image/batch-analysis' },
                     { title: '批量标注', href: '/agent/image/batch-annotate' },
                 ],
@@ -99,6 +100,7 @@ export const menuData: MenuItem[] = [
             { title: '学习笔记', href: '/docs/study' },
             { title: '日语笔记', href: '/docs/japanese' },
             { title: '旅游攻略', href: '/docs/travel' },
+            { title: 'demo', href: '/docs/demo' },
         ],
     },
 

@@ -10,6 +10,7 @@ import DirectoryNode from './DirectoryNode';
 
 export interface DirectoryManagerProps {
     feature: string;
+    modelName: string;
     items: ContentItem[];
 
     /** ★ 由父组件控制的展开状态 */
@@ -36,6 +37,7 @@ export interface DirectoryManagerProps {
 
 export default function DirectoryManager({
                                              feature,
+                                             modelName,
                                              items,
                                              expand,             // ← 来自父组件
                                              toggleExpand,       // ← 来自父组件
@@ -79,7 +81,7 @@ export default function DirectoryManager({
         >
             {/* ── 顶栏 ── */}
             <div className="flex items-center justify-between px-2 py-1 border-b">
-                {!collapsed && <span className="font-semibold">目录</span>}
+                {!collapsed && <span className="text-xs text-gray-400">{modelName}</span>}
                 <div className="flex items-center space-x-1">
                     {!collapsed && (
                         <button
