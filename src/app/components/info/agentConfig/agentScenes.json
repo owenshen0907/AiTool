@@ -1,0 +1,24 @@
+[
+  {
+    "agentId": "imageGenerate",
+    "name": "图像生成助手",
+    "description": "生成与编辑图片的智能助手。",
+    "scenes": [
+      { "sceneKey": "img_intent_extract", "label": "提取意图", "desc": "根据输入的内容和意图生成图片的主题关键信息。" },
+      { "sceneKey": "img_prompt_generate", "label": "生成图片提示词", "desc": "根据主题和关键信息，生成生成图片的提示词。" },
+      { "sceneKey": "img_generate", "label": "图片生成", "desc": "根据 prompt 进行文生图，初稿生成。" },
+      { "sceneKey": "img_variant", "label": "图片变体", "desc": "基于现有图片生成变体。" },
+      { "sceneKey": "img_edit", "label": "图片编辑", "desc": "局部修改 / 增强 / 加字。" }
+    ]
+  },
+  {
+    "agentId": "agent_code_helper",
+    "name": "代码助手",
+    "description": "解释代码、生成片段、调试建议。",
+    "scenes": [
+      { "sceneKey": "code_completion", "label": "代码补全", "desc": "根据上下文预测编写剩余代码。" },
+      { "sceneKey": "code_explain", "label": "代码解释", "desc": "解释函数/模块含义。" },
+      { "sceneKey": "debug_advice", "label": "调试建议", "desc": "针对报错/日志提出排查步骤。" }
+    ]
+  }
+]

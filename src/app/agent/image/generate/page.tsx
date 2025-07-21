@@ -1,4 +1,4 @@
-// File: src/app/docs/demo/page.tsx
+// File: src/app/agent/image/page.tsx
 'use client';
 
 export default function DubbingPage() {

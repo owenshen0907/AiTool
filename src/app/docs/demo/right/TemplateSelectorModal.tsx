@@ -1,6 +1,7 @@
 // File: src/app/docs/japanese/TemplateSelectorModal.tsx
-'use client';
 
+'use client';
+console.log('[TRACE] Using /docs/demo/right/GenerateSection.tsx', import.meta.url);
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 

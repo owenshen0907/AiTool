@@ -9,6 +9,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useUser } from '@/app/providers/UserProvider';
 import UserInfoModal from './info/UserInfoModal';
 import SupplierModelManagement from './info/SupplierModelManagement';
+import AgentManagement from './info/agentConfig/AgentManagement';
 import { menuData, MenuItem } from './menuData';
 import { CASDOOR_CONFIG } from '@/config';
 
@@ -81,6 +82,7 @@ export default function NavBar() {
 
     const displayName = user?.displayName || 'U';
     const firstChar = displayName.charAt(0).toUpperCase();
+    const [showAgentModal, setShowAgentModal] = useState(false);
 
     return (
         <>
@@ -106,6 +108,10 @@ export default function NavBar() {
                                 <div className="absolute right-0 top-full mt-1 w-44 bg-white border rounded-md shadow-lg">
                                     <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { setShowUserModal(true); setDropdownOpen(false); }}>个人信息</div>
                                     <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { setShowSupplierModal(true); setDropdownOpen(false); }}>供应商＆模型管理</div>
+                                    <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"   // NEW
+                                        onClick={() => { setShowAgentModal(true); setDropdownOpen(false); }}
+                                    >Agent管理</div>
                                     <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={handleLogout}>注销登录</div>
                                 </div>
                             )}
@@ -117,6 +123,7 @@ export default function NavBar() {
             </nav>
             {showUserModal && user && <UserInfoModal data={user} onClose={() => setShowUserModal(false)}/>}
             {showSupplierModal && <SupplierModelManagement onClose={() => setShowSupplierModal(false)}/>}
+            {showAgentModal && <AgentManagement onClose={() => setShowAgentModal(false)} />} {/* NEW */}
         </>
     );
 }

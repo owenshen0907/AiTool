@@ -100,6 +100,57 @@ CREATE INDEX IF NOT EXISTS idx_voice_tones_supplier_id
 -- GIN 索引：加速按模型 ID 在 available_model_ids 中搜索
 CREATE INDEX IF NOT EXISTS idx_voice_tones_available_models_gin
   ON voice_tones USING GIN (available_model_ids);
+  
+-- Agent配置  
+-- Agent 场景配置表
+CREATE TABLE IF NOT EXISTS agent_scene_config (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     VARCHAR(50) NOT NULL,                    -- 对应 user_info.user_id 类型
+    agent_id    TEXT        NOT NULL,
+    scene_key   TEXT        NOT NULL,
+    supplier_id UUID        NOT NULL REFERENCES ai_suppliers(id) ON DELETE CASCADE,
+    model_id    UUID        NOT NULL REFERENCES models(id)        ON DELETE CASCADE,
+    extras      JSONB       NOT NULL DEFAULT '{}'::jsonb,         -- 预留扩展（可删除）
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- 唯一约束：同一用户的同一 agent 的同一场景只有一条配置
+    UNIQUE (user_id, agent_id, scene_key)
+);
+
+-- 索引：按用户加载全部
+CREATE INDEX IF NOT EXISTS idx_agent_scene_user ON agent_scene_config(user_id);
+
+-- 索引：按用户+agent 查询
+CREATE INDEX IF NOT EXISTS idx_agent_scene_user_agent ON agent_scene_config(user_id, agent_id);
+
+-- 可选：统计/分析（供应商、模型维度）
+CREATE INDEX IF NOT EXISTS idx_agent_scene_supplier ON agent_scene_config(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_agent_scene_model    ON agent_scene_config(model_id);
+
+-- 自动更新时间触发器（如果还没有）
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+      FROM pg_trigger
+     WHERE tgname = 'trg_agent_scene_config_updated'
+       AND tgrelid = 'agent_scene_config'::regclass
+  ) THEN
+    CREATE TRIGGER trg_agent_scene_config_updated
+      BEFORE UPDATE ON agent_scene_config
+      FOR EACH ROW
+      EXECUTE FUNCTION set_updated_at();
+  END IF;
+END;
+$$;
 
 -- 数据库迁移脚本示例
 CREATE TABLE IF NOT EXISTS directories (

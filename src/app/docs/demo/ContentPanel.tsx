@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import DirectoryInfoView from './DirectoryInfoView';
-import ContentLeft from "@/app/docs/demo/ContentLeft";
-import ContentRight from "@/app/docs/demo/ContentRight";
+import ContentLeft from "./ContentLeft";
+import ContentRight from "./ContentRight";
 
 interface Props {
     feature: string;

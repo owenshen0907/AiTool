@@ -6,3 +6,10 @@ export type ImageEntry = {
     status: 'uploading' | 'success' | 'error';
     file_id?: string;
 };
+
+export interface Template {
+    id: string;
+    title: string;
+    purpose: string;
+    content: string; // 作为 system prompt
+}

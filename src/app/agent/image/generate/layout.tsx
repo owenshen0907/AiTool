@@ -1,4 +1,4 @@
-// File: src/app/docs/demo/layout.tsx
+// File: src/app/agent/image/layout.tsx
 'use client';
 
 import React from 'react';

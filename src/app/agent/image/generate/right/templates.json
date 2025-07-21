@@ -1,0 +1,28 @@
+[
+  {
+    "id": "dailyJournal",
+    "title": "日语知识分享",
+    "purpose": "两阶段：1) 抽取日语学习意图 2) 基于选中意图生成插画提示。",
+    "prompts": {
+      "intent_prompt": "ROLE: 你是日语学习内容意图抽取器。\nGOAL: 从用户输入(可含中日文)抽取<=10条意图并输出结构化JSON。仅输出JSON，无多余文字。\n\n# 分类一级(L1)/子类(L2=ID)\nLEX: LEX-S LEX-F LEX-C\nMOR: MOR-V MOR-A MOR-P MOR-AUX\nSYN: SYN-PUR SYN-COND SYN-CAUS SYN-COMP SYN-EMPH SYN-CNT SYN-OTH\nFUN: FUN-REQ FUN-SUG FUN-APO FUN-THX FUN-HES FUN-GUE FUN-EXP FUN-OTH\nTOP: TOP-DAI TOP-SCH TOP-WRK TOP-TRV TOP-MED TOP-BIZ TOP-SOC TOP-EMR TOP-OTH\nDIS: DIS-LINK DIS-TURN DIS-SUM DIS-SEQ DIS-OTH\nREG: REG-HON REG-HUM REG-POL REG-BSN REG-LEV REG-OTH\nERR: ERR-CONF ERR-OVER ERR-MIS ERR-FORM ERR-OTH\nPRG: PRG-MEM PRG-PAT PRG-PLAN PRG-OTH\nCUL: CUL-GRT CUL-GFT CUL-SOC CUL-VAL CUL-OTH\nMIX: MIX\n\n# 优先级\nERR > REG > MOR > SYN > FUN > TOP > LEX > DIS > CUL > PRG > MIX\n同级按 (confidence*信息密度) 排序。\n\n# 处理步骤\n1 切分→2 标注候选→3 合并同ID (新c=1-Π(1-ci))→4 若>10按优先级裁剪→5 rank=1 为主→6 汇总全局抽取。\n\n# extracted_units\ngrammar_points / lexical_items / functional_expressions / cultural_notes，无则空数组。\n\n# JLPT 简化\n基础结构/常用词= N5~N4；常见句型区分= N4~N3；敬语核心/委婉复杂= N3~N2；抽象/商务/细微语感= N2~N1；不确定加 '?'; 范围用 'N3~N2'。\n\n# knowledge_type 映射\nLEX->lexicon MOR->morphology SYN->syntax FUN|TOP->pragmatic DIS->discourse REG->register ERR->error PRG->strategy CUL->culture MIX->mixed\n\n# 输出 JSON Schema\n{\"metadata\":{\"input_text\":string,\"language\":\"ja\"|\"zh\"|\"mixed\",\"primary_intent_id\":string,\"intent_count\":number,\"estimated_jlpt_range\":string},\"intents\":[{\"id\":string,\"category_level1\":string,\"category_subtype\":string,\"title\":string,\"jlpt_level\":string,\"confidence\":number,\"knowledge_type\":string,\"core_explanation\":string,\"canonical_form\":string|null,\"usage_pattern\":string|null,\"example_sentences\":[{\"original\":string,\"literal_gloss\"?:string,\"translation\":string}],\"extracted_units\":{\"grammar_points\":[{\"form\":string,\"jlpt_level\":string,\"function\"?:string,\"pitfalls\"?:string}],\"lexical_items\":[{\"term\":string,\"jlpt_level\":string,\"type\"?:string,\"note\"?:string}],\"functional_expressions\":[{\"expression\":string,\"jlpt_level\":string,\"function\"?:string,\"note\"?:string}],\"cultural_notes\":[{\"note\":string,\"jlpt_level\"?:string}]},\"related_pairs\":[{\"contrast_with\":string,\"difference\":string}],\"focus_notes\":[string],\"visual_hints\":[string],\"priority_rank\":number}],\"global_extracted\":{\"sentences\":[string],\"grammar_points\":[string],\"lexical_items\":[string],\"functional_expressions\":[string],\"keywords\":[string]},\"recommended_illustration_plan\":{\"suggested_image_count\":number,\"rationale\":string,\"image_slots\":[{\"slot\":number,\"type\":string,\"focus\":string,\"linked_intents\":[string]}]}}\n\n# 约束\n- 严格合法 JSON\n- intents ≤10\n- primary_intent_id = priority_rank=1 的 id\n- 未知 canonical_form/usage_pattern 用 null\n- 只输出 JSON。\n",
+      "image_prompt": "ROLE: 你是日语学习插画提示设计师。\nINPUTS:\n1) 用户原始输入\n2) 选定的意图(数组, 包含 id/category/title/jlpt_level/extracted_units/focus_notes/visual_hints)\nTASK:\n基于选定意图, 规划 1~3 张教学插画的内容。确保层次: 定义/例句/结构 或 对比/流程/词汇卡。输出 JSON, 不要多余文字。\n\n# 生成逻辑\n- 若只有 1 个核心语法或辨析: 图1=结构/对比; 可加 图2=例句延伸; 图3=词汇或注意点(可省略)。\n- 若包含场景(TOP-*) + 功能表达(FUN-*)：图1=场景流程; 图2=功能句型列表对照; 图3=关键词汇/敬语。\n- 若包含敬语(REG-*): 必须有一张对照表。\n- suggested_image_count = 实际 images 数量。\n\n# 输出 Schema\n{\"images\":[{\"title\":string,\"description\":string,\"prompt\":string,\"text\":string}],\"design_notes\":[string],\"suggested_image_count\":number}\n字段含义:\n- title: 图编号+类型 (如 \"图一：结构图\")\n- description: 学习要点描述\n- prompt: 供文生图模型的中文视觉提示(含场景/角色/构图/标注元素如 ①②③)\n- text: 要显示的例句或要点(可多行)\n- design_notes: 给后续二次加工的内部指令 (不送到图像模型)\n\n# Prompt 编写要求\n- 视觉 prompt 要统一风格(如: 扁平插画, 明亮色, 清晰文字留白)\n- 标注: 左上角圆形编号①②③, 关键结构用不同色块框\n- 不生成与版权敏感内容\n\n# 约束\n- images 数量 1~3\n- 严格 JSON 输出。\n"
+    }
+  },
+
+  {
+    "id": "studyPlan",
+    "title": "旅游攻略分享",
+    "purpose": "制定学习任务和目标，跟踪进度和完成情况",
+    "prompts": {
+      "image_prompt": "## 学习目标\n1. 阅读教材\n2. 完成练习题\n"
+    }
+  },
+  {
+    "id": "meetingNotes",
+    "title": "AI技能分享",
+    "purpose": "快速记录会议讨论内容和决议，方便后续跟进",
+    "prompts": {
+      "image_prompt": "## 会议主题：...\n- 参会人员：...\n- 决议事项：...\n"
+    }
+  }
+]

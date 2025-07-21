@@ -1,47 +1,144 @@
-// File: src/app/docs/demo/ContentLeft.tsx
+// File: src/app/agent/image/ContentLeft.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ContentItem } from '@/lib/models/content';
-import MarkdownEditor from '@/components/common/MarkdownEditor';
-import { Save, Printer, RefreshCw, MoreVertical } from 'lucide-react';
-import { marked } from 'marked';
-import { parseSSEStream } from '@/lib/utils/sse';
+import type { AgentSceneConfig } from 'src/hooks/useAgentScenes';  // ← 新增
 
+import HeaderSection  from './left/HeaderSection';
+import CardView       from './left/cards/CardView';
+import EmptyState     from './left/EmptyState';
+
+import { useSummaryGenerator } from './left/hooks/useSummaryGenerator';
+import { useImageCards       } from './left/hooks/useImageCards';
+
+import LoadingIndicator from '@/components/LoadingIndicator/LoadingIndicator';
+
+/* ---------- 组件 Props ---------- */
 interface Props {
+    feature: string;
+    scenes: AgentSceneConfig[];
+    loadingConfig: boolean;
+    getScene: (sceneKey: string) => AgentSceneConfig | undefined;
+
     selectedItem: ContentItem | null;
-    body: string;                         // 父组件传进来的当前正文
-    onChangeBody: (body: string) => void; // 编辑器里内容变化时回调
-    onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => void;
+    body:         string;
+    onChangeBody: (body: string) => void;
+    onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
+    promptGenerating?: boolean;     // 右侧正在生成插画提示
 }
 
 export default function ContentLeft({
-                                                selectedItem,
-                                                body,
-                                                onChangeBody,
-                                                onUpdateItem,
-                                            }: Props) {
+                                        feature,
+                                        scenes,
+                                        loadingConfig,
+                                        getScene,
+                                        selectedItem,
+                                        body,
+                                        onChangeBody,
+                                        onUpdateItem,
+                                        promptGenerating = false
+                                    }: Props) {
+    const imgGenerateScene = getScene('img_generate');
+
+    /* ---------- 标题 / 摘要 ---------- */
     const [title, setTitle] = useState('');
     const [summary, setSummary] = useState('');
     const [orig, setOrig] = useState({ title: '', summary: '', body: '' });
     const [editHeader, setEditHeader] = useState(false);
-    const [isGenerating, setIsGenerating] = useState(false);
+    const { generate, loading: summaryLoading } = useSummaryGenerator();
 
-    // 选中项切换：重置 header 和 orig
+    /* ---------- 解析卡片 ---------- */
+    const { cards, error: parseError, parsed } = useImageCards(body, {
+        autoParse: true,
+        reparseOnChange: true
+    });
+
+    /* ---------- 选中文档变动 ---------- */
+    const lastSavedBody = useRef(body);
     useEffect(() => {
-        if (selectedItem) {
-            const t = selectedItem.title ?? '';
-            const s = selectedItem.summary ?? '';
-            const b = selectedItem.body ?? '';
-            setTitle(t);
-            setSummary(s);
-            setOrig({ title: t, summary: s, body: b });
-            setEditHeader(false);
-            // 同步父组件的 bodyState
-            onChangeBody(b);
-        }
+        if (!selectedItem) return;
+        const t = selectedItem.title ?? '';
+        const s = selectedItem.summary ?? '';
+        const b = selectedItem.body ?? '';
+        setTitle(t);
+        setSummary(s);
+        setOrig({ title: t, summary: s, body: b });
+        setEditHeader(false);
+        onChangeBody(b);
+        lastSavedBody.current = b;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedItem?.id]);
 
+    /* ---------- 自动保存正文 ---------- */
+    useEffect(() => {
+        if (!selectedItem) return;
+        if (body === lastSavedBody.current) return;
+        const timer = setTimeout(async () => {
+            try {
+                await onUpdateItem(selectedItem, { body });
+                lastSavedBody.current = body;
+            } catch (err) {
+                console.error('[auto-save] failed:', err);
+            }
+        }, 1000);
+        return () => clearTimeout(timer);
+    }, [body, selectedItem, onUpdateItem]);
+
+    /* ---------- 工具函数 ---------- */
+    const escapeHtml = (str: string) =>
+        str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    /* ---------- Header 操作 ---------- */
+    const dirtyHeader = title !== orig.title || summary !== orig.summary;
+    const handleRestore = () => {
+        if (!dirtyHeader) return;
+        if (confirm('确认还原未保存的标题/摘要修改？')) {
+            setTitle(orig.title);
+            setSummary(orig.summary);
+            setEditHeader(false);
+        }
+    };
+    const handleSave = () => {
+        if (!dirtyHeader || !selectedItem) return;
+        if (!confirm('确认保存修改？')) return;
+        onUpdateItem(selectedItem, { title, summary, body })
+            .then(() => setOrig({ title, summary, body }))
+            .catch(err => console.error('手动保存失败:', err));
+        setEditHeader(false);
+    };
+    const handlePrint = () => {
+        const win = window.open('', '_blank');
+        if (!win) return;
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title}</title>
+<style>
+body{font-family:Arial,system-ui;padding:20px;}
+h1{font-size:24px;margin-bottom:10px;}
+p.summary{font-size:16px;color:#555;margin-bottom:20px;}
+pre{background:#f6f8fa;padding:12px;border-radius:4px;line-height:1.5;white-space:pre-wrap;}
+</style></head><body>
+<h1>${title}</h1><p class="summary">${summary||''}</p>
+<pre>${escapeHtml(body)}</pre></body></html>`;
+        win.document.write(html);
+        win.document.close();
+        win.print();
+        win.close();
+    };
+
+    const handleGenerateSummary = async () => {
+        if (summaryLoading) return;
+        const userReq = prompt('AI 自动生成摘要，附加要求？（可留空）', '');
+        if (userReq === null) return;
+        try {
+            const res = await generate(body, userReq || '');
+            setSummary(res);
+            setEditHeader(true);
+        } catch {
+            /* error 已在 hook 中处理 */
+        }
+    };
+
+    /* ---------- 未选文档 ---------- */
     if (!selectedItem) {
         return (
             <div className="w-2/3 flex items-center justify-center">
@@ -50,202 +147,67 @@ export default function ContentLeft({
         );
     }
 
-    const dirtyHeader = title !== orig.title || summary !== orig.summary;
-    const dirtyBody = body !== orig.body;
-    const dirty = dirtyHeader || dirtyBody;
-
-    const handleRestore = () => {
-        if (!dirty) return;
-        if (confirm('确认要还原所有未保存的修改吗？')) {
-            setTitle(orig.title);
-            setSummary(orig.summary);
-            onChangeBody(orig.body);
-            setEditHeader(false);
-        }
-    };
-
-    const handleSave = () => {
-        if (!dirty) return;
-        if (!confirm('确认要保存所有修改吗？')) return;
-        onUpdateItem(selectedItem, {
-            title,
-            summary,
-            body, // body 已经同步到父组件
-        });
-        setOrig({ title, summary, body });
-        setEditHeader(false);
-    };
-
-    const handlePrint = () => {
-        const win = window.open('', '_blank');
-        if (!win) return;
-        const html = `
-      <!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title}</title>
-      <style>
-        body{font-family:Arial;padding:20px;}
-        h1{font-size:24px;margin-bottom:10px;}
-        p.summary{font-size:16px;color:#555;margin-bottom:20px;}
-        table{width:100%;border-collapse:collapse;margin-bottom:20px;}
-        table,th,td{border:1px solid #333;}th,td{padding:8px;text-align:left;}
-        .content img{max-width:100%;}pre,code{background:#f6f8fa;padding:6px;}
-      </style>
-      </head><body>
-      <h1>${title}</h1>
-      <p class="summary">${summary}</p>
-      <div class="content">${marked(body)}</div>
-      </body></html>`;
-        win.document.write(html);
-        win.document.close();
-        win.print();
-        win.close();
-    };
-
-    const handleGenerateSummary = async () => {
-        if (isGenerating) return;
-        // 弹框提示并让用户输入附加要求
-        const userReq = window.prompt(
-            'AI 自动生成摘要。如果对生成的摘要有要求，请在此输入；否则留空。',
-            ''
-        );
-        if (userReq === null) return; // 用户取消
-        setIsGenerating(true);
-        setSummary(''); // 清空当前摘要，开始接收新摘要
-        try {
-            const combinedContent = [
-                `【主体内容开始】：\n${body}【主体内容结束】`,
-                userReq.trim() ? `\n\n【附加要求】：\n${userReq.trim()}` : ''
-            ].join('');
-            const payload = {
-                scene: 'SUMMARY_GEN',
-                messages: [
-                    { role: 'user', content: combinedContent }
-                ]
-            };
-            const res = await fetch('/api/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (!res.ok || !res.body) {
-                console.error('生成摘要时接口返回错误');
-                setIsGenerating(false);
-                return;
-            }
-            await parseSSEStream(res.body, ({ type, text }) => {
-                if (type === 'content') {
-                    setSummary(prev => prev + text);
-                }
-                // 对于 reasoning 片段可根据需要处理，例如在控制台输出
-            });
-        } catch (e) {
-            console.error('生成摘要过程中发生异常：', e);
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
+    /* ========================= 渲染 ========================= */
     return (
         <div className="w-2/3 flex flex-col h-screen p-4">
-            {/* Header 编辑区 */}
-            <div className="mb-4 flex items-start justify-between">
-                <div className="flex-1 space-y-1">
-                    {editHeader ? (
-                        <>
-                            <input
-                                className="w-full border rounded p-2"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                placeholder="输入标题"
-                            />
-                            <textarea
-                                className="w-full border rounded p-2"
-                                rows={2}
-                                value={summary}
-                                onChange={(e) => setSummary(e.target.value)}
-                                placeholder="输入摘要"
-                            />
-                            <button
-                                className={`mt-2 px-2 py-1 text-blue-600 hover:underline ${
-                                    isGenerating ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                                onClick={handleGenerateSummary}
-                                disabled={isGenerating}
-                            >
-                                {isGenerating ? '生成中...' : '重新生成摘要'}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <h1
-                                className="text-2xl font-semibold cursor-pointer"
-                                onClick={() => setEditHeader(true)}
-                            >
-                                {title || '（无标题）'}
-                            </h1>
-                            {summary ? (
-                                <p
-                                    className="text-gray-600 cursor-pointer"
-                                    onClick={() => setEditHeader(true)}
-                                >
-                                    {summary}
-                                </p>
-                            ) : (
-                                <button
-                                    className={`px-2 py-1 text-blue-600 hover:underline ${
-                                        isGenerating ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
-                                    onClick={handleGenerateSummary}
-                                    disabled={isGenerating}
-                                >
-                                    {isGenerating ? '生成中...' : 'AI生成摘要'}
-                                </button>
-                            )}
-                        </>
+            {/* Header */}
+            <HeaderSection
+                title={title}
+                summary={summary}
+                edit={editHeader}
+                dirty={dirtyHeader}
+                isGenerating={summaryLoading}
+                onChangeTitle={setTitle}
+                onChangeSummary={setSummary}
+                onToggleEdit={() => setEditHeader(e => !e)}
+                onRestore={handleRestore}
+                onSave={handleSave}
+                onPrint={handlePrint}
+                onGenerateSummary={handleGenerateSummary}
+            />
+
+            {/* 状态块 */}
+            <div className="mb-4">
+                <div
+                    className={`
+                        group relative w-full rounded-xl border-2 transition
+                        ${promptGenerating
+                        ? 'border-transparent bg-gradient-to-br from-fuchsia-100 to-pink-100'
+                        : 'border-dashed border-gray-300 bg-gray-50'}
+                        hover:shadow-lg hover:-translate-y-[1px] hover:scale-[1.02]
+                    `}
+                    style={{ minHeight: '120px' }}
+                >
+                    {!promptGenerating && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-gray-500 text-sm transition group-hover:opacity-70 group-hover:scale-[0.98]">
+                                状态：等待生成插画提示
+                            </span>
+                        </div>
+                    )}
+                    {promptGenerating && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <LoadingIndicator scene="img_prompt_generate" />
+                        </div>
                     )}
                 </div>
-
-                <div className="flex flex-col items-center ml-4 space-y-2">
-                    <button
-                        onClick={handleRestore}
-                        disabled={!dirty}
-                        className={`p-2 rounded ${
-                            dirty ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        title="还原"
-                    >
-                        <RefreshCw size={20} />
-                    </button>
-                    <button
-                        onClick={handlePrint}
-                        className="p-2 rounded hover:bg-gray-200"
-                        title="打印"
-                    >
-                        <Printer size={20} />
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={!dirty}
-                        className={`p-2 rounded ${
-                            dirty ? 'hover:bg-gray-200' : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        title="保存"
-                    >
-                        <Save size={20} />
-                    </button>
-                </div>
-
-                <button
-                    onClick={() => setEditHeader(!editHeader)}
-                    className="p-2 ml-2 hover:bg-gray-200 rounded"
-                    title="编辑标题/摘要"
-                >
-                    <MoreVertical size={20} />
-                </button>
             </div>
 
-            {/* Markdown 编辑器，value=body，onChange=onChangeBody */}
-            <div className="flex-1 flex flex-col overflow-auto">
-                <MarkdownEditor value={body} onChange={onChangeBody} />
+            {/* 卡片 / 空态 */}
+            <div className="flex-1 overflow-auto space-y-4 pr-1">
+                {parseError && <p className="text-xs text-red-500">{parseError}</p>}
+                {!parseError && cards.length === 0 && parsed && body.trim().replace(/\s+/g, '').replace(/<!--[\s\S]*?-->/g, '') !== ''
+                    ? <EmptyState />
+                    : cards.map(card => (
+                        <CardView
+                            key={card.id}
+                            data={card}
+                            selectedItem={selectedItem}
+                            onUpdateItem={onUpdateItem}
+                            imgGenerateScene={imgGenerateScene}
+                        />
+                    ))
+                }
             </div>
         </div>
     );

@@ -1,32 +1,36 @@
-// File: src/app/docs/japanese/GenerateSection.tsx
+// File: src/app/agent/image/right/GenerateSection.tsx
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import TemplateSelectorModal, { Template } from './TemplateSelectorModal';
-import SupplierModelSelector from './SupplierModelSelector';
-import { Send } from 'lucide-react';
+import { Brain, Send } from 'lucide-react';
+import IntentList from './IntentList';
+import LoadingIndicator from '@/components/LoadingIndicator/LoadingIndicator';
+import type { IntentItem } from './hooks/useIntentExtraction';
 
 interface Props {
     feature: string;
     selectedTemplate: Template | null;
     setSelectedTemplate: (tpl: Template) => void;
+
     noteRequest: string;
     setNoteRequest: (val: string) => void;
-    includeExisting: boolean;
-    setIncludeExisting: (flag: boolean) => void;
+
     forceBase64: boolean;
     setForceBase64: (flag: boolean) => void;
-    supplierId: string;
-    handleSupplierChange: (id: string) => void;
-    model: string;
-    handleModelChange: (name: string) => void;
-    loading: boolean;
+    imagesCount: number;
+
+    loadingConfig: boolean;
+    loadingIntent: boolean;
+    onExtractIntent: () => void;
+
+    intents: IntentItem[];
+    selectedIntentId: string | null;
+    setSelectedIntentId: (id: string) => void;
+    generatedIntentMap: Record<string, { lastContent: string; updatedAt: string; count: number }>;
+
+    loadingGenerate: boolean;
     onGenerate: () => void;
-    /** 是否已有生成内容 */
-    hasContent: boolean;
-    /** 是否覆盖已有内容 */
-    overwriteExisting: boolean;
-    setOverwriteExisting: (flag: boolean) => void;
 }
 
 export default function GenerateSection({
@@ -35,102 +39,106 @@ export default function GenerateSection({
                                             setSelectedTemplate,
                                             noteRequest,
                                             setNoteRequest,
-                                            includeExisting,
-                                            setIncludeExisting,
                                             forceBase64,
                                             setForceBase64,
-                                            supplierId,
-                                            handleSupplierChange,
-                                            model,
-                                            handleModelChange,
-                                            loading,
-                                            onGenerate,
-                                            hasContent,
-                                            overwriteExisting,
-                                            setOverwriteExisting,
+                                            imagesCount,
+                                            loadingConfig,
+                                            loadingIntent,
+                                            onExtractIntent,
+                                            intents,
+                                            selectedIntentId,
+                                            setSelectedIntentId,
+                                            generatedIntentMap,
+                                            loadingGenerate,
+                                            onGenerate
                                         }: Props) {
-    const lastSupKey = `lastSupplier_${feature}`;
-    const lastModelKey = `lastModel_${feature}`;
-
-    /* ---- 初始化 ---- */
-    useEffect(() => {
-        // 强制勾选“包含已有笔记”
-        if (!includeExisting) setIncludeExisting(true);
-
-        const sup = localStorage.getItem(lastSupKey);
-        if (sup) handleSupplierChange(sup);
-        const mdl = localStorage.getItem(lastModelKey);
-        if (mdl) handleModelChange(mdl);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    const actionLabel = hasContent ? '一键优化笔记' : '一键生成笔记';
-
     return (
         <div className="flex flex-col space-y-4">
             {/* 模板选择 */}
             <div className="flex items-center space-x-2">
                 <TemplateSelectorModal feature={feature} onSelect={setSelectedTemplate} />
                 {selectedTemplate && (
-                    <span className="text-gray-700 truncate" title={selectedTemplate.name}>
-            已选模板：{selectedTemplate.name}
+                    <span
+                        className="text-gray-700 truncate text-sm"
+                        title={selectedTemplate.title}
+                    >
+            已选模板：{selectedTemplate.title}
           </span>
                 )}
             </div>
 
-            {/* 供应商 & 模型 */}
-            <SupplierModelSelector
-                className="w-full"
-                supplierId={supplierId}
-                onSupplierChange={handleSupplierChange}
-                model={model}
-                onModelChange={handleModelChange}
-            />
-
-            {/* 强制 Base64 */}
-            <label className="inline-flex items-center space-x-2">
-                <input
-                    type="checkbox"
-                    checked={forceBase64}
-                    onChange={e => setForceBase64(e.target.checked)}
-                    className="h-4 w-4"
-                />
-                <span>强制使用 Base64</span>
-            </label>
-
-            {/* 覆盖已有内容（仅当已有正文时显示） */}
-            {hasContent && (
-                <label className="inline-flex items-center space-x-2">
-                    <input
-                        type="checkbox"
-                        checked={overwriteExisting}
-                        onChange={e => setOverwriteExisting(e.target.checked)}
-                        className="h-4 w-4"
-                    />
-                    <span>覆盖已有内容</span>
-                </label>
+            {loadingConfig && (
+                <div className="text-xs text-gray-500">加载模型配置中...</div>
             )}
 
-            {/* 笔记要求 */}
+            {/* 原始输入 */}
             <textarea
                 value={noteRequest}
                 onChange={e => setNoteRequest(e.target.value)}
-                placeholder="输入笔记要求（可选）"
-                className="w-full border rounded p-2 h-24 resize-none"
+                placeholder="输入原始内容（意图抽取用）"
+                className="w-full border rounded p-2 h-24 resize-none text-sm"
             />
 
-            {/* 动作按钮 */}
+            {/* Base64 选项（有图片时才显示） */}
+            {imagesCount > 0 && (
+                <label className="inline-flex items-center space-x-2 text-sm">
+                    <input
+                        type="checkbox"
+                        checked={forceBase64}
+                        onChange={e => setForceBase64(e.target.checked)}
+                        className="h-4 w-4"
+                    />
+                    <span>兼容不支持图片外链的模型（转Base64）</span>
+                </label>
+            )}
+
+            {/* 意图抽取 */}
+            <button
+                type="button"
+                onClick={onExtractIntent}
+                disabled={loadingIntent || !selectedTemplate?.prompts?.intent_prompt}
+                className={`w-full flex items-center justify-center px-4 py-2 rounded font-semibold transition text-white ${
+                    loadingIntent || !selectedTemplate?.prompts?.intent_prompt
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-indigo-500 hover:bg-indigo-600'
+                }`}
+            >
+                <Brain size={16} className="mr-2" />
+                {loadingIntent ? '抽取中...' : '抽取意图'}
+            </button>
+
+            {/* 意图列表或加载 */}
+            {loadingIntent ? (
+                <LoadingIndicator scene="img_intent_extract" />
+            ) : (
+                <IntentList
+                    intents={intents}
+                    selectedId={selectedIntentId}
+                    onSelect={id => setSelectedIntentId(id)}
+                    generatedIntentMap={generatedIntentMap}
+                />
+            )}
+
+            {/* 生成插画提示 */}
             <button
                 onClick={onGenerate}
-                disabled={loading}
+                disabled={
+                    loadingGenerate ||
+                    !selectedTemplate?.prompts?.image_prompt ||
+                    intents.length === 0 ||
+                    !selectedIntentId
+                }
                 className={`w-full flex items-center justify-center px-4 py-2 rounded font-semibold transition ${
-                    loading
+                    loadingGenerate ||
+                    !selectedTemplate?.prompts?.image_prompt ||
+                    intents.length === 0 ||
+                    !selectedIntentId
                         ? 'bg-gray-400 cursor-not-allowed text-gray-200'
                         : 'bg-blue-500 hover:bg-blue-600 text-white'
                 }`}
             >
                 <Send size={16} className="mr-2 flex-shrink-0" />
-                {loading ? (hasContent ? '优化中...' : '生成中...') : actionLabel}
+                {loadingGenerate ? '生成中...' : '生成插画提示'}
             </button>
         </div>
     );

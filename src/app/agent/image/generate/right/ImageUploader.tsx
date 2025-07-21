@@ -1,4 +1,4 @@
-// File: src/app/docs/japanese/ImageUploader.tsx
+// File: src/app/agent/image/right/ImageUploader.tsx
 'use client';
 
 import React, { useRef, useEffect } from 'react';
