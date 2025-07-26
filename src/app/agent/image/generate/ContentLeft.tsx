@@ -234,10 +234,23 @@ export default function ContentLeft({
                     }
 
                     const res = await fetch('/api/files', { method: 'POST', body: form });
-                    if (!res.ok) throw new Error('上传失败');
-                    const json = await res.json();
+
+// 只读一次 body：优先按 JSON 解析；不是 JSON 的话当作纯文本
+                    const contentType = res.headers.get('content-type') || '';
+                    const raw = await res.text(); // 只读一次
+                    let data: any = raw;
+                    if (contentType.includes('application/json')) {
+                        try { data = raw ? JSON.parse(raw) : null; } catch { /* 保留 raw */ }
+                    }
+
+                    if (!res.ok) {
+                        const msg = (data && typeof data === 'object' && data.error) ? data.error : `上传失败（${res.status}）`;
+                        throw new Error(msg);
+                    }
+
+// 后续都用 data，千万别再 res.json() 了
                     const arr: Array<{ url?: string; file_path?: string; file_id?: string }> =
-                        Array.isArray(json) ? json : [json];
+                        Array.isArray(data) ? data : [data];
 
                     dbg('saveAll.card.uploadResult', arr);
 
