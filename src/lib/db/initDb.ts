@@ -179,17 +179,23 @@ CREATE TABLE IF NOT EXISTS file_uploads (
   file_path      TEXT        NOT NULL,                              -- 存储在服务器上的相对路径或 URL
   file_size      BIGINT      NOT NULL,                              -- 文件大小（字节）
   form_id        TEXT,                                              -- 关联业务表单的 ID
+
+  -- 新增 origin 字段，限定为 'manual' 或 'ai'
+  origin         TEXT        NOT NULL DEFAULT 'manual',
+  
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),                -- 上传时间
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),                -- 最近更新时间
 
-  CONSTRAINT fk_file_user FOREIGN KEY (user_id) REFERENCES user_info(user_id)
+  -- 外键约束
+  CONSTRAINT fk_file_user FOREIGN KEY (user_id) REFERENCES user_info(user_id),
+  -- 检查约束：origin 只能取 manual 或 ai
+  CONSTRAINT chk_origin      CHECK (origin = ANY (ARRAY['manual'::text, 'ai'::text]))
 );
 
 -- 常用查询索引
 CREATE INDEX IF NOT EXISTS idx_file_uploads_user     ON file_uploads(user_id);
 CREATE INDEX IF NOT EXISTS idx_file_uploads_module   ON file_uploads(module_name);
 CREATE INDEX IF NOT EXISTS idx_file_uploads_category ON file_uploads(file_category);
-
 -- prompts 表
 CREATE TABLE IF NOT EXISTS prompts (
     id           UUID PRIMARY KEY,
