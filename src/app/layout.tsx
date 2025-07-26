@@ -6,6 +6,7 @@ import { Inter } from 'next/font/google';
 import NavBar from './components/NavBar';
 import { CASDOOR_CONFIG } from '@/config';
 import { UserProvider, User } from './providers/UserProvider';
+import ClientBoot from './ClientBoot';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -46,10 +47,11 @@ export default async function RootLayout({
     return (
         <html lang="en">
         <head>
-            <Script src="/fetchPatch.js" strategy="beforeInteractive" />
+            {/*<Script src="/fetchPatch.js" strategy="beforeInteractive" />*/}
         </head>
         <body className={inter.className}>
         <UserProvider initialUser={initialUser}>
+            <ClientBoot />
             <NavBar />
             {children}
         </UserProvider>

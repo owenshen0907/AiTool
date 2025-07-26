@@ -8,26 +8,27 @@ const LOGIN_URL =
     '&state=casdoor';
 
 function shouldRedirect(res: Response) {
-    // 302 被 middleware 重定向到登录；或 API 返回 401
-    if (res.redirected) return true;
-    if (res.status === 401) return true;
-    return false;
+    return res.redirected || res.status === 401;
 }
 
-// —— 小工具 —— //
-function toUrl(input: RequestInfo | URL): string | null {
+// —— 小工具：安全拿到 URL（避免跨 realm 的 instanceof 失效）——
+function toUrl(input: RequestInfo | URL): string {
     try {
         if (typeof input === 'string') return input;
         if (input instanceof URL) return input.href;
-        if (input instanceof Request) return input.url;
+        // Duck typing：只要像 Request 就取 .url
+        if (input && typeof (input as any).url === 'string') return (input as any).url;
     } catch {}
-    return null;
+    return '';
 }
 
-function isSameOriginApi(url: string) {
+// —— 仅匹配“同源 /api/*” ——
+// 注意：内部所有字符串操作都先把 url 正常化，避免 undefined 触发 startsWith。
+function isSameOriginApi(raw: string): boolean {
     try {
+        const url = String(raw || '');
         if (!url) return false;
-        if (url.startsWith('/')) return url.startsWith('/api/');
+        if (url[0] === '/') return url.startsWith('/api/');
         const u = new URL(url, window.location.origin);
         return u.origin === window.location.origin && u.pathname.startsWith('/api/');
     } catch {
@@ -45,43 +46,41 @@ export function patchFetchOnce() {
 
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         const DEBUG = localStorage.getItem('FETCH_DEBUG') === '1';
-        const url = toUrl(input);
 
-        if (!url) {
-            // 这里就能抓到“input 是 undefined/奇怪对象”的情况
-            if (DEBUG) console.warn('[FETCH_PATCH] missing url in fetch input =', input);
-            // 交给原生 fetch 处理，避免干扰 Next 内部逻辑
+        try {
+            const url = toUrl(input);
+            if (DEBUG) console.debug('[FETCH_PATCH] input url =', url, 'init =', init);
+
+            // 非 /api/* 的请求一律放行（包括 RSC 预取）
+            if (!isSameOriginApi(url)) {
+                // @ts-ignore
+                return nativeFetch(input, init);
+            }
+
+            // 对 API 请求设定更安全的默认值，调用方传了就以调用方为准
+            const mergedInit: RequestInit = {
+                credentials: init?.credentials ?? 'include',
+                redirect: init?.redirect ?? 'follow',
+                ...init,
+            };
+
+            const res = await nativeFetch(input as any, mergedInit);
+            if (DEBUG) console.debug('[FETCH_PATCH] response:', res.status, res.redirected, res.url);
+
+            if (shouldRedirect(res)) {
+                if (DEBUG) console.debug('[FETCH_PATCH] redirect to login:', LOGIN_URL);
+                // 触发浏览器跳转
+                window.location.href = LOGIN_URL;
+                // 同时返回一个 401 Response，避免调用方 await 一个永不 resolve 的 Promise
+                return new Response(null, { status: 401 });
+            }
+
+            return res;
+        } catch (err) {
+            // 任何我们补丁内部的错误都不应该影响页面
+            console.error('[FETCH_PATCH] wrapper error -> fallback to native fetch', err, input, init);
             // @ts-ignore
             return nativeFetch(input, init);
         }
-
-        // 非同源 / 非 /api/*：完全不处理
-        if (!isSameOriginApi(url)) {
-            // @ts-ignore
-            return nativeFetch(input, init);
-        }
-
-        // 仅对 /api/* 设定默认 credentials，调用方传了就尊重调用方
-        const mergedInit: RequestInit = {
-            credentials: init?.credentials ?? 'include',
-            redirect: init?.redirect ?? 'follow',
-            ...init,
-        };
-
-        if (DEBUG) console.debug('[FETCH_PATCH] ->', url, mergedInit);
-
-        const res = await nativeFetch(input as any, mergedInit);
-
-        if (DEBUG) console.debug('[FETCH_PATCH] <-', res.status, res.redirected, res.url);
-
-        if (shouldRedirect(res)) {
-            if (DEBUG) console.debug('[FETCH_PATCH] redirect to login:', LOGIN_URL);
-            // 触发浏览器跳转
-            location.href = LOGIN_URL;
-            // 同时返回一个“可读”的响应，避免调用方再去 await 一个永不 resolve 的 Promise
-            return new Response(null, { status: 401 });
-        }
-
-        return res;
     };
 }
