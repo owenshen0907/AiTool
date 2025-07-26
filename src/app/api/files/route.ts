@@ -46,6 +46,10 @@ export const POST = withUser(async (req: NextRequest, uid: string) => {
     const moduleName = (form.get('module') as string) || 'default';
     const formId     = (form.get('form_id') as string) || null;
 
+    // 从 formData 里取 origin，并限制为 'ai' 或 'manual'
+    const originRaw = form.get('origin');
+    const origin = originRaw === 'ai' ? 'ai' : 'manual';  // 'manual' | 'ai'
+
     const files = Array.from(form.values()).filter(isFileLike);
     if (files.length === 0) {
         return new NextResponse('No file found', { status: 400 });
@@ -73,12 +77,13 @@ export const POST = withUser(async (req: NextRequest, uid: string) => {
                 file_path:     relPath,
                 file_size:     buffer.byteLength,
                 url:           `/${relPath}`,
+                origin,
             };
         })
     );
 
     // 持久化到 DB，并关联 formId
-    const created = await uploadFilesWithDb(uid, moduleName, formId, records);
+    const created = await uploadFilesWithDb(uid, moduleName, formId,origin, records);
     return NextResponse.json(created.length === 1 ? created[0] : created);
 });
 

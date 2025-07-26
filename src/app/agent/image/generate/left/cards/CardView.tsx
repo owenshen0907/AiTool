@@ -1,14 +1,129 @@
 // File: src/app/agent/image/left/cards/CardView.tsx
 'use client';
 
-import React from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { CardPromptBlock } from './CardPromptBlock';
-import { CardImagePanel } from './CardImagePanel';
+import { CardImagePanel  } from './CardImagePanel';
 import { useImageGenerate } from '../hooks/useImageGenerate';
-import type { ContentItem } from '@/lib/models/content';
+import type { ContentItem }      from '@/lib/models/content';
 import type { AgentSceneConfig } from 'src/hooks/useAgentScenes';
 
+/* ------------ 工具 & 调试 ------------ */
+function escapeRegExp(str: string) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function dbg(...args: any[]) {
+    try {
+        if (typeof window !== 'undefined' && window.localStorage.getItem('IMG_DEBUG') === '1') {
+            // eslint-disable-next-line no-console
+            console.debug('[IMG_DEBUG]', ...args);
+        }
+    } catch {}
+}
+function normalizeForCompare(s: string) {
+    return (s || '').replace(/\s+/g, '').replace(/：/g, ':').trim();
+}
+// base64 预览补头
+function isBareB64(s: string) {
+    if (!s) return false;
+    if (s.startsWith('data:')) return false;
+    if (/^https?:\/\//i.test(s)) return false;
+    if (s.startsWith('/')) return false;
+    const t = s.replace(/\s+/g, '');
+    if (t.length < 128) return false;
+    return /^[A-Za-z0-9+/_-]+={0,2}$/.test(t);
+}
+function normalizePreviewSrc(src: string) {
+    if (!src) return src;
+    if (src.startsWith('data:')) return src;
+    if (isBareB64(src)) return `data:image/png;base64,${src.replace(/\s+/g, '')}`;
+    return src;
+}
+// 展示时给 /upload/... 补域名
+function withOriginIfRelative(src: string) {
+    if (!src) return src;
+    if (typeof window !== 'undefined' && src.startsWith('/')) {
+        return `${window.location.origin}${src}`;
+    }
+    return src;
+}
+// 删除时把域名剥掉，和 body 里的相对路径对齐
+function stripOrigin(u: string) {
+    if (!u) return u;
+    try {
+        const { origin } = window.location;
+        return u.startsWith(origin) ? u.slice(origin.length) : u;
+    } catch {
+        return u;
+    }
+}
+
+/** 按 file_id 精确删行（否则回退 URL），返回 next body 和命中方式 */
+/** 行级删除：优先按 file_id 命中，其次回退按 URL 命中 */
+function removeLineByIdOrUrl(
+    md: string,
+    fileId?: string,
+    url?: string
+): { next: string; matchedBy: 'id'|'url'|'none'; debug?: any } {
+    const src = md || '';
+
+    // 工具：给 url 去掉域名，和正文中的相对路径一致
+    const stripOrigin = (u: string) => {
+        if (!u) return u;
+        try {
+            const { origin } = window.location;
+            return u.startsWith(origin) ? u.slice(origin.length) : u;
+        } catch { return u; }
+    };
+
+    // 工具：裁掉一整行（从 startOfLine 到 endOfLine）
+    const clipLineByHitIndex = (text: string, hitIdx: number) => {
+        const start = Math.max(0, text.lastIndexOf('\n', Math.max(0, hitIdx - 1)) + 1);
+        // 找“下一个换行”的索引；如果没有，则取文末
+        const nl = text.indexOf('\n', hitIdx);
+        const end = nl === -1 ? text.length : nl + 1;
+        const before = text.slice(0, start);
+        const after  = text.slice(end);
+        // 压缩 3+ 连续换行为 2 行
+        const merged = (before + after).replace(/\n{3,}/g, '\n\n');
+        return { next: merged, start, end };
+    };
+
+    // ① 先按 file_id 删
+    if (fileId) {
+        const needle = `id: ${fileId}`;
+        const hitIdx = src.indexOf(needle);
+        if (hitIdx !== -1) {
+            const { next, start, end } = clipLineByHitIndex(src, hitIdx);
+            return {
+                next,
+                matchedBy: 'id',
+                debug: { via: 'id', needle, hitIdx, start, end, removedSample: src.slice(start, end) }
+            };
+        }
+    }
+
+    // ② 回退按 URL 删（把 http://host 去掉，只保留 /upload/...）
+    if (url) {
+        const bodyUrl = stripOrigin(url);
+        const needle = `](${bodyUrl})`;
+        const hitIdx = src.indexOf(needle);
+        if (hitIdx !== -1) {
+            const { next, start, end } = clipLineByHitIndex(src, hitIdx);
+            return {
+                next,
+                matchedBy: 'url',
+                debug: { via: 'url', needle, hitIdx, start, end, removedSample: src.slice(start, end) }
+            };
+        }
+    }
+
+    return { next: src, matchedBy: 'none', debug: { reason: 'no-hit', len: src.length } };
+}
+
+/* ------------ 组件 ------------ */
 interface CardViewProps {
+    feature: string;
     data: {
         id: string;
         title?: string;
@@ -17,57 +132,220 @@ interface CardViewProps {
         text?: string | string[];
     };
     selectedItem: ContentItem;
-    onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => void;
-    /** 从上层 ContentLeft 传入的 img_generate 场景配置 */
+
+    /** 左侧最新正文（用于解析历史图片） */
+    bodyText: string;
+
+    onChangeBody: (body: string) => void;
+    onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
     imgGenerateScene?: AgentSceneConfig;
+
+    onStart?: () => void;
+    onFinish?: () => void;
+    onPreviewsChange?: (cardId: string, title: string, previews: string[]) => void;
 }
 
 export default function CardView({
+                                     feature,
                                      data,
                                      selectedItem,
+                                     bodyText,
+                                     onChangeBody,
                                      onUpdateItem,
                                      imgGenerateScene,
+                                     onStart,
+                                     onFinish,
+                                     onPreviewsChange,
                                  }: CardViewProps) {
-    const { title, description, prompt, text } = data;
+    const { id: cardId, title = '（无标题）', description, prompt, text } = data;
 
-    // 把 prompt 和 imgGenerateScene 一起传给 hook
-    const { images, callId, loading, error, create, refine } = useImageGenerate(
-        prompt,
-        imgGenerateScene
+    // 生成 → 预览
+    const { previews, loading, error, generate, refine } = useImageGenerate(prompt, imgGenerateScene);
+
+    /** 解析与本卡相关的“已保存图片”：拿到 (url, fileId) 对 */
+    const persistedPairs = useMemo(() => {
+        const md = bodyText || '';
+        // 抓所有 markdown 图片（带不带 id 注释都行）
+        const anyImgRe = /!\[([^\]]*)\]\(([^)]+)\)(?:\s*<!--\s*id:\s*([a-f0-9-]+)\s*-->)?/gi;
+        const hits: Array<{ alt: string; url: string; id?: string }> = [];
+        let m: RegExpExecArray | null;
+        while ((m = anyImgRe.exec(md)) !== null) {
+            hits.push({ alt: m[1] || '', url: m[2], id: m[3] });
+        }
+        const normTitle = normalizeForCompare(title);
+        const pairs = hits.filter(h => normalizeForCompare(h.alt).startsWith(`${normTitle}-`));
+        dbg('CardView.parse.pairs', { cardId, title, all: hits.length, matched: pairs.length, sample: pairs.slice(0,3) });
+        return pairs; // [{url, id}]
+    }, [bodyText, title, cardId]);
+
+    /** 展示：预览优先，随后拼接持久化的；同时构造 fileId 数组（与展示顺序对齐） */
+    const previewsForDisplay  = useMemo(() => previews.map(normalizePreviewSrc), [previews]);
+
+    const persistedForDisplay = useMemo(
+        () => persistedPairs.map(p => withOriginIfRelative(p.url)),
+        [persistedPairs]
+    );
+    const persistedFileIds = useMemo(
+        () => persistedPairs.map(p => p.id),
+        [persistedPairs]
     );
 
-    // 下载图片（base64 补全 data URI）
+    const displayImages = useMemo(() => {
+        if (previewsForDisplay.length === 0) return persistedForDisplay;
+        return [...previewsForDisplay, ...persistedForDisplay];
+    }, [previewsForDisplay, persistedForDisplay]);
+
+    const displayFileIds = useMemo(() => {
+        if (previewsForDisplay.length === 0) return persistedFileIds;
+        return [...new Array(previewsForDisplay.length).fill(undefined), ...persistedFileIds];
+    }, [previewsForDisplay, persistedFileIds]);
+
+    useEffect(() => {
+        dbg('CardView.gallery', {
+            cardId, title,
+            previewsLen: previewsForDisplay.length,
+            persistedLen: persistedForDisplay.length,
+            showLen: displayImages.length,
+            sample: displayImages.slice(0,3)
+        });
+    }, [cardId, title, previewsForDisplay, persistedForDisplay, displayImages]);
+
+    // 上报预览（用于“保存主体内容”）
+    useEffect(() => {
+        onPreviewsChange?.(cardId, title, previews);
+    }, [cardId, title, previews, onPreviewsChange]);
+
+    /* ---- 交互 ---- */
     const handleDownload = (idx: number) => {
-        if (!images[idx]) return;
+        const url = displayImages[idx];
+        if (!url) return;
         const a = document.createElement('a');
+        a.href = url;
         a.download = `${title || 'image'}-${idx + 1}.png`;
-        a.href = `data:image/png;base64,${images[idx]}`;
         a.click();
     };
 
-    // 插入到正文末尾
-    const insertIntoBody = (idx: number) => {
-        if (!selectedItem || !images[idx]) return;
-        const md = `\n\n![${title || 'image'}-${idx + 1}](data:image/png;base64,${images[idx]})\n`;
-        onUpdateItem(selectedItem, { body: (selectedItem.body || '') + md });
+    const handleDelete = async (idx: number) => {
+        const fileId = displayFileIds[idx];
+        const url    = displayImages[idx];
+        const group  = `[IMG_DEBUG] delete ${title} @${idx}`;
+
+        // 折叠日志组，便于一眼看全流程
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(group);
+        try {
+            // 0) 参数 & 上下文
+            // eslint-disable-next-line no-console
+            console.debug('[IMG_DEBUG] delete.params', { cardId, title, idx, fileId, url });
+
+            if (!fileId && !url) {
+                // eslint-disable-next-line no-console
+                console.warn('[IMG_DEBUG] delete.cancel: empty fileId & url');
+                return;
+            }
+            if (!confirm('确定删除这张图片吗？')) {
+                // eslint-disable-next-line no-console
+                console.debug('[IMG_DEBUG] delete.userCancel');
+                return;
+            }
+
+            const beforeBody = bodyText || '';
+            const { next, matchedBy, debug } = removeLineByIdOrUrl(beforeBody, fileId, url);
+            console.debug('[IMG_DEBUG] delete.removeLine', {
+                matchedBy,
+                via: debug?.via,
+                needle: debug?.needle,
+                hitIdx: debug?.hitIdx,
+                start: debug?.start,
+                end: debug?.end,
+                removedSample: debug?.removedSample,
+                beforeLen: beforeBody.length,
+                afterLen: next.length
+            });
+
+            // 判定一下是否真的删到了东西
+            if (next.length === beforeBody.length) {
+                // eslint-disable-next-line no-console
+                console.warn('[IMG_DEBUG] delete.noChange: body length unchanged (regex not matched)');
+            }
+
+            // 2) 乐观更新（先把 UI 里的这行干掉，避免裂图）
+            onChangeBody(next);
+            // eslint-disable-next-line no-console
+            console.debug('[IMG_DEBUG] delete.optimisticApplied');
+
+            // 3) 有 fileId 就删服务器文件；没有 id（旧数据）就跳过
+            if (fileId) {
+                const res = await fetch('/api/files', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_id: fileId }),
+                });
+                const text = await res.text().catch(() => '');
+                // eslint-disable-next-line no-console
+                console.debug('[IMG_DEBUG] delete.api.files', { ok: res.ok, status: res.status, body: text });
+                if (!res.ok) throw new Error(`删除文件失败（status ${res.status}）`);
+            } else {
+                // eslint-disable-next-line no-console
+                console.debug('[IMG_DEBUG] delete.api.files.skip (no fileId)');
+            }
+
+            // 4) 持久化新的 body
+            // eslint-disable-next-line no-console
+            console.debug('[IMG_DEBUG] delete.onUpdateItem.call');
+            await onUpdateItem(selectedItem, { body: next });
+            // eslint-disable-next-line no-console
+            console.debug('[IMG_DEBUG] delete.onUpdateItem.done');
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('[IMG_DEBUG] delete.error', e);
+            alert((e as any)?.message || '删除失败');
+            // 理论上这里应该回滚，但 onChangeBody 的回滚需要上层持有 beforeBody；
+            // 如果你要回滚，请把 beforeBody 通过参数传回调用方，这里仅记录日志。
+        } finally {
+            // eslint-disable-next-line no-console
+            console.groupEnd();
+        }
     };
+
+    const handleGenerate = async () => {
+        onStart?.();
+        try { await generate(); } finally { onFinish?.(); }
+    };
+    const handleRefine = async () => {
+        const refineText = window.prompt('输入细化指令（例如：更写实 / 柔和光线）', '');
+        if (!refineText) return;
+        onStart?.();
+        try { await refine(refineText); } finally { onFinish?.(); }
+    };
+
+    // 临时插入（预览或 URL）；仍建议用“保存主体内容”统一上传/落库
+    const makeMd = (url: string, idx: number) => `![${title}-${idx + 1}](${url})`;
 
     return (
         <div className="border rounded-lg bg-white shadow-sm flex p-4">
             <div className="flex-1 pr-4 space-y-2">
-                <h3 className="font-semibold text-sm">{title || '（无标题）'}</h3>
+                <h3 className="font-semibold text-sm">{title}</h3>
                 <CardPromptBlock prompt={prompt} description={description} text={text} />
             </div>
+
             <CardImagePanel
-                images={images}
+                images={displayImages}
+                fileIds={displayFileIds}        // ✅ 与 images 对齐的 fileId（预览 undefined）
                 loading={loading}
-                callId={callId}
-                onGenerate={create}
-                onRefine={refine}
+                callId={null}
+                onGenerate={handleGenerate}
+                onRefine={handleRefine}
                 onDownload={handleDownload}
-                onInsert={insertIntoBody}
+                onInsert={(i) => {
+                    const md = makeMd(displayImages[i], i);
+                    const updated = (bodyText || '') + '\n\n' + md;
+                    dbg('CardView.onInsert', { cardId, title, mdLine: md });
+                    onChangeBody(updated);
+                }}
+                onDelete={handleDelete}         // ✅ 新增：调用上面的删除逻辑
                 canGenerate={!!prompt}
-                canRefine={!!callId}
+                canRefine={previews.length > 0 && !loading}
                 title={title}
                 error={error}
             />

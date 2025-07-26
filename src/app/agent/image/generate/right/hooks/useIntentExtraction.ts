@@ -3,9 +3,9 @@
 
 import { useState } from 'react';
 import { urlToBase64 } from '@/lib/utils/imageToBase64';
-import type { AgentSceneConfig } from '../../../../../../hooks/useAgentScenes';
+import type { AgentSceneConfig } from 'src/hooks/useAgentScenes';
 import type { Template } from '../TemplateSelectorModal';
-import type { ImageEntry } from '../../types';
+import type { ImageEntry } from '@/lib/models/file';
 
 export interface IntentItem {
     id: string;

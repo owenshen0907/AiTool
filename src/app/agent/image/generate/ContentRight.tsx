@@ -4,10 +4,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import type { Template      } from './right/TemplateSelectorModal';
-import type { ImageEntry    } from './types';
+import type { ImageEntry } from '@/lib/models/file';
 
 import GenerateSection      from './right/GenerateSection';
-import ImageUploader        from './right/ImageUploader';
+import ImageUploader        from '@/lib/utils/ImageUploader';
 import CacheBar             from './right/CacheBar';
 import ConfirmOverrideModal from './right/ConfirmOverrideModal';
 
@@ -104,21 +104,32 @@ export default function ContentRight({
 
     /* ================================================================ */
     /* 1. 加载历史图片（保持不变） */
+    /* 1. 加载历史图片（带 origin） */
     useEffect(() => {
         if (!formId) { setImages([]); return; }
         (async () => {
             try {
                 const res = await fetch(`/api/files?form_id=${formId}`);
                 if (!res.ok) throw new Error('接口错误');
-                const files: Array<{ file_id: string; file_path: string; created_at: string }> = await res.json();
-                files.sort((a,b)=>+new Date(a.created_at)-+new Date(b.created_at));
-                setImages(files.map(f=>({
-                    id:f.file_id, url:`${location.origin}/${f.file_path}`,
-                    status:'success' as const, file_id:f.file_id
+                const files: Array<{
+                    file_id: string;
+                    file_path: string;
+                    created_at: string;
+                    origin?: 'manual' | 'ai';
+                }> = await res.json();
+                files.sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+                setImages(files.map(f => ({
+                    id:       f.file_id,
+                    url:      `${location.origin}/${f.file_path}`,
+                    status:   'success' as const,
+                    file_id:  f.file_id,
+                    origin:   f.origin ?? 'manual',
                 })));
-            } catch (e) { console.error('加载历史图片失败:', e); }
+            } catch (e) {
+                console.error('加载历史图片失败:', e);
+            }
         })();
-    },[formId]);
+    }, [formId]);
 
     /* 2. 本地 cache 加载 */
     useEffect(()=>{

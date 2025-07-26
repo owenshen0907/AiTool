@@ -9,6 +9,16 @@ export interface FileUpload {
     file_path: string;
     file_size: number;
     form_id: string;
+    origin: 'manual' | 'ai';
     created_at: string;
     updated_at: string;
 }
+
+export type ImageEntry = {
+    id: string;
+    file?: File;
+    url: string;
+    status: 'uploading' | 'success' | 'error';
+    file_id?: string;
+    origin?:   'manual' | 'ai';
+};

@@ -1,3 +1,4 @@
+// File: src/app/agent/image/left/hooks/useImageCards.ts
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 

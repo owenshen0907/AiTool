@@ -31,7 +31,7 @@ export async function generateImages(opts: GenerateImagesOptions): Promise<strin
     const body: any = {
         prompt,
         n,
-        // response_format,
+        response_format,
         model: model ?? undefined,
         size,
         // background

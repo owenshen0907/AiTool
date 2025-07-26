@@ -4,9 +4,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import GenerateSection from './right/GenerateSection';
-import ImageUploader from './right/ImageUploader';
+import ImageUploader from '@/lib/utils/ImageUploader';
 import OptimizePreviewModal from './right/OptimizePreviewModal';
-import type { ImageEntry } from './types';
+import type { ImageEntry } from '@/lib/models/file';
 import type { Template } from './right/TemplateSelectorModal';
 import { parseSSEStream } from '@/lib/utils/sse';
 import { urlToBase64 } from '@/lib/utils/imageToBase64';
@@ -53,11 +53,9 @@ export default function JapaneseContentRight({
     const [showPreview, setShowPreview] = useState(false);
     const [suggestionTitle, setSuggestionTitle] = useState('');
     // 加载数据库已上传图片，按照时间排序，时间早的排在前面
+    /* 1. 加载历史图片（带 origin） */
     useEffect(() => {
-        if (!formId) {
-            setImages([]);
-            return;
-        }
+        if (!formId) { setImages([]); return; }
         (async () => {
             try {
                 const res = await fetch(`/api/files?form_id=${formId}`);
@@ -66,24 +64,18 @@ export default function JapaneseContentRight({
                     file_id: string;
                     file_path: string;
                     created_at: string;
+                    origin?: 'manual' | 'ai';
                 }> = await res.json();
-
-                // 1. 按 created_at 升序排序
-                files.sort((a, b) =>
-                    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-                );
-
-                // 2. 再映射成 ImageEntry
-                setImages(
-                    files.map(f => ({
-                        id: f.file_id,
-                        url: `${window.location.origin}/${f.file_path}`,
-                        status: 'success' as const,
-                        file_id: f.file_id,
-                    }))
-                );
+                files.sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+                setImages(files.map(f => ({
+                    id:       f.file_id,
+                    url:      `${location.origin}/${f.file_path}`,
+                    status:   'success' as const,
+                    file_id:  f.file_id,
+                    origin:   f.origin ?? 'manual',
+                })));
             } catch (e) {
-                console.error('加载历史图片失败：', e);
+                console.error('加载历史图片失败:', e);
             }
         })();
     }, [formId]);

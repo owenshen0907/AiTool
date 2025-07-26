@@ -1,32 +1,23 @@
 // File: src/app/agent/image/ContentPanel.tsx
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import DirectoryInfoView from './DirectoryInfoView';
 import ContentLeft from './ContentLeft';
 import ContentRight from './ContentRight';
-import { useAgentScenes, type AgentSceneConfig } from 'src/hooks/useAgentScenes';
+import { useAgentScenes } from 'src/hooks/useAgentScenes';
 
-interface Props {
+export default function ContentPanel(props: {
     feature: string;
     visibleItems: ContentItem[];
     selectedItem: ContentItem | null;
     onSelectItem: (id: string) => void;
     onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
-}
-
-export default function ContentPanel({
-                                         feature,
-                                         visibleItems,
-                                         selectedItem,
-                                         onSelectItem,
-                                         onUpdateItem,
-                                     }: Props) {
+}) {
+    const { feature, visibleItems, selectedItem, onSelectItem, onUpdateItem } = props;
     const [body, setBody] = useState<string>(selectedItem?.body ?? '');
-    const [promptGenerating, setPromptGenerating] = useState(false);
+    const [promptGenerating, setPromptGenerating] = useState(false); // ← 新增
 
-    // —— 在最顶层取 scenes & getScene ——
     const { scenes, loading: loadingConfig, getScene } = useAgentScenes(feature);
 
     useEffect(() => {
@@ -59,7 +50,7 @@ export default function ContentPanel({
                         body={body}
                         onChangeBody={setBody}
                         onUpdateItem={onUpdateItem}
-                        promptGenerating={promptGenerating}
+                        promptGenerating={promptGenerating}        // ← 透传
                     />
                     <ContentRight
                         feature={feature}
@@ -68,7 +59,7 @@ export default function ContentPanel({
                         existingBody={body}
                         onChangeBody={setBody}
                         onUpdateItem={onUpdateItem}
-                        onPromptGeneratingChange={setPromptGenerating}
+                        onPromptGeneratingChange={setPromptGenerating} // ← 让右侧控制加载状态
                     />
                 </>
             ) : (

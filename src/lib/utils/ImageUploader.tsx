@@ -1,8 +1,8 @@
-// File: src/app/agent/image/right/ImageUploader.tsx
+// File: src/app/lib/utils/ImageUploader.tsx
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import type { ImageEntry } from '../types';
+import type { ImageEntry } from '@/lib/models/file';
 
 interface Props {
     feature: string;
@@ -50,7 +50,7 @@ export default function ImageUploader({
         const newEntries = accepted.map(file => {
             const preview = URL.createObjectURL(file);
             const id = 'temp-' + Math.random().toString(36).slice(2, 9);
-            return { id, file, url: preview, status: 'uploading' } as const;
+            return { id, file, url: preview, status: 'uploading',origin: 'manual' } as const;
         });
         setImages(prev => [...prev, ...newEntries]);
         newEntries.forEach(uploadImage);
@@ -181,7 +181,8 @@ export default function ImageUploader({
             ) : (
                 <div className="relative">
                     <div className="grid grid-cols-3 gap-2">
-                        {images.map(entry => (
+                        {/*{images.map(entry => (*/}
+                        {images.filter(e => e.origin === 'manual').map(entry => (
                             <div key={entry.id} className="relative">
                                 <img
                                     src={entry.url}

@@ -10,13 +10,14 @@ export const createFileUpload = async (
     original_name: string,
     file_path: string,
     file_size: number,
-    form_id: string | null
+    form_id: string | null,
+    origin: 'manual' | 'ai'
 ): Promise<FileUpload> => {
     const text = `
     INSERT INTO file_uploads(
       user_id, module_name, file_category, mime_type,
-      original_name, file_path, file_size, form_id
-    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+      original_name, file_path, file_size, form_id,origin
+    ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
     RETURNING *
   `;
     const values = [
@@ -27,7 +28,8 @@ export const createFileUpload = async (
         original_name,
         file_path,
         file_size,
-        form_id
+        form_id,
+        origin,
     ];
     const { rows } = await pool.query<FileUpload>(text, values);
     return rows[0];

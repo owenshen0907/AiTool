@@ -4,9 +4,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import GenerateSection from './right/GenerateSection';
-import ImageUploader from './right/ImageUploader';
+import ImageUploader from '@/lib/utils/ImageUploader';
 import OptimizePreviewModal from './right/OptimizePreviewModal';
-import type { ImageEntry } from './types';
+import type { ImageEntry } from '@/lib/models/file';
 import type { Template } from './right/TemplateSelectorModal';
 import { parseSSEStream } from '@/lib/utils/sse';
 import { urlToBase64 } from '@/lib/utils/imageToBase64';
