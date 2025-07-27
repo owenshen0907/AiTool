@@ -187,6 +187,14 @@ CASDOOR_CLIENT_SECRET=your_client_secret
 ```
 
 ---
+### 开启日志
+
+在浏览器的开发者工具中执行以下代码，可以开启日志：
+
+```javascript
+localStorage.setItem('FETCH_DEBUG', '1');
+location.reload();
+```
 
 ## 许可证
 

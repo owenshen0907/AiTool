@@ -3,20 +3,28 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import type { ContentItem } from '@/lib/models/content';
-import type { Template      } from './right/TemplateSelectorModal';
+import type { Template } from './right/TemplateSelectorModal';
 import type { ImageEntry } from '@/lib/models/file';
 
-import GenerateSection      from './right/GenerateSection';
-import ImageUploader        from '@/lib/utils/ImageUploader';
-import CacheBar             from './right/CacheBar';
+import GenerateSection from './right/GenerateSection';
+import ImageUploader from '@/lib/utils/ImageUploader';
+import CacheBar from './right/CacheBar';
 import ConfirmOverrideModal from './right/ConfirmOverrideModal';
+import ConfirmExtractModal from './right/ConfirmExtractModal';
 
-import { useAgentScenes }     from 'src/hooks/useAgentScenes';
-import { useIntentExtraction, type IntentItem  } from './right/hooks/useIntentExtraction';
-import { extractIntentsBlock, upsertIntentsBlock } from './utils/mdIntents';
+import { useAgentScenes } from 'src/hooks/useAgentScenes';
+import { useIntentExtraction } from './right/hooks/useIntentExtraction';
+import type { IntentPromptOutput } from './types';
 
-const CACHE_KEY        = 'optimize_previews';
-const MAX_CACHE        = 10;
+// ✅ 新增：统一的正文保存工具（只更新相应区块、自动补齐围栏、合并 JSON）
+import {
+    saveImagePromptBlock,
+    saveRequestAndIntentsBlocks,
+    parseImagePromptBlock, // 仅用于解析 existingBody → state
+} from './utils/saveBodyBlocks';
+
+const CACHE_KEY = 'optimize_previews';
+const MAX_CACHE = 10;
 const SCENE_PROMPT_GEN = 'img_prompt_generate';
 
 /* ---------- 本地缓存项 ---------- */
@@ -29,29 +37,39 @@ interface CacheItem {
 }
 
 interface Props {
-    feature:                   string;
-    formId:                    string;
-    selectedItem:              ContentItem | null;
-    existingBody:              string;
-    onChangeBody:              (body: string) => void;
-    onUpdateItem:              (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>; // 透传给 CardView
+    feature: string;
+    formId: string;
+    selectedItem: ContentItem | null;
+    existingBody: string;
+    onChangeBody: (body: string) => void;
+    onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
     onPromptGeneratingChange?: (f: boolean) => void;
 }
 
-function parseIntentsBlock(markdown: string): IntentItem[] | null {
+/** 从 markdown 中摘出原始请求文本（INTENT REQUEST） */
+function parseRequestBlock(markdown: string): string | null {
     const m = markdown.match(
-        /<!--\s*INTENTS START\s*-->\s*```json\s*([\s\S]*?)\s*```[\s\S]*?<!--\s*INTENTS END\s*-->/,
+        /<!--\s*INTENT REQUEST START\s*-->\s*```text\s*([\s\S]*?)\s*```[\s\S]*?<!--\s*INTENT REQUEST END\s*-->/i
+    );
+    return m ? m[1].trim() : null;
+}
+
+/** 解析 INTENTS（数组） */
+function parseIntentsBlock(markdown: string): IntentPromptOutput['intents'] | null {
+    const m = markdown.match(
+        /<!--\s*INTENTS START\s*-->\s*```json\s*([\s\S]*?)\s*```[\s\S]*?<!--\s*INTENTS END\s*-->/i
     );
     if (!m) return null;
     try {
         const arr: any[] = JSON.parse(m[1].trim());
-        return arr.map((i) => ({
-            id: i.id || i.category_subtype || 'UNKNOWN',
-            title: i.title || i.id || '未命名意图',
-            jlpt_level: i.jlpt_level,
-            category_level1: i.category_level1,
-            category_subtype: i.category_subtype,
-            core_explanation: i.core_explanation,
+        return arr.map((i: any) => ({
+            id: i.id,
+            title: i.title,
+            level: i.level,
+            description: i.description,
+            category: i.category,
+            subcategory: i.subcategory,
+            confidence: i.confidence,
         }));
     } catch {
         console.warn('INTENTS JSON 解析失败');
@@ -67,13 +85,18 @@ export default function ContentRight({
                                          existingBody,
                                          onChangeBody,
                                          onUpdateItem,
-                                         onPromptGeneratingChange
+                                         onPromptGeneratingChange,
                                      }: Props) {
     /* ---------- 基础 state ---------- */
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-    const [noteRequest, setNoteRequest]           = useState('');
-    const [forceBase64, setForceBase64]           = useState(false);
-    const [images, setImages]                     = useState<ImageEntry[]>([]);
+    const [noteRequest, setNoteRequest] = useState('');
+    const [forceBase64, setForceBase64] = useState(false);
+    const [images, setImages] = useState<ImageEntry[]>([]);
+    const [imagePromptJson, setImagePromptJson] = useState<any>(null);
+
+    /* 二次确认—意图抽取 */
+    const [showExtractConfirmModal, setShowExtractConfirmModal] = useState(false);
+    const [extractExtraNote, setExtractExtraNote] = useState('');
 
     /* ---------- 意图抽取 ---------- */
     const {
@@ -82,19 +105,19 @@ export default function ContentRight({
         setIntents,
         selectedIntentId,
         setSelectedIntentId,
-        extract
+        extract,
     } = useIntentExtraction();
 
     /* ---------- 本地生成记录 ---------- */
     const [generatedIntentMap, setGeneratedIntentMap] = useState<
         Record<string, { lastContent: string; updatedAt: string; count: number }>
     >({});
-    const [generateLoading,      setGenerateLoading]      = useState(false);
+    const [generateLoading, setGenerateLoading] = useState(false);
     const [lastGeneratedIntentId, setLastGeneratedIntentId] = useState<string | null>(null);
 
     /* ---------- 覆盖确认 ---------- */
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [extraNote,        setExtraNote]        = useState('');
+    const [extraNote, setExtraNote] = useState('');
 
     /* ---------- 浏览器缓存 ---------- */
     const [cacheList, setCacheList] = useState<CacheItem[]>([]);
@@ -103,10 +126,12 @@ export default function ContentRight({
     const { scenes, loading: loadingConfig, getScene } = useAgentScenes(feature);
 
     /* ================================================================ */
-    /* 1. 加载历史图片（保持不变） */
     /* 1. 加载历史图片（带 origin） */
     useEffect(() => {
-        if (!formId) { setImages([]); return; }
+        if (!formId) {
+            setImages([]);
+            return;
+        }
         (async () => {
             try {
                 const res = await fetch(`/api/files?form_id=${formId}`);
@@ -118,96 +143,110 @@ export default function ContentRight({
                     origin?: 'manual' | 'ai';
                 }> = await res.json();
                 files.sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
-                setImages(files.map(f => ({
-                    id:       f.file_id,
-                    url:      `${location.origin}/${f.file_path}`,
-                    status:   'success' as const,
-                    file_id:  f.file_id,
-                    origin:   f.origin ?? 'manual',
-                })));
+                setImages(
+                    files.map((f) => ({
+                        id: f.file_id,
+                        url: `${location.origin}/${f.file_path}`,
+                        status: 'success' as const,
+                        file_id: f.file_id,
+                        origin: f.origin ?? 'manual',
+                    }))
+                );
             } catch (e) {
                 console.error('加载历史图片失败:', e);
             }
         })();
     }, [formId]);
 
-    /* 2. 本地 cache 加载 */
-    useEffect(()=>{
-        const raw = localStorage.getItem(CACHE_KEY);
-        if (!raw) return;
-        try {
-            const list:CacheItem[] = JSON.parse(raw);
-            setCacheList(list.map(i=>({...i,title:i.title||i.suggestion})));
-        } catch {/* empty */}
-    },[]);
-    // ② 回显 useEffect
+    /* 2. 切换文档时重置意图选择 */
     useEffect(() => {
-        if (intents.length > 0) return;           // 已经有了 → 不覆盖
-        const parsed = parseIntentsBlock(existingBody);
-        if (parsed?.length) {
-            setIntents(parsed);
-            setSelectedIntentId(parsed[0].id);
+        setIntents([]);
+        setSelectedIntentId(null);
+    }, [selectedItem?.id]);
+
+    /* 3. 从 existingBody 中初始化：INTENTS、REQUEST、IMAGE_PROMPT */
+    useEffect(() => {
+        const parsedIntents = parseIntentsBlock(existingBody);
+        if (parsedIntents && parsedIntents.length) {
+            setIntents(parsedIntents);
+            setSelectedIntentId(parsedIntents[0].id);
+        }
+        const parsedReq = parseRequestBlock(existingBody);
+        if (parsedReq) setNoteRequest(parsedReq);
+
+        const parsedImg = parseImagePromptBlock(existingBody); // util 内部已匹配 json 围栏
+        if (parsedImg) {
+            try {
+                setImagePromptJson(JSON.parse(parsedImg));
+            } catch {
+                console.warn('IMAGE_PROMPT JSON 解析失败');
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [existingBody, selectedItem?.id]);
+    }, [existingBody, setIntents, setSelectedIntentId]);
 
-    const saveCache = (list:CacheItem[])=>{
+    /* ---------- 本地缓存工具 ---------- */
+    const saveCache = (list: CacheItem[]) => {
         localStorage.setItem(CACHE_KEY, JSON.stringify(list));
         setCacheList(list);
     };
 
-    const upsertCache = (title:string, content:string)=>{
+    const upsertCache = (title: string, content: string) => {
         if (!selectedItem) return;
         const key = selectedItem.id;
-        const idx = cacheList.findIndex(i=>i.key===key && i.suggestion===noteRequest);
-        if (idx>=0){
-            const next=[...cacheList];
-            next[idx]={...next[idx],title,content};
+        const idx = cacheList.findIndex((i) => i.key === key && i.suggestion === noteRequest);
+        if (idx >= 0) {
+            const next = [...cacheList];
+            next[idx] = { ...next[idx], title, content };
             saveCache(next);
         } else {
-            const item:CacheItem={id:Date.now().toString(),key,title,suggestion:noteRequest,content};
-            const same  = cacheList.filter(i=>i.key===key);
-            const other = cacheList.filter(i=>i.key!==key);
-            saveCache([...other,item,...same].slice(0,MAX_CACHE));
+            const item: CacheItem = {
+                id: Date.now().toString(),
+                key,
+                title,
+                suggestion: noteRequest,
+                content,
+            };
+            const same = cacheList.filter((i) => i.key === key);
+            const other = cacheList.filter((i) => i.key !== key);
+            saveCache([...other, item, ...same].slice(0, MAX_CACHE));
         }
     };
 
     const filteredCache = useMemo(
-        ()=> selectedItem ? cacheList.filter(i=>i.key===selectedItem.id) : [],
+        () => (selectedItem ? cacheList.filter((i) => i.key === selectedItem.id) : []),
         [cacheList, selectedItem]
     );
 
     const hasContent = Boolean(existingBody.trim());
 
     /* ================================================================ */
-    /** —— 只提取意图，不保存 —— */
-    /** 抽取意图 —— 提取完后直接写入 body 并保存 */
-    const handleExtractIntents = async () => {
+    /** 抽取意图 —— 提取完后替换原有的请求 & 意图区块并保存 */
+    const handleExtractIntents = async (extra?: string) => {
+        const fullRequest = extra ? `${noteRequest}\n\n【补充说明】\n${extra.trim()}` : noteRequest;
+
         try {
-            const intentItems: IntentItem[] = await extract({
-                template: selectedTemplate,
-                noteRequest,
+            const intentItems = await extract({
+                template: selectedTemplate!,
+                noteRequest: fullRequest,
                 images,
                 scenes,
-                forceBase64
+                forceBase64,
             });
-
             if (!selectedItem || intentItems.length === 0) return;
 
-            // ① 拼 Markdown 区块
-            const intentBlock =
-                '\n\n<!-- INTENTS START -->\n```json\n' +
-                JSON.stringify(intentItems, null, 2) +
-                '\n```\n<!-- INTENTS END -->\n';
+            await saveRequestAndIntentsBlocks(
+                {
+                    selectedItem,
+                    existingBody,
+                    onChangeBody,
+                    onUpdateItem,
+                },
+                fullRequest,
+                intentItems
+            );
 
-            // ② 更新正文
-            // const newBody = existingBody + intentBlock;
-            const newBody = upsertIntentsBlock(existingBody, intentBlock);
-            onChangeBody(newBody);
-
-            // ③ 立即持久化
-            await onUpdateItem(selectedItem, { body: newBody });
-            console.debug('✅ 意图已保存到 DB');
+            console.debug('✅ 原始请求 + 意图区块已替换并保存到 DB');
         } catch (err: any) {
             console.error(err);
             alert(err.message || '意图抽取失败');
@@ -216,94 +255,151 @@ export default function ContentRight({
 
     /* -- 生成插画提示（左侧自动保存） -- */
     const requestGenerate = () => {
-        if (!selectedIntentId) { alert('请选择意图'); return; }
+        if (!selectedIntentId) {
+            alert('请选择意图');
+            return;
+        }
         if (hasContent && lastGeneratedIntentId === selectedIntentId) {
-            setExtraNote(''); setShowConfirmModal(true); return;
+            setExtraNote('');
+            setShowConfirmModal(true);
+            return;
         }
         handleGenerate();
     };
 
-    /** helper：调用 API → 返回完整内容 */
-    const callModel = async (prompt: any[], apiUrl:string, apiKey:string, modelName:string) => {
-        const res = await fetch(`${apiUrl}/chat/completions`,{
-            method:'POST',
-            headers:{'Content-Type':'application/json', Authorization:`Bearer ${apiKey}`},
-            body:JSON.stringify({ model:modelName, stream:true, messages:prompt })
+    /** helper：调用 API → 返回完整内容（SSE/流式拼接） */
+    const callModel = async (prompt: any[], apiUrl: string, apiKey: string, modelName: string) => {
+        const res = await fetch(`${apiUrl}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({ model: modelName, stream: true, messages: prompt }),
         });
         if (!res.ok || !res.body) throw new Error('生成接口调用失败');
-        const reader = res.body.getReader(); const dec = new TextDecoder();
-        let buf=''; let full='';
-        while(true){
-            const {value,done}=await reader.read(); if(done) break;
-            buf += dec.decode(value,{stream:true});
-            const lines = buf.split('\n'); buf = lines.pop()!;
-            for(const l of lines){
-                if(!l.startsWith('data:')) continue;
-                const js = l.replace(/^data:\s*/,'').trim();
-                if(js==='[DONE]'){ reader.cancel(); break; }
-                let p:any; try{ p=JSON.parse(js);}catch{continue;}
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        let full = '';
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop()!;
+            for (const l of lines) {
+                if (!l.startsWith('data:')) continue;
+                const js = l.replace(/^data:\s*/, '').trim();
+                if (js === '[DONE]') {
+                    reader.cancel();
+                    break;
+                }
+                let p: any;
+                try {
+                    p = JSON.parse(js);
+                } catch {
+                    continue;
+                }
                 const delta = p.choices?.[0]?.delta?.content ?? p.choices?.[0]?.message?.content;
-                if(delta) full += delta;
+                if (delta) full += delta;
             }
         }
         return full.trim();
     };
 
-    const handleGenerate = async (extra?:string) => {
+    /** 二次确认抽取意图 的入口 */
+    const requestExtract = () => {
+        if (intents.length > 0) {
+            setShowExtractConfirmModal(true);
+        } else {
+            handleExtractIntents(); // 直接第一次抽取
+        }
+    };
+
+    const handleGenerate = async (extra?: string) => {
         onPromptGeneratingChange?.(true);
 
         const scene = getScene(SCENE_PROMPT_GEN);
         if (!scene || !selectedTemplate?.prompts?.image_prompt || !selectedIntentId) {
-            alert('生成前置条件缺失'); onPromptGeneratingChange?.(false); return;
+            alert('生成前置条件缺失');
+            onPromptGeneratingChange?.(false);
+            return;
         }
-        const chosen = intents.find(i=>i.id===selectedIntentId);
-        if (!chosen){ alert('意图不存在'); onPromptGeneratingChange?.(false); return; }
+        const chosen = intents.find((i) => i.id === selectedIntentId);
+        if (!chosen) {
+            alert('意图不存在');
+            onPromptGeneratingChange?.(false);
+            return;
+        }
 
         setGenerateLoading(true);
-        try{
+        try {
             const { apiUrl, apiKey } = scene.supplier;
-            const modelName          = scene.model.name;
-            const prev               = generatedIntentMap[chosen.id];
+            const modelName = scene.model.name;
+            const prev = generatedIntentMap[chosen.id];
 
             const userTxt =
-                `【选中意图】\nID:${chosen.id}\n标题:${chosen.title}\n`+
-                (chosen.jlpt_level? `JLPT:${chosen.jlpt_level}\n`:'') +
-                (chosen.core_explanation?`说明:${chosen.core_explanation}\n`:'') +
-                (extra?.trim()?`\n【补充说明】\n${extra.trim()}`:'');
+                `【选中意图】\nID:${chosen.id}\n标题:${chosen.title}\n` +
+                (chosen.level ? `JLPT:${chosen.level}\n` : '') +
+                (chosen.description ? `说明:${chosen.description}\n` : '') +
+                (extra?.trim() ? `\n【补充说明】\n${extra.trim()}` : '');
 
-            const prompt:any[]=[
-                { role:'system', content:selectedTemplate.prompts.image_prompt },
-                ...(prev?.lastContent ? [{role:'assistant',content:prev.lastContent}] : []),
-                { role:'user', content:[{type:'text',text:userTxt}] }
+            const prompt: any[] = [
+                { role: 'system', content: selectedTemplate.prompts.image_prompt },
+                ...(prev?.lastContent ? [{ role: 'assistant', content: prev.lastContent }] : []),
+                { role: 'user', content: [{ type: 'text', text: userTxt }] },
             ];
 
             const full = await callModel(prompt, apiUrl, apiKey, modelName);
-            if (full){
-                // onChangeBody(full);                 // 左侧监听到变化→自动保存
-                const intentsBlk = extractIntentsBlock(existingBody) ?? '';
-                onChangeBody(full + '\n\n' + intentsBlk);
-                upsertCache(chosen.title || '(意图生成)', full);
+            if (full) {
+                // ✅ 统一保存：补齐围栏、校验 JSON、与旧 IMAGE_PROMPT 合并（不覆盖）、写回并持久化
+                const { newBody, mergedJson } = await saveImagePromptBlock(
+                    {
+                        selectedItem,
+                        existingBody,
+                        onChangeBody,
+                        onUpdateItem,
+                    },
+                    full
+                );
+
+                // ✅ 缓存与统计：建议缓存“合并后的 JSON 文本”，避免重复和冲突
+                const jsonTextForCache = JSON.stringify(mergedJson, null, 2);
+                upsertCache(chosen.title || '(意图生成)', jsonTextForCache);
                 setLastGeneratedIntentId(chosen.id);
-                setGeneratedIntentMap(prev=>({
-                    ...prev,
-                    [chosen.id]:{
-                        lastContent: full,
-                        updatedAt:   new Date().toISOString(),
-                        count:       (prev[chosen.id]?.count||0)+1
-                    }
+                setGeneratedIntentMap((prevMap) => ({
+                    ...prevMap,
+                    [chosen.id]: {
+                        lastContent: jsonTextForCache,
+                        updatedAt: new Date().toISOString(),
+                        count: (prevMap[chosen.id]?.count || 0) + 1,
+                    },
                 }));
             }
-        }catch(e:any){
+        } catch (e: any) {
             console.error(e);
             alert(e.message || '生成失败');
-        }finally{
+        } finally {
             setGenerateLoading(false);
             onPromptGeneratingChange?.(false);
         }
     };
 
-    const confirmOverride = () => { setShowConfirmModal(false); handleGenerate(extraNote); };
-    const cancelOverride  = () => { setShowConfirmModal(false); setExtraNote(''); };
+    const confirmOverride = () => {
+        setShowConfirmModal(false);
+        handleGenerate(extraNote);
+    };
+    const cancelOverride = () => {
+        setShowConfirmModal(false);
+        setExtraNote('');
+    };
+    const confirmExtract = () => {
+        setShowExtractConfirmModal(false);
+        handleExtractIntents(extractExtraNote);
+        setExtractExtraNote('');
+    };
+    const cancelExtract = () => {
+        setShowExtractConfirmModal(false);
+        setExtractExtraNote('');
+    };
 
     /* ==================== 渲染 ==================== */
     return (
@@ -319,31 +415,28 @@ export default function ContentRight({
                 imagesCount={images.length}
                 loadingConfig={loadingConfig}
                 loadingIntent={intentsLoading}
-                onExtractIntent={handleExtractIntents}
+                onExtractIntent={requestExtract}
                 intents={intents}
                 selectedIntentId={selectedIntentId}
-                setSelectedIntentId={id=>setSelectedIntentId(id)}
-                generatedIntentMap={generatedIntentMap}
+                setSelectedIntentId={setSelectedIntentId}
                 loadingGenerate={generateLoading}
                 onGenerate={requestGenerate}
+                generatedIntentMap={generatedIntentMap}
             />
 
             <CacheBar
                 items={filteredCache}
-                onClick={item=>{
+                onClick={(item) => {
                     setNoteRequest(item.suggestion);
+                    // ⚠️ 注意：这里沿用原设计，直接用缓存内容覆盖编辑器正文
+                    // 如果缓存仅存 JSON，而非完整正文，你可能需要改造成 upsert 到 IMAGE_PROMPT
                     onChangeBody(item.content);
                 }}
-                onRemove={id=> saveCache(cacheList.filter(i=>i.id!==id))}
+                onRemove={(id) => saveCache(cacheList.filter((i) => i.id !== id))}
             />
 
             <div className="flex-1 overflow-auto mt-2">
-                <ImageUploader
-                    feature={feature}
-                    formId={formId}
-                    images={images}
-                    setImages={setImages}
-                />
+                <ImageUploader feature={feature} formId={formId} images={images} setImages={setImages} />
             </div>
 
             <ConfirmOverrideModal
@@ -352,7 +445,14 @@ export default function ContentRight({
                 onConfirm={confirmOverride}
                 extraNote={extraNote}
                 onChangeExtraNote={setExtraNote}
-                intentTitle={intents.find(i=>i.id===selectedIntentId)?.title}
+                intentTitle={intents.find((i) => i.id === selectedIntentId)?.title}
+            />
+            <ConfirmExtractModal
+                open={showExtractConfirmModal}
+                extraNote={extractExtraNote}
+                onChangeExtraNote={setExtractExtraNote}
+                onConfirm={confirmExtract}
+                onCancel={cancelExtract}
             />
         </div>
     );

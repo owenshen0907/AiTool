@@ -1,4 +1,4 @@
-// File src/app/agent/image/ContentLeft.tsx
+// File: src/app/agent/image/ContentLeft.tsx
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -12,9 +12,7 @@ import StatusPanel    from './left/StatusPanel';
 
 import { useSummaryGenerator } from './left/hooks/useSummaryGenerator';
 import { useImageCards       } from './left/hooks/useImageCards';
-
-// 只保留 INTENTS 保底（与右侧一致）
-import { extractIntentsBlock } from './utils/mdIntents';
+import { useSaveAll          } from './left/hooks/useSaveAll';  // ✅ 新增：抽离后的“保存主体内容”Hook
 
 interface Props {
     feature: string;
@@ -22,13 +20,49 @@ interface Props {
     loadingConfig: boolean;
     getScene: (sceneKey: string) => AgentSceneConfig | undefined;
     selectedItem: ContentItem | null;
-    body:         string;
+    body: string;
     onChangeBody: (body: string) => void;
     onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
     promptGenerating?: boolean;
 }
 
-/** 读取 localStorage IMG_DEBUG 决定是否打印 */
+/** 提取 IMAGE_PROMPT 块内部的纯 JSON 文本；若没找到则返回 null */
+function extractImagePromptInnerJson(markdown: string): string | null {
+    const m = markdown.match(
+        /<!--\s*IMAGE_PROMPT START\s*-->\s*```json\s*([\s\S]*?)\s*```[\s\S]*?<!--\s*IMAGE_PROMPT END\s*-->/i
+    );
+    return m ? m[1].trim() : null;
+}
+
+/** 把 IMAGE_PROMPT 的 JSON（对象或数组）转换为“卡片数组”；失败返回 null */
+function buildCardsFromImagePromptJson(jsonText: string): Array<{
+    id: string;
+    title?: string;
+    description?: string;
+    prompt?: string;
+    text?: string | string[];
+    index: number;
+}> | null {
+    try {
+        const data = JSON.parse((jsonText || '').trim());
+        const groups = Array.isArray(data) ? data : [data];
+        // 把每个分组里的 images 收集起来
+        const images: any[] = groups.flatMap(g => Array.isArray(g?.images) ? g.images : []);
+        // 映射成 CardView 需要的结构（和 StatusPanel 也兼容）
+        return images.map((img, idx) => ({
+            id: `img-${idx}`,                        // 简单唯一 id；可换 uuid
+            title: img?.title ?? `图 ${idx + 1}`,
+            description: img?.description ?? '',
+            prompt: img?.prompt ?? '',
+            text: img?.text ?? '',
+            index: idx,
+        }));
+    } catch (e) {
+        // JSON 损坏/解析失败
+        return null;
+    }
+}
+/** 读取 localStorage IMG_DEBUG 决定是否打印调试日志 */
 const dbg = (...args: any[]) => {
     try {
         if (typeof window !== 'undefined' && localStorage.getItem('IMG_DEBUG') === '1') {
@@ -37,6 +71,7 @@ const dbg = (...args: any[]) => {
         }
     } catch {}
 };
+
 export default function ContentLeft({
                                         feature,
                                         scenes,
@@ -57,13 +92,38 @@ export default function ContentLeft({
     const [editHeader, setEditHeader] = useState(false);
     const { generate, loading: summaryLoading } = useSummaryGenerator();
 
-    /* ---------- 解析卡片 ---------- */
-    const { cards, error: parseError, parsed } = useImageCards(body, {
-        autoParse: true,
-        reparseOnChange: true,
-    });
+    /* ---------- 解析卡片（读取正文中的卡片定义） ---------- */
 
-    /* ---------- 选中文档变动 ---------- */
+// 先从 IMAGE_PROMPT 围栏里取出 JSON
+    const innerJson = extractImagePromptInnerJson(body);
+
+// 如果能取到并成功解析，就直接用它生成 cards；否则回退到原来的 useImageCards
+    const cardsFromImagePrompt = React.useMemo(
+        () => (innerJson ? buildCardsFromImagePromptJson(innerJson) : null),
+        [innerJson]
+    );
+
+// 只有当没有 IMAGE_PROMPT（或解析失败）时，才使用 useImageCards 的旧逻辑
+    const shouldUseHook = !cardsFromImagePrompt;
+
+    const { cards: hookCards, error: hookError, parsed: hookParsed } = useImageCards(
+        shouldUseHook ? body : '',                       // 避免重复解析
+        { autoParse: true, reparseOnChange: true }
+    );
+
+// 统一对外变量（后续渲染无需改）
+    const cards      = cardsFromImagePrompt ?? hookCards;
+    const parseError = cardsFromImagePrompt ? null : hookError;
+    const parsed     = cardsFromImagePrompt ? true : hookParsed;
+
+// 可选调试
+    try {
+        if (typeof window !== 'undefined' && localStorage.getItem('IMG_DEBUG') === '1') {
+            console.debug('[IMG_DEBUG] cards.count', cards?.length, { fromImagePrompt: !!cardsFromImagePrompt });
+        }
+    } catch {}
+
+    /* ---------- 选中文档变化时，同步标题/摘要/正文到本地 ---------- */
     const lastSavedBody = useRef(body);
     useEffect(() => {
         if (!selectedItem) return;
@@ -79,7 +139,7 @@ export default function ContentLeft({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedItem?.id]);
 
-    /* ---------- 自动保存正文（普通编辑） ---------- */
+    /* ---------- 自动保存正文（普通编辑，去抖 1s） ---------- */
     useEffect(() => {
         if (!selectedItem) return;
         if (body === lastSavedBody.current) return;
@@ -99,11 +159,9 @@ export default function ContentLeft({
     const markStart  = (cardId: string) => setPendingMap(m => ({ ...m, [cardId]: 1 as const }));
     const markFinish = (cardId: string) => setPendingMap(m => ({ ...m, [cardId]: 0 as const }));
 
-    /* ---------- 收集各卡片预览（base64/data-URI） ---------- */
-    // { [cardId]: { title, previews: string[] } }
+    /* ---------- 收集各卡片预览（base64/data-URI/URL），供“保存主体内容”使用 ---------- */
+    // 结构：{ [cardId]: { title, previews: string[] } }
     const [previewMap, setPreviewMap] = useState<Record<string, { title: string; previews: string[] }>>({});
-    const [saving, setSaving] = useState(false);
-
     const handlePreviewsChange = useCallback((cardId: string, title: string, previews: string[]) => {
         setPreviewMap(prev => {
             const old = prev[cardId]?.previews || [];
@@ -117,188 +175,17 @@ export default function ContentLeft({
         });
     }, []);
 
-    const totalPreviews = Object.values(previewMap).reduce<number>(
-        (sum, it) => sum + (it?.previews?.length || 0),
-        0
-    );
-
-// helper：对正则中的标题做转义
-    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    /** ✅ 标准 Markdown 规则：统计某个标题已存在的最大序号，返回 next = max + 1 */
-    const getNextIndexForTitle = useCallback((md: string, title: string) => {
-        if (!title) return 1;
-        const esc = escapeRegExp(title.trim());
-
-        // ✅ 标准 Markdown：![标题-数字](URL)  可有空格；行尾可带 <!-- id: ... -->
-        // 例：![图一：结构图-3](/upload/xxx.png) <!-- id: 123 -->
-        const re = new RegExp(
-            `!\$begin:math:display$\\\\s*${esc}\\\\s*-\\\\s*(\\\\d+)\\\\s*\\$end:math:display$\$begin:math:text$[^\\$end:math:text$]+\\)(?:\\s*<!--\\s*id:\\s*([a-f0-9-]+)\\s*-->)?`,
-            'gi'
-        );
-
-        let max = 0;
-        let m: RegExpExecArray | null;
-        const matchedNums: number[] = [];
-
-        while ((m = re.exec(md)) !== null) {
-            const n = parseInt(m[1], 10);
-            if (!Number.isNaN(n)) {
-                matchedNums.push(n);
-                if (n > max) max = n;
-            }
-        }
-
-        // 便于你在控制台确认统计是否正确
-        try {
-            if (typeof window !== 'undefined' && localStorage.getItem('IMG_DEBUG') === '1') {
-                // eslint-disable-next-line no-console
-                console.debug('[IMG_DEBUG] getNextIndexForTitle', {
-                    title,
-                    matched: matchedNums.sort((a,b)=>a-b),
-                    max,
-                    next: max + 1,
-                });
-            }
-        } catch {}
-
-        return max + 1;
-    }, []);
-
-    const isDataUriOrB64 = (s: string) =>
-        s.startsWith('data:') || /^[A-Za-z0-9+/=]+$/.test(s);
-
-    const dataUriToFile = async (dataUriOrB64: string, filename: string) => {
-        const dataUri = dataUriOrB64.startsWith('data:')
-            ? dataUriOrB64
-            : `data:image/png;base64,${dataUriOrB64}`;
-        const blob = await fetch(dataUri).then(r => r.blob());
-        return new File([blob], filename, { type: blob.type || 'image/png' });
-    };
-
-    /* ---------- 保存主体内容：批量上传 + 写回（保留 INTENTS） ---------- */
-    /** 批量上传预览并写回正文（在行尾追加 file_id 注释），只在末尾 append，不覆盖其它内容 */
-    const handleSaveAll = useCallback(async () => {
-        if (!selectedItem) return;
-        if (totalPreviews === 0) { alert('没有可保存的图片。'); return; }
-        if (Object.values(pendingMap).some(v => v === 1)) { alert('仍有图片生成中，请稍后再保存。'); return; }
-
-        setSaving(true);
-        try {
-            let newBody = body; // 保留原内容，下面只在末尾 append
-
-            dbg('saveAll.start', {
-                cardIds: Object.keys(previewMap),
-                totalPreviews,
-            });
-
-            for (const cardId of Object.keys(previewMap)) {
-                const { title: cardTitle, previews } = previewMap[cardId] || {};
-                if (!previews || previews.length === 0) continue;
-
-                // 拆分：需要上传 vs 已是 URL
-                const needsUpload = previews.filter(p => isDataUriOrB64(p));
-                const readyUrls   = previews.filter(p => !isDataUriOrB64(p));
-
-                // 计算该标题的起始序号（基于“当前 newBody”）
-                let nextIndex = getNextIndexForTitle(newBody, cardTitle);
-                const mdLines: string[] = [];
-
-                dbg('saveAll.card.begin', {
-                    cardId,
-                    cardTitle,
-                    previewsLen: previews.length,
-                    needsUploadLen: needsUpload.length,
-                    readyUrlsLen: readyUrls.length,
-                    startNextIndex: nextIndex,
-                });
-
-                // ① 先把“已是 URL”的直接写入
-                for (const url of readyUrls) {
-                    mdLines.push(`![${cardTitle}-${nextIndex}](${url})`);
-                    dbg('saveAll.card.addReadyUrl', { url, index: nextIndex });
-                    nextIndex += 1;
-                }
-
-                // ② 再上传 base64/dataURI（一次卡片一次表单）
-                if (needsUpload.length > 0) {
-                    const form = new FormData();
-                    form.append('module', feature);
-                    form.append('form_id', selectedItem.id);
-                    form.append('origin', 'ai');
-
-                    let i = 0;
-                    for (const p of needsUpload) {
-                        const file = await dataUriToFile(p, `save-${cardId}-${++i}.png`);
-                        form.append(`file${i}`, file);
-                    }
-
-                    const res = await fetch('/api/files', { method: 'POST', body: form });
-
-// 只读一次 body：优先按 JSON 解析；不是 JSON 的话当作纯文本
-                    const contentType = res.headers.get('content-type') || '';
-                    const raw = await res.text(); // 只读一次
-                    let data: any = raw;
-                    if (contentType.includes('application/json')) {
-                        try { data = raw ? JSON.parse(raw) : null; } catch { /* 保留 raw */ }
-                    }
-
-                    if (!res.ok) {
-                        const msg = (data && typeof data === 'object' && data.error) ? data.error : `上传失败（${res.status}）`;
-                        throw new Error(msg);
-                    }
-
-// 后续都用 data，千万别再 res.json() 了
-                    const arr: Array<{ url?: string; file_path?: string; file_id?: string }> =
-                        Array.isArray(data) ? data : [data];
-
-                    dbg('saveAll.card.uploadResult', arr);
-
-                    for (const it of arr) {
-                        const url = it?.url ?? (it?.file_path ? `/${it.file_path}` : '');
-                        if (!url) continue;
-                        const fileId = it?.file_id || '';
-                        mdLines.push(`![${cardTitle}-${nextIndex}](${url})${fileId ? ` <!-- id: ${fileId} -->` : ''}`);
-                        dbg('saveAll.card.addUploaded', { url, fileId, index: nextIndex });
-                        nextIndex += 1;
-                    }
-                }
-
-                // ③ 把该卡片的行统一 append 到正文末尾（不改原文其它部分）
-                if (mdLines.length > 0) {
-                    const block = mdLines.join('\n\n');
-                    newBody = (newBody ? `${newBody}\n\n` : '') + block;
-                    dbg('saveAll.card.appendBlock', { cardId, lines: mdLines.length, blockSample: block.slice(0, 120) + '...' });
-                }
-            }
-
-            // 一次性写回 & 持久化
-            onChangeBody(newBody);
-            await onUpdateItem(selectedItem, { body: newBody });
-
-            // 清理“预览缓存”
-            setPreviewMap({});
-            alert('已保存主体内容。');
-
-            dbg('saveAll.done');
-        } catch (e: any) {
-            console.error(e);
-            alert(e?.message || '保存失败');
-        } finally {
-            setSaving(false);
-        }
-    }, [
-        body,
+    /* ---------- 使用抽离的保存 Hook ---------- */
+    const { totalPreviews, saving, handleSaveAll } = useSaveAll({
         feature,
+        selectedItem,
+        body,
+        previewMap,
+        pendingMap,
         onChangeBody,
         onUpdateItem,
-        previewMap,
-        selectedItem,
-        totalPreviews,
-        pendingMap,
-        getNextIndexForTitle
-    ]);
-
+        onAfterSaved: () => setPreviewMap({}) // 保存成功后清空预览缓存
+    });
 
     /* ---------- 渲染 ---------- */
     if (!selectedItem) {
@@ -410,7 +297,12 @@ pre{background:#f6f8fa;padding:12px;border-radius:4px;line-height:1.5;white-spac
             />
 
             <div className="flex-1 overflow-auto space-y-4 pr-1">
-                {parseError && <p className="text-xs text-red-500">{parseError}</p>}
+                {/* 仅在“确实解析出了卡片且报错”时显示错误提示 */}
+                {parseError && cards.length > 0 && (
+                    <p className="text-xs text-red-500">图片卡解析失败：{parseError}</p>
+                )}
+
+                {/* 无错误且无卡片时，显示空状态；否则渲染各卡片 */}
                 {!parseError && cards.length === 0 && parsed && body.trim().replace(/\s+/g, '').replace(/<!--[\s\S]*?-->/g, '') !== ''
                     ? <EmptyState />
                     : cards.map(card => (
