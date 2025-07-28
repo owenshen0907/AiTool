@@ -5,6 +5,7 @@ import React, { useMemo, useEffect } from 'react';
 import { CardPromptBlock } from './CardPromptBlock';
 import { CardImagePanel  } from './CardImagePanel';
 import { useImageGenerate } from '../hooks/useImageGenerate';
+import { useImageEdits } from '../hooks/useImageEdits';
 import type { ContentItem }      from '@/lib/models/content';
 import type { AgentSceneConfig } from 'src/hooks/useAgentScenes';
 
@@ -68,7 +69,7 @@ function removeLineByIdOrUrl(
     const src = md || '';
 
     // 工具：给 url 去掉域名，和正文中的相对路径一致
-    const stripOrigin = (u: string) => {
+    const stripOriginLocal = (u: string) => {
         if (!u) return u;
         try {
             const { origin } = window.location;
@@ -105,7 +106,7 @@ function removeLineByIdOrUrl(
 
     // ② 回退按 URL 删（把 http://host 去掉，只保留 /upload/...）
     if (url) {
-        const bodyUrl = stripOrigin(url);
+        const bodyUrl = stripOriginLocal(url);
         const needle = `](${bodyUrl})`;
         const hitIdx = src.indexOf(needle);
         if (hitIdx !== -1) {
@@ -139,6 +140,8 @@ interface CardViewProps {
     onChangeBody: (body: string) => void;
     onUpdateItem: (item: ContentItem, patch: Partial<ContentItem>) => Promise<void>;
     imgGenerateScene?: AgentSceneConfig;
+    /** ✅ 新增：图片编辑场景 */
+    imgEditScene?: AgentSceneConfig;
 
     onStart?: () => void;
     onFinish?: () => void;
@@ -153,14 +156,31 @@ export default function CardView({
                                      onChangeBody,
                                      onUpdateItem,
                                      imgGenerateScene,
+                                     imgEditScene,
                                      onStart,
                                      onFinish,
                                      onPreviewsChange,
                                  }: CardViewProps) {
     const { id: cardId, title = '（无标题）', description, prompt, text } = data;
 
-    // 生成 → 预览
-    const { previews, loading, error, generate, refine } = useImageGenerate(prompt, imgGenerateScene);
+    // 生成
+    const {
+        previews: genPreviews,
+        loading: genLoading,
+        error: genError,
+        generate
+    } = useImageGenerate(prompt, imgGenerateScene);
+
+    // 编辑
+    const {
+        previews: editPreviews,
+        loading: editLoading,
+        error: editError,
+        edit
+    } = useImageEdits(prompt, imgEditScene);
+
+    const loading = genLoading || editLoading;
+    const error   = genError || editError;
 
     /** 解析与本卡相关的“已保存图片”：拿到 (url, fileId) 对 */
     const persistedPairs = useMemo(() => {
@@ -178,8 +198,16 @@ export default function CardView({
         return pairs; // [{url, id}]
     }, [bodyText, title, cardId]);
 
-    /** 展示：预览优先，随后拼接持久化的；同时构造 fileId 数组（与展示顺序对齐） */
-    const previewsForDisplay  = useMemo(() => previews.map(normalizePreviewSrc), [previews]);
+    /** 展示：预览优先（生成 + 编辑），随后拼接持久化的；同时构造 fileId 数组（与展示顺序对齐） */
+    const previewsFromHooks = useMemo(
+        () => [...genPreviews, ...editPreviews],   // 原始（保存用，不做 normalize）
+        [genPreviews, editPreviews]
+    );
+
+    const previewsForDisplay = useMemo(
+        () => previewsFromHooks.map(normalizePreviewSrc),
+        [previewsFromHooks]
+    );
 
     const persistedForDisplay = useMemo(
         () => persistedPairs.map(p => withOriginIfRelative(p.url)),
@@ -203,17 +231,18 @@ export default function CardView({
     useEffect(() => {
         dbg('CardView.gallery', {
             cardId, title,
-            previewsLen: previewsForDisplay.length,
+            genPreviews: genPreviews.length,
+            editPreviews: editPreviews.length,
             persistedLen: persistedForDisplay.length,
             showLen: displayImages.length,
             sample: displayImages.slice(0,3)
         });
-    }, [cardId, title, previewsForDisplay, persistedForDisplay, displayImages]);
+    }, [cardId, title, genPreviews, editPreviews, persistedForDisplay, displayImages]);
 
-    // 上报预览（用于“保存主体内容”）
+    // 上报“可保存的预览”（生成+编辑），供左侧“保存主体内容”使用
     useEffect(() => {
-        onPreviewsChange?.(cardId, title, previews);
-    }, [cardId, title, previews, onPreviewsChange]);
+        onPreviewsChange?.(cardId, title, previewsFromHooks);
+    }, [cardId, title, previewsFromHooks, onPreviewsChange]);
 
     /* ---- 交互 ---- */
     const handleDownload = (idx: number) => {
@@ -308,19 +337,17 @@ export default function CardView({
         }
     };
 
-    const handleGenerate = async () => {
+    // 生成：支持额外说明（从弹框传入）
+    const handleGenerate = async (extraNote?: string) => {
         onStart?.();
-        try { await generate(); } finally { onFinish?.(); }
-    };
-    const handleRefine = async () => {
-        const refineText = window.prompt('输入细化指令（例如：更写实 / 柔和光线）', '');
-        if (!refineText) return;
-        onStart?.();
-        try { await refine(refineText); } finally { onFinish?.(); }
+        try { await generate(extraNote); } finally { onFinish?.(); }
     };
 
-    // 临时插入（预览或 URL）；仍建议用“保存主体内容”统一上传/落库
-    const makeMd = (url: string, idx: number) => `![${title}-${idx + 1}](${url})`;
+    // 编辑：需要选中图片 + 编辑说明
+    const handleEdit = async (imageSrc: string, extraNote?: string) => {
+        onStart?.();
+        try { await edit(imageSrc, extraNote); } finally { onFinish?.(); }
+    };
 
     return (
         <div className="border rounded-lg bg-white shadow-sm flex p-4">
@@ -335,17 +362,11 @@ export default function CardView({
                 loading={loading}
                 callId={null}
                 onGenerate={handleGenerate}
-                onRefine={handleRefine}
+                onEdit={handleEdit}             // ✅ 新：编辑
                 onDownload={handleDownload}
-                onInsert={(i) => {
-                    const md = makeMd(displayImages[i], i);
-                    const updated = (bodyText || '') + '\n\n' + md;
-                    dbg('CardView.onInsert', { cardId, title, mdLine: md });
-                    onChangeBody(updated);
-                }}
-                onDelete={handleDelete}         // ✅ 新增：调用上面的删除逻辑
+                onDelete={handleDelete}
                 canGenerate={!!prompt}
-                canRefine={previews.length > 0 && !loading}
+                canEdit={displayImages.length > 0}  // ✅ 只要有图即可编辑
                 title={title}
                 error={error}
             />

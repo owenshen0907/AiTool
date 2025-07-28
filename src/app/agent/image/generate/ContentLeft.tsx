@@ -84,6 +84,7 @@ export default function ContentLeft({
                                         promptGenerating = false,
                                     }: Props) {
     const imgGenerateScene = getScene('img_generate');
+    const imgEditScene     = getScene('img_edit');
 
     /* ---------- 标题 / 摘要 ---------- */
     const [title, setTitle] = useState('');
@@ -312,6 +313,7 @@ pre{background:#f6f8fa;padding:12px;border-radius:4px;line-height:1.5;white-spac
                             data={card}
                             selectedItem={selectedItem}
                             imgGenerateScene={imgGenerateScene}
+                            imgEditScene={imgEditScene}
                             onChangeBody={onChangeBody}
                             onUpdateItem={onUpdateItemDebug}
                             onStart={() => markStart(card.id)}

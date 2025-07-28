@@ -23,7 +23,18 @@ export function useIntentExtraction() {
         forceBase64: boolean;
     }): Promise<IntentPromptOutput['intents']> => {
         const { template, noteRequest, images, scenes, forceBase64 } = params;
-        if (!template?.prompts?.intent_prompt) throw new Error('模板缺少意图抽取 prompt');
+        if (!template?.id) {
+            throw new Error('未选择模板');
+        }
+
+        let systemPrompt: string;
+        try {
+            systemPrompt = buildPrompt(template.id, 'intent_prompt');
+        } catch {
+            // 这里表示 promptConfigs 里没有对应 template.id 的 intent_prompt 定义
+            throw new Error('PromptDefinition 未配置 intent_prompt');
+        }
+
         const scene = scenes.find(s => s.sceneKey === SCENE_INTENT);
         if (!scene) throw new Error('缺少意图抽取场景配置');
 
@@ -51,7 +62,7 @@ export function useIntentExtraction() {
                 }
             }
 
-            const systemPrompt = buildPrompt(template.id, 'intent_prompt');
+            // const systemPrompt = buildPrompt(template.id, 'intent_prompt');
             const messages = [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userMsgs }

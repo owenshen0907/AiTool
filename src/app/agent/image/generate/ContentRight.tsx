@@ -14,6 +14,8 @@ import ConfirmExtractModal from './right/ConfirmExtractModal';
 
 import { useAgentScenes } from 'src/hooks/useAgentScenes';
 import { useIntentExtraction } from './right/hooks/useIntentExtraction';
+// 新增
+import { useImagePromptGenerate } from './right/hooks/useImagePromptGenerate';
 import type { IntentPromptOutput } from './types';
 
 // ✅ 新增：统一的正文保存工具（只更新相应区块、自动补齐围栏、合并 JSON）
@@ -107,6 +109,9 @@ export default function ContentRight({
         setSelectedIntentId,
         extract,
     } = useIntentExtraction();
+    /* ---------- 基于意图生成插画提示词 ---------- */
+    // 使用“读取 prompt 的统一 hook”
+    const { generate: genImagePrompt } = useImagePromptGenerate();
 
     /* ---------- 本地生成记录 ---------- */
     const [generatedIntentMap, setGeneratedIntentMap] = useState<
@@ -264,45 +269,7 @@ export default function ContentRight({
             setShowConfirmModal(true);
             return;
         }
-        handleGenerate();
-    };
-
-    /** helper：调用 API → 返回完整内容（SSE/流式拼接） */
-    const callModel = async (prompt: any[], apiUrl: string, apiKey: string, modelName: string) => {
-        const res = await fetch(`${apiUrl}/chat/completions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-            body: JSON.stringify({ model: modelName, stream: true, messages: prompt }),
-        });
-        if (!res.ok || !res.body) throw new Error('生成接口调用失败');
-        const reader = res.body.getReader();
-        const dec = new TextDecoder();
-        let buf = '';
-        let full = '';
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buf += dec.decode(value, { stream: true });
-            const lines = buf.split('\n');
-            buf = lines.pop()!;
-            for (const l of lines) {
-                if (!l.startsWith('data:')) continue;
-                const js = l.replace(/^data:\s*/, '').trim();
-                if (js === '[DONE]') {
-                    reader.cancel();
-                    break;
-                }
-                let p: any;
-                try {
-                    p = JSON.parse(js);
-                } catch {
-                    continue;
-                }
-                const delta = p.choices?.[0]?.delta?.content ?? p.choices?.[0]?.message?.content;
-                if (delta) full += delta;
-            }
-        }
-        return full.trim();
+        void handleGenerate();
     };
 
     /** 二次确认抽取意图 的入口 */
@@ -317,13 +284,14 @@ export default function ContentRight({
     const handleGenerate = async (extra?: string) => {
         onPromptGeneratingChange?.(true);
 
-        const scene = getScene(SCENE_PROMPT_GEN);
-        if (!scene || !selectedTemplate?.prompts?.image_prompt || !selectedIntentId) {
+        // === 前置校验：沿用你原来的判断（也可以只保留“是否选择了意图”） ===
+        const scene = getScene(SCENE_PROMPT_GEN); // 可保留/也可去掉，让 hook 自行检查
+        if (!scene || !selectedTemplate?.id || !selectedIntentId) {
             alert('生成前置条件缺失');
             onPromptGeneratingChange?.(false);
             return;
         }
-        const chosen = intents.find((i) => i.id === selectedIntentId);
+        const chosen = intents.find(i => i.id === selectedIntentId);
         if (!chosen) {
             alert('意图不存在');
             onPromptGeneratingChange?.(false);
@@ -332,48 +300,41 @@ export default function ContentRight({
 
         setGenerateLoading(true);
         try {
-            const { apiUrl, apiKey } = scene.supplier;
-            const modelName = scene.model.name;
-            const prev = generatedIntentMap[chosen.id];
+            // 1) 取该意图上一次生成的内容（作为“连续对话式”上下文）
+            const prevContent = generatedIntentMap[chosen.id]?.lastContent;
 
-            const userTxt =
-                `【选中意图】\nID:${chosen.id}\n标题:${chosen.title}\n` +
-                (chosen.level ? `JLPT:${chosen.level}\n` : '') +
-                (chosen.description ? `说明:${chosen.description}\n` : '') +
-                (extra?.trim() ? `\n【补充说明】\n${extra.trim()}` : '');
+            // 2) 调用统一 hook：用 promptBuilder 读模板，非流式完成，自动解析 JSON/围栏
+            const jsonText = await genImagePrompt({
+                template: selectedTemplate,
+                scenes,
+                intent: chosen,
+                extraNote: extra,
+                prevContent,         // ✅ 新参数名，替代你之前写错的 prev
+            });
 
-            const prompt: any[] = [
-                { role: 'system', content: selectedTemplate.prompts.image_prompt },
-                ...(prev?.lastContent ? [{ role: 'assistant', content: prev.lastContent }] : []),
-                { role: 'user', content: [{ type: 'text', text: userTxt }] },
-            ];
+            // 3) 仅更新 IMAGE_PROMPT 区块（自动补齐 ```json/```，并与旧内容合并不覆盖）
+            const { newBody, mergedJson } = await saveImagePromptBlock(
+                {
+                    selectedItem,
+                    existingBody,
+                    onChangeBody,
+                    onUpdateItem,
+                },
+                jsonText               // ✅ 直接传 hook 返回的“合法 JSON 字符串”
+            );
 
-            const full = await callModel(prompt, apiUrl, apiKey, modelName);
-            if (full) {
-                // ✅ 统一保存：补齐围栏、校验 JSON、与旧 IMAGE_PROMPT 合并（不覆盖）、写回并持久化
-                const { newBody, mergedJson } = await saveImagePromptBlock(
-                    {
-                        selectedItem,
-                        existingBody,
-                        onChangeBody,
-                        onUpdateItem,
-                    },
-                    full
-                );
-
-                // ✅ 缓存与统计：建议缓存“合并后的 JSON 文本”，避免重复和冲突
-                const jsonTextForCache = JSON.stringify(mergedJson, null, 2);
-                upsertCache(chosen.title || '(意图生成)', jsonTextForCache);
-                setLastGeneratedIntentId(chosen.id);
-                setGeneratedIntentMap((prevMap) => ({
-                    ...prevMap,
-                    [chosen.id]: {
-                        lastContent: jsonTextForCache,
-                        updatedAt: new Date().toISOString(),
-                        count: (prevMap[chosen.id]?.count || 0) + 1,
-                    },
-                }));
-            }
+            // 4) 缓存与统计：以“格式化后的 JSON 文本”为准
+            const jsonTextForCache = JSON.stringify(mergedJson, null, 2);
+            upsertCache(chosen.title || '(意图生成)', jsonTextForCache);
+            setLastGeneratedIntentId(chosen.id);
+            setGeneratedIntentMap(prevMap => ({
+                ...prevMap,
+                [chosen.id]: {
+                    lastContent: jsonTextForCache,     // ✅ 保存“本次最终 JSON”
+                    updatedAt: new Date().toISOString(),
+                    count: (prevMap[chosen.id]?.count || 0) + 1,
+                },
+            }));
         } catch (e: any) {
             console.error(e);
             alert(e.message || '生成失败');
@@ -385,7 +346,7 @@ export default function ContentRight({
 
     const confirmOverride = () => {
         setShowConfirmModal(false);
-        handleGenerate(extraNote);
+        void handleGenerate(extraNote);
     };
     const cancelOverride = () => {
         setShowConfirmModal(false);
@@ -393,7 +354,7 @@ export default function ContentRight({
     };
     const confirmExtract = () => {
         setShowExtractConfirmModal(false);
-        handleExtractIntents(extractExtraNote);
+        void handleExtractIntents(extractExtraNote);
         setExtractExtraNote('');
     };
     const cancelExtract = () => {

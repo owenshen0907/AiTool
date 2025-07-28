@@ -116,9 +116,9 @@ export default function GenerateSection({
             {/* 抽取意图 */}
             <button
                 onClick={onExtractIntent}
-                disabled={loadingIntent || !selectedTemplate?.prompts?.intent_prompt}
+                disabled={loadingIntent || !selectedTemplate?.id}
                 className={`w-full flex items-center justify-center px-4 py-2 rounded font-semibold text-white ${
-                    loadingIntent || !selectedTemplate?.prompts?.intent_prompt
+                    loadingIntent || !selectedTemplate?.id
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-indigo-500 hover:bg-indigo-600'
                 }`}
@@ -144,13 +144,13 @@ export default function GenerateSection({
                 onClick={onGenerate}
                 disabled={
                     loadingGenerate ||
-                    !selectedTemplate?.prompts?.image_prompt ||
+                    !selectedTemplate?.id ||
                     intents.length === 0 ||
                     !selectedIntentId
                 }
                 className={`w-full flex items-center justify-center px-4 py-2 rounded font-semibold text-white ${
                     loadingGenerate ||
-                    !selectedTemplate?.prompts?.image_prompt ||
+                    !selectedTemplate?.id ||
                     intents.length === 0 ||
                     !selectedIntentId
                         ? 'bg-gray-400 cursor-not-allowed'

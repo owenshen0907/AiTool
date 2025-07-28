@@ -7,7 +7,6 @@
       { "sceneKey": "img_intent_extract", "label": "提取意图", "desc": "根据输入的内容和意图生成图片的主题关键信息。" },
       { "sceneKey": "img_prompt_generate", "label": "生成图片提示词", "desc": "根据主题和关键信息，生成生成图片的提示词。" },
       { "sceneKey": "img_generate", "label": "图片生成", "desc": "根据 prompt 进行文生图，初稿生成。" },
-      { "sceneKey": "img_variant", "label": "图片变体", "desc": "基于现有图片生成变体。" },
       { "sceneKey": "img_edit", "label": "图片编辑", "desc": "局部修改 / 增强 / 加字。" }
     ]
   },
