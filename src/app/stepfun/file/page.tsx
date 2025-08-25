@@ -94,7 +94,17 @@ export default function FilePage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">文件管理</h1>
+      <div className="flex items-center gap-2 mb-4">
+        <h1 className="text-2xl font-semibold">文件管理</h1>
+        <a
+            href="https://owenshen.top/upload/stepfun%E6%96%87%E4%BB%B6%E5%88%A0%E9%99%A4%E7%AE%A1%E7%90%86.mp4"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 text-blue-600 underline text-sm"
+        >
+          操作指引
+        </a>
+      </div>
 
       {/* 顶部控制区 */}
       <div className="flex flex-wrap gap-3 mb-4 items-center">
