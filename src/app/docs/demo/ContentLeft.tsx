@@ -1,12 +1,13 @@
 // File: src/app/docs/demo/ContentLeft.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ContentItem } from '@/lib/models/content';
 import MarkdownEditor from '@/components/common/MarkdownEditor';
-import { Save, Printer, RefreshCw, MoreVertical } from 'lucide-react';
+import { Save, Printer, RefreshCw, MoreVertical, ImageDown } from 'lucide-react';
 import { marked } from 'marked';
 import { parseSSEStream } from '@/lib/utils/sse';
+import { exportMarkdownToXHSImages } from '@/lib/utils/exportXHSImages';
 
 interface Props {
     selectedItem: ContentItem | null;
@@ -26,6 +27,11 @@ export default function ContentLeft({
     const [orig, setOrig] = useState({ title: '', summary: '', body: '' });
     const [editHeader, setEditHeader] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    // 新增：导出菜单相关
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const menuBtnRef = useRef<HTMLButtonElement | null>(null);
 
     // 选中项切换：重置 header 和 orig
     useEffect(() => {
@@ -143,6 +149,51 @@ export default function ContentLeft({
             setIsGenerating(false);
         }
     };
+    // ✅ 新增：导出为小红书长图
+    const handleExportXHS = async () => {
+        if (isExporting) return;
+        try {
+            setIsExporting(true);
+            setMenuOpen(false);
+
+            await exportMarkdownToXHSImages(body, {
+                width: 1080,
+                height: 1440,
+                pageMargin: { top: 64, right: 64, bottom: 64, left: 64 },
+                bg: '#ffffff',
+                fg: '#111111',
+                accent: '#2563eb',
+                card: {
+                    padding: 28,
+                    radius: 24,
+                    shadow: '0 10px 30px rgba(0,0,0,0.06)',
+                    border: '#f2f2f2',
+                    gapY: 24,
+                },
+                fontSize: 18,
+                lineHeight: 1.65,
+                header: {
+                    enabled: true,
+                    height: 100,
+                    title: title,          // ✅ 顶部标题
+                    summary: summary,      // ✅ 首页摘要（可空）
+                    showDivider: true,
+                },
+                footer: {
+                    showPageNumber: true,
+                    watermarkText: '@你的账号',
+                    watermarkColor: '#a3a3a3',
+                    watermarkFontSize: 18,
+                },
+                filePrefix: (selectedItem?.title || 'markdown_export').replace(/\s+/g, '_'),
+            });
+        } catch (e) {
+            console.error('导出失败：', e);
+            alert('导出失败，请查看控制台日志。');
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <div className="w-2/3 flex flex-col h-screen p-4">
@@ -234,13 +285,38 @@ export default function ContentLeft({
                     </button>
                 </div>
 
-                <button
-                    onClick={() => setEditHeader(!editHeader)}
-                    className="p-2 ml-2 hover:bg-gray-200 rounded"
-                    title="编辑标题/摘要"
-                >
-                    <MoreVertical size={20} />
-                </button>
+                {/*<button*/}
+                {/*    onClick={() => setEditHeader(!editHeader)}*/}
+                {/*    className="p-2 ml-2 hover:bg-gray-200 rounded"*/}
+                {/*    title="编辑标题/摘要"*/}
+                {/*>*/}
+                {/*    <MoreVertical size={20} />*/}
+                {/*</button>*/}
+                {/* “三个点”按钮 + 下拉菜单 */}
+                <div className="relative ml-2">
+                    <button
+                        ref={menuBtnRef}
+                        onClick={() => setMenuOpen((v) => !v)}
+                        className="p-2 hover:bg-gray-200 rounded"
+                        title="更多操作"
+                    >
+                        <MoreVertical size={20} />
+                    </button>
+
+                    {menuOpen && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-10">
+                            <button
+                                onClick={handleExportXHS}
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left"
+                                disabled={isExporting}
+                                title="将正文导出为小红书长图"
+                            >
+                                <ImageDown size={18} />
+                                {isExporting ? '导出中…' : '导出为小红书长图（ZIP）'}
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Markdown 编辑器，value=body，onChange=onChangeBody */}
