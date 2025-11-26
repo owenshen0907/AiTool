@@ -12,6 +12,25 @@ interface FileItem {
   status: string;
 }
 
+const ERROR_HINTS: Record<number, string> = {
+  400: [
+    '原因：请求参数格式不正确，可能原因如下：',
+    '1. 图片无法下载',
+    '2. 图片数量超过限制',
+    '3. 该模型不支持视频输入',
+    '4. 模型不存在或无权限',
+    '5. 参数值不合法',
+    '解决方案：请参照文档正确传递参数信息',
+  ].join('\n'),
+  401: '原因：认证无效\n解决方案：确保使用正确的 API 密钥',
+  402: '原因：余额不足\n解决方案：确保账户里面有足够余额',
+  404: '原因：请求路径不正确\n解决方案：请参照文档修复请求路径信息',
+  429: '原因：请求的资源超限，可能原因是你发送请求太快，超过了速率限制\n解决方案：请稍候重试您的请求',
+  451: '原因：请求内容或者响应内容未审核通过\n解决方案：修改请求信息后再重试',
+  500: '原因：我们服务器上的问题\n解决方案：稍等片刻后重试请求，如果问题仍然存在，请联系我们',
+  503: '原因：目前服务器负载过高\n解决方案：请稍候重试您的请求',
+};
+
 export default function FilePage() {
   const [apiKey, setApiKey] = useState(''); // 用户输入的 API Key（开发者工具场景）
   const [usage, setUsage] = useState(''); // 文件用途筛选，可为空
@@ -39,7 +58,12 @@ export default function FilePage() {
         headers: { Authorization: `Bearer ${apiKey}` },
         cache: 'no-store',
       });
-      if (!res.ok) throw new Error(`请求失败：${res.status}`);
+      if (!res.ok) {
+        const hint = ERROR_HINTS[res.status];
+        const msg = hint ? `请求失败（${res.status}）\n${hint}` : `请求失败：${res.status}`;
+        alert(msg);
+        return;
+      }
       const json = await res.json();
       setFiles(Array.isArray(json.data) ? json.data : []);
       setSelectedIds(new Set());
