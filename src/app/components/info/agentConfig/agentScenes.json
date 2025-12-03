@@ -19,5 +19,13 @@
       { "sceneKey": "code_explain", "label": "代码解释", "desc": "解释函数/模块含义。" },
       { "sceneKey": "debug_advice", "label": "调试建议", "desc": "针对报错/日志提出排查步骤。" }
     ]
+  },
+  {
+    "agentId": "webPageAgent",
+    "name": "网页生成 Agent",
+    "description": "根据需求生成静态 H5 页面。",
+    "scenes": [
+      { "sceneKey": "web_generate", "label": "网页生成", "desc": "调用大模型生成响应式静态网页。" }
+    ]
   }
 ]

@@ -87,6 +87,12 @@ export const menuData: MenuItem[] = [
                     { title: '接口文档生成', href: '/agent/code/docs' },
                 ],
             },
+            {
+                title: '网页 Agent',
+                children: [
+                    { title: '网页生成', href: '/agent/web/generate' },
+                ],
+            },
             { title: '自定义测试', href: '/agent/other/custom-test' },
         ],
     },

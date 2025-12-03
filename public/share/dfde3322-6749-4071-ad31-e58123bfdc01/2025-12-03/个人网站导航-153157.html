@@ -1,0 +1,105 @@
+```html
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人网站导航</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(200, 200, 255, 0.8));
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            padding: 20px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 20px;
+        }
+
+        p {
+            font-size: 1rem;
+            margin: 10px 0;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+        }
+
+        .button {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>日语学习助手</h1>
+        <p>通过多维度的学习方式，快速掌握日语单词和常用句子。</p>
+        
+        <h2>功能亮点</h2>
+        <div class="feature">
+            <h3>单词背诵</h3>
+            <p>快速识记日语单词，配合场景图片与发音。</p>
+        </div>
+        <div class="feature">
+            <h3>常用搭配</h3>
+            <p>每个单词衍生常用句子，助你更好地记忆。</p>
+        </div>
+        <div class="feature">
+            <h3>标签管理</h3>
+            <p>自定义标签，分级掌握单词熟练度。</p>
+        </div>
+        <div class="feature">
+            <h3>批量学习</h3>
+            <p>一键学习多个单词，提升学习效率。</p>
+        </div>
+        
+        <button class="button">立即开始学习</button>
+    </div>
+</body>
+</html>
+``` 
+
+该 HTML 页面采用了现代简约风格，通过使用内联 CSS 创建了渐变背景和卡片效果，确保了在移动端和桌面端的良好响应式体验。每个功能亮点都通过卡片展示，增加了视觉层次。按钮包含悬浮效果，确保用户体验友好。

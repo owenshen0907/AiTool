@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>日语单词学习网站首页｜多维记忆·沉浸式学习</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<style>
+    :root {
+        --bg-gradient: radial-gradient(circle at 0% 0%, #4facfe 0, #00f2fe 30%, #1b1e3b 80%, #050816 100%);
+        --glass-bg: rgba(10, 16, 40, 0.55);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --accent-main: #4fd1c5;
+        --accent-sub: #a855f7;
+        --accent-warm: #fbbf24;
+        --text-main: #f9fafb;
+        --text-sub: #cbd5f5;
+        --danger: #fb7185;
+        --safe: #34d399;
+        --blur-val: 18px;
+        --radius-lg: 22px;
+        --radius-md: 16px;
+        --radius-pill: 999px;
+        --shadow-soft: 0 18px 45px rgba(0,0,0,0.45);
+        --shadow-subtle: 0 10px 30px rgba(10,20,60,0.6);
+        --transition-fast: 0.22s ease-out;
+        --transition-med: 0.35s ease;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+        background: #020617;
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+        background-image:
+            radial-gradient(circle at 10% 20%, rgba(79, 209, 197, 0.28) 0, transparent 55%),
+            radial-gradient(circle at 90% 10%, rgba(168, 85, 247, 0.25) 0, transparent 55%),
+            radial-gradient(circle at 10% 80%, rgba(59, 130, 246, 0.28) 0, transparent 55%),
+            linear-gradient(135deg, #020617 0%, #020617 50%, #020817 100%);
+        background-attachment: fixed;
+        display: flex;
+        justify-content: center;
+        padding: 24px 14px 40px;
+    }
+
+    .page {
+        width: 100%;
+        max-width: 1120px;
+        position: relative;
+        isolation: isolate;
+    }
+
+    .page::before, .page::after {
+        content: "";
+        position: fixed;
+        inset: auto;
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        filter: blur(42px);
+        opacity: 0.4;
+        z-index: -1;
+        pointer-events: none;
+    }
+
+    .page::before {
+        top: 40px;
+        right: 8%;
+        background: radial-gradient(circle, rgba(79, 209, 197, 0.7), transparent 60%);
+    }
+
+    .page::after {
+        bottom: 20px;
+        left: 4%;
+        background: radial-gradient(circle, rgba(168, 85, 247, 0.55), transparent 65%);
+    }
+
+    .glass-shell {
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: linear-gradient(135deg, rgba(15,23,42,0.7), rgba(15,23,42,0.45));
+        box-shadow: 0 40px 90px rgba(15, 23, 42, 0.95);
+        padding: 18px 18px 26px;
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
+    }
+
+    header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 4px 6px 14px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .logo-area {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .logo-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: 20px;
+        background:
+            radial-gradient(circle at 30% 20%, #f9fafb 0, transparent 50%),
+            conic-gradient(from 210deg, #4fd1c5, #3b82f6, #a855f7, #4fd1c5);
+        position: relative;
+        box-shadow: 0 0 0 1px rgba(15,23,42,0.6), 0 12px 20px rgba(15,23,42,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .logo-mark::after {
+        content: "あ";
+        font-weight: 700;
+        font-size: 16px;
+        color: rgba(15,23,42,0.96);
+        text-shadow: 0 0 6px rgba(248,250,252,0.7);
+    }
+
+    .logo-text-main {
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        font-size: 14px;
+        text-transform: uppercase;
+        color: #e5e7eb;
+    }
+
+    .logo-text-sub {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    nav {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #9ca3af;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .nav-pill {
+        border-radius: 999px;
+        padding: 4px 10px;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        background: radial-gradient(circle at 0 0, rgba(148,163,184,0.22), transparent 60%);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .nav-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #4fd1c5, #3b82f6);
+        box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.18);
+    }
+
+    .nav-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .nav-link {
+        padding: 4px 8px;
+        border-radius: 999px;
+        color: #9ca3af;
+        border: 1px solid transparent;
+        background: transparent;
+        transition: all var(--transition-fast);
+        cursor: default;
+    }
+
+    .nav-link.active {
+        border-color: rgba(148,163,184,0.38);
+        background: radial-gradient(circle at 10% 0, rgba(79,209,197,0.22), transparent 60%);
+        color: #e5e7eb;
+    }
+
+    .nav-link.badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-color: rgba(248,250,252,0.08);
+        background: linear-gradient(135deg, rgba(56,189,248,0.14), rgba(129,140,248,0.08));
+        color: #e0f2fe;
+    }
+
+    .nav-pill-icon {
+        width: 14px;
+        height: 14px;
+        border-radius: 6px;
+        border: 1px solid rgba(148,163,184,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #e5e7eb;
+        font-size: 9px;
+        background: rgba(15,23,42,0.8);
+    }
+
+    /* Layout blocks */
+    main {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+        gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+        main {
+            grid-template-columns: minmax(0,1fr);
+        }
+    }
+
+    /* HERO LEFT */
+    .hero-left {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .hero-tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .hero-tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.4);
+        background: linear-gradient(120deg, rgba(15,23,42,0.95), rgba(15,23,42,0.7));
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #e5e7eb;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .hero-tag span.dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: conic-gradient(from 180deg, #4fd1c5, #3b82f6, #a855f7, #4fd1c5);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+    }
+
+    .hero-tag span.pulse {
+        position: relative;
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        box-shadow: 0 0 0 5px rgba(52,211,153,0.24);
+        border: 1px solid rgba(74,222,128,0.9);
+        background: radial-gradient(circle, #22c55e 0, #166534 75%);
+    }
+
+    .hero-tag span.key-word {
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(15,23,42,0.9);
+        border: 1px solid rgba(148,163,184,0.6);
+        font-size: 10px;
+        color: #a5b4fc;
+    }
+
+    h1 {
+        font-size: clamp(24px, 4.4vw, 34px);
+        line-height: 1.25;
+        letter-spacing: 0.03em;
+    }
+
+    .h1-grad {
+        background: linear-gradient(120deg, #e5e7eb, #f9fafb, #bae6fd);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .h1-sub {
+        font-size: clamp(18px, 3.4vw, 26px);
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .hero-desc {
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--text-sub);
+        max-width: 540px;
+    }
+
+    .hero-desc strong {
+        color: #e5e7eb;
+        font-weight: 600;
+    }
+
+    .hero-desc .kw {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: 999px;
+        padding: 2px 8px;
+        margin: 0 2px;
+        background: radial-gradient(circle at 0 0, rgba(59,130,246,0.34), transparent 60%);
+        border: 1px solid rgba(59,130,246,0.55);
+        font-size: 11px;
+        color: #dbeafe;
+        white-space: nowrap;
+    }
+
+    .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .btn-primary, .btn-ghost {
+        border-radius: 999px;
+        padding: 9px 18px;
+        font-size: 13px;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: default;
+        transition: all var(--transition-med);
+        white-space: nowrap;
+    }
+
+    .btn-primary {
+        background-image: linear-gradient(120deg, #22c55e, #4fd1c5, #3b82f6);
+        border-color: rgba(190,242,100,0.7);
+        color: #022c22;
+        box-shadow: 0 18px 40px rgba(34,197,94,0.36);
+        font-weight: 600;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-primary::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, rgba(255,255,255,0.32), transparent 60%);
+        opacity: 0.0;
+        pointer-events: none;
+        transition: opacity var(--transition-fast);
+    }
+
+    .btn-ghost {
+        border-color: rgba(148,163,184,0.7);
+        color: #e5e7eb;
+        background: radial-gradient(circle at 0 0, rgba(148,163,184,0.22), transparent 55%);
+    }
+
+    .btn-icon {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1px solid rgba(15,23,42,0.8);
+        background: rgba(15,23,42,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: #a5b4fc;
+        box-shadow: 0 0 0 1px rgba(129,140,248,0.5);
+    }
+
+    .btn-primary .btn-icon {
+        background: rgba(15,23,42,0.9);
+        color: #a7f3d0;
+        border-color: rgba(16,185,129,0.9);
+        box-shadow: 0 0 0 1px rgba(22,163,74,0.9);
+    }
+
+    .hero-meta {
+        margin-top: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 11px;
+        color: #9ca3af;
+        align-items: center;
+    }
+
+    .hero-meta-pill {
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.5);
+        background: linear-gradient(135deg, rgba(15,23,42,0.9), rgba(15,23,42,0.6));
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .hero-meta-pill span.badge {
+        padding: 2px 5px;
+        border-radius: 999px;
+        font-size: 10px;
+        color: #bbf7d0;
+        background: rgba(21,128,61,0.6);
+        border: 1px solid rgba(74,222,128,0.9);
+    }
+
+    /* HERO RIGHT SIMULATED UI */
+    .hero-right {
+        position: relative;
+        min-height: 260px;
+        display: flex;
+        align-items: stretch;
+    }
+
+    .device-card {
+        position: relative;
+        margin-left: auto;
+        width: 100%;
+        max-width: 380px;
+        border-radius: 30px;
+        background: radial-gradient(circle at 0 0, rgba(59,130,246,0.3), transparent 60%),
+                    linear-gradient(145deg, rgba(15,23,42,0.95), rgba(15,23,42,0.8));
+        border: 1px solid rgba(148,163,184,0.7);
+        box-shadow: var(--shadow-soft);
+        padding: 12px 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        overflow: hidden;
+    }
+
+    .device-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    .device-signal {
+        display: flex;
+        gap: 3px;
+        align-items: flex-end;
+    }
+
+    .device-signal span {
+        width: 3px;
+        border-radius: 999px;
+        background: rgba(148,163,184,0.8);
+    }
+
+    .device-signal span:nth-child(1) { height: 6px; }
+    .device-signal span:nth-child(2) { height: 8px; }
+    .device-signal span:nth-child(3) { height: 10px; background: #22c55e; }
+    .device-signal span:nth-child(4) { height: 12px; background: #22c55e; }
+
+    .device-word-tag {
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: linear-gradient(120deg, rgba(15,23,42,0.95), rgba(30,64,175,0.95));
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        color: #e5e7eb;
+    }
+
+    .device-word-tag span.jp {
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+    }
+
+    .device-word-tag span.level {
+        font-size: 10px;
+        padding: 1px 5px;
+        border-radius: 999px;
+        background: rgba(15,23,42,0.9);
+        color: #a5b4fc;
+        border: 1px solid rgba(129,140,248,0.9);
+    }
+
+    .device-body {
+        display: grid;
+        grid-template-columns: 6fr 5fr;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    @media (max-width: 600px) {
+        .device-body {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .device-word-panel {
+        border-radius: 18px;
+        padding: 10px;
+        border: 1px solid rgba(148,163,184,0.75);
+        background: radial-gradient(circle at 0 0, rgba(148,163,184,0.33), transparent 65%),
+                    linear-gradient(150deg, rgba(15,23,42,0.95), rgba(15,23,42,0.8));
+        box-shadow: var(--shadow-subtle);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .word-main {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .word-jp {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+    }
+
+    .word-kana {
+        font-size: 11px;
+        color: #cbd5f5;
+    }
+
+    .word-zh {
+        font-size: 12px;
+        color: #e5e7eb;
+    }
+
+    .word-tags-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 2px;
+    }
+
+    .word-tag-chip {
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.8);
+        background: rgba(15,23,42,0.95);
+        color: #cbd5f5;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .word-tag-chip.status-familiar {
+        border-color: rgba(34,197,94,0.85);
+        background: rgba(22,163,74,0.3);
+        color: #bbf7d0;
+    }
+
+    .word-tag-chip.status-blur {
+        border-color: rgba(234,179,8,0.9);
+        background: rgba(234,179,8,0.25);
+        color: #fef9c3;
+    }
+
+    .word-tag-chip.status-none {
+        border-color: rgba(248,113,113,0.9);
+        background: rgba(248,113,113,0.18);
+        color: #fee2e2;
+    }
+
+    .word-example {
+        border-radius: 12px;
+        padding: 7px 8px;
+        border: 1px dashed rgba(148,163,184,0.65);
+        background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.8));
+        font-size: 11px;
+        color: #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .word-example .jp {
+        color: #e0f2fe;
+    }
+
+    .word-example .zh {
+        color: #9ca3af;
+    }
+
+    .audio-bar {
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .audio-btn {
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        border: 1px solid rgba(52,211,153,0.9);
+        background: radial-gradient(circle, rgba(74,222,128,0.9), rgba(5,46,22,0.9));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: #ecfdf5;
+        box-shadow: 0 0 0 4px rgba(22,163,74,0.4);
+    }
+
+    .audio-wave {
+        flex: 1;
+        height: 16px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(15,23,42,0.95), rgba(30,64,175,0.95));
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 5px;
+    }
+
+    .audio-wave span {
+        display: block;
+        width: 3px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(125,211,252,0.8), rgba(37,99,235,0.9));
+    }
+
+    .audio-time {
+        font-size: 10px;
+        color: #cbd5f5;
+    }
+
+    .device-scene-panel {
+        border-radius: 18px;
+        padding: 9px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: radial-gradient(circle at 80% 0, rgba(59,130,246,0.4), transparent 60%),
+                    linear-gradient(150deg, rgba(15,23,42,0.98), rgba(15,23,42,0.85));
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .scene-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        color: #cbd5f5;
+    }
+
+    .scene-tag {
+        padding: 2px 7px;
+        border-radius: 999px;
+        border: 1px solid rgba(59,130,246,0.85);
+        background: rgba(37,99,235,0.4);
+        color: #dbeafe;
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .scene-preview {
+        position: relative;
+        border-radius: 12px;
+        padding: 10px 9px;
+        border: 1px solid rgba(148,163,184,0.75);
+        background: radial-gradient(circle at 10% 0, rgba(59,130,246,0.5), transparent 70%),
+                    radial-gradient(circle at 90% 100%, rgba(56,189,248,0.35), transparent 60%),
+                    linear-gradient(150deg, rgba(15,23,42,0.98), rgba(15,23,42,0.9));
+        overflow: hidden;
+    }
+
+    .scene-layer-sun {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        width: 20px;
+        height: 20px;
+        border-radius: 999px;
+        background: radial-gradient(circle, #facc15 0, #f97316 70%);
+        box-shadow: 0 0 18px rgba(250,204,21,0.9);
+        opacity: 0.9;
+    }
+
+    .scene-layer-mount {
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 55%;
+        background:
+            radial-gradient(circle at 20% 0%, rgba(30,64,175,0.95) 0, transparent 50%),
+            radial-gradient(circle at 70% -20%, rgba(15,23,42,0.98) 0, transparent 60%);
+        opacity: 0.95;
+    }
+
+    .scene-layer-window {
+        position: relative;
+        border-radius: 12px;
+        border: 1px solid rgba(148,163,184,0.7);
+        padding: 6px 8px;
+        background: linear-gradient(145deg, rgba(15,23,42,0.92), rgba(15,23,42,0.85));
+        display: inline-flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 10px;
+        color: #e5e7eb;
+        max-width: 80%;
+    }
+
+    .scene-layer-window .label {
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 9px;
+        color: #9ca3af;
+    }
+
+    .scene-layer-window .text {
+        color: #dbeafe;
+    }
+
+    .scene-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        color: #cbd5f5;
+    }
+
+    .scene-footer span.count {
+        color: #a5b4fc;
+    }
+
+    .scene-footer span.hot {
+        color: #f97316;
+    }
+
+    .device-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+
+    .device-footer .progress-bar {
+        flex: 1;
+        height: 7px;
+        margin: 0 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: rgba(15,23,42,0.95);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .device-footer .progress-inner {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, #22c55e, #4fd1c5, #3b82f6);
+        width: 68%;
+    }
+
+    /* HOVER (visual only, no script) */
+    .btn-primary:hover {
+        transform: translateY(-1px) scale(1.01);
+        box-shadow: 0 20px 45px rgba(34,197,94,0.46);
+    }
+
+    .btn-primary:hover::after {
+        opacity: 0.26;
+    }
+
+    .btn-ghost:hover {
+        border-color: rgba(148,163,184,0.9);
+        background: radial-gradient(circle at 0 0, rgba(148,163,184,0.32), transparent 65%);
+        transform: translateY(-1px);
+    }
+
+    .device-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 44px 90px rgba(15,23,42,0.9);
+    }
+
+    /* SECTION: 功能亮点 */
+    .section {
+        margin-top: 18px;
+        border-radius: 22px;
+        border: 1px solid rgba(148,163,184,0.5);
+        background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.85));
+        padding: 14px 14px 16px;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: 0 24px 60px rgba(15,23,42,0.9);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 10px;
+    }
+
+    .section-title {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .section-label {
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #9ca3af;
+    }
+
+    .section-heading {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e5e7eb;
+    }
+
+    .section-subtitle {
+        font-size: 12px;
+        color: #9ca3af;
+        max-width: 360px;
+    }
+
+    .section-badge {
+        border-radius: 999px;
+        padding: 4px 10px;
+        border: 1px solid rgba(56,189,248,0.8);
+        background: radial-gradient(circle at 0 0, rgba(56,189,248,0.35), transparent 55%);
+        font-size: 11px;
+        color: #e0f2fe;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .section-badge span.dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 4px rgba(34,197,94,0.4);
+    }
+
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+        .grid-3 {
+            grid-template-columns: repeat(2, minmax(0,1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .grid-3 {
+            grid-template-columns: minmax(0,1fr);
+        }
+    }
+
+    .feature-card {
+        border-radius: 18px;
+        padding: 10px 10px 11px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: radial-gradient(circle at 0 0, rgba(148,163,184,0.38), transparent 65%),
+                    linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+        box-shadow: 0 16px 45px rgba(15,23,42,0.9);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-icon {
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        color: #0b1120;
+        margin-bottom: 2px;
+    }
+
+    .feature-icon.audio {
+        background: radial-gradient(circle, #22c55e 0, #16a34a 70%);
+        box-shadow: 0 0 18px rgba(34,197,94,0.7);
+    }
+
+    .feature-icon.scene {
+        background: radial-gradient(circle, #38bdf8 0, #1d4ed8 70%);
+        box-shadow: 0 0 18px rgba(56,189,248,0.6);
+    }
+
+    .feature-icon.build {
+        background: radial-gradient(circle, #a855f7 0, #7c3aed 70%);
+        box-shadow: 0 0 18px rgba(168,85,247,0.6);
+    }
+
+    .feature-title {
+        font-weight: 600;
+        color: #e5e7eb;
+    }
+
+    .feature-desc {
+        color: #9ca3af;
+        line-height: 1.6;
+    }
+
+    .feature-meta {
+        margin-top: 2px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 10px;
+        color: #a5b4fc;
+    }
+
+    .feature-tag {
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(129,140,248,0.8);
+        background: rgba(15,23,42,0.9);
+    }
+
+    .feature-card::after {
+        content: "";
+        position: absolute;
+        inset: -40%;
+        background: radial-gradient(circle at 120% -20%, rgba(248,250,252,0.12), transparent 60%);
+        opacity: 0.0;
+        transition: opacity var(--transition-med);
+        pointer-events: none;
+    }
+
+    .feature-card:hover::after {
+        opacity: 1;
+    }
+
+    /* SECTION: 标签系统 + 智能筛选 */
+    .flex-2 {
+        display: grid;
+        grid-template-columns: minmax(0,6fr) minmax(0,5fr);
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    @media (max-width: 860px) {
+        .flex-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .card-sub {
+        border-radius: 18px;
+        padding: 10px 10px 11px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+        box-shadow: 0 18px 45px rgba(15,23,42,0.9);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+    }
+
+    .card-title-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .card-title-row .title {
+        font-weight: 600;
+        color: #e5e7eb;
+    }
+
+    .card-title-row .hint {
+        font-size: 10px;
+        color: #9ca3af;
+    }
+
+    .tag-badges-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .status-badge {
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid transparent;
+    }
+
+    .status-badge.familiar {
+        border-color: rgba(34,197,94,0.9);
+        background: rgba(22,163,74,0.2);
+        color: #bbf7d0;
+    }
+
+    .status-badge.blur {
+        border-color: rgba(234,179,8,0.9);
+        background: rgba(234,179,8,0.2);
+        color: #fef9c3;
+    }
+
+    .status-badge.none {
+        border-color: rgba(239,68,68,0.9);
+        background: rgba(239,68,68,0.24);
+        color: #fee2e2;
+    }
+
+    .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+    }
+
+    .status-dot.familiar {
+        background: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34,197,94,0.5);
+    }
+
+    .status-dot.blur {
+        background: #eab308;
+        box-shadow: 0 0 0 3px rgba(234,179,8,0.4);
+    }
+
+    .status-dot.none {
+        background: #ef4444;
+        box-shadow: 0 0 0 3px rgba(248,113,113,0.4);
+    }
+
+    .tags-logic {
+        margin-top: 2px;
+        font-size: 11px;
+        color: #9ca3af;
+        line-height: 1.7;
+    }
+
+    .tags-logic strong {
+        color: #e5e7eb;
+    }
+
+    .filter-preview {
+        margin-top: 4px;
+        border-radius: 14px;
+        padding: 8px 8px 7px;
+        border: 1px dashed rgba(148,163,184,0.8);
+        background: linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.95));
+        font-size: 11px;
+        color: #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .filter-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .filter-chip {
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.75);
+        background: rgba(15,23,42,0.95);
+        color: #cbd5f5;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .filter-chip span.label {
+        font-size: 10px;
+    }
+
+    .filter-chip span.count {
+        font-size: 9px;
+        padding: 1px 5px;
+        border-radius: 999px;
+        background: rgba(15,23,42,0.9);
+        color: #a5b4fc;
+        border: 1px solid rgba(129,140,248,0.9);
+    }
+
+    .filter-mode {
+        font-size: 10px;
+        color: #a5b4fc;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .filter-mode span.switch {
+        width: 22px;
+        height: 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(129,140,248,0.9);
+        background: linear-gradient(90deg, #4f46e5, #22c55e);
+        position: relative;
+    }
+
+    .filter-mode span.knob {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #e5e7eb;
+        right: 1px;
+        top: 0.5px;
+    }
+
+    .filter-footer {
+        margin-top: 3px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        color: #9ca3af;
+    }
+
+    .filter-footer span.highlight {
+        color: #a5b4fc;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0,1fr));
+        gap: 6px;
+        margin-top: 6px;
+        font-size: 11px;
+        color: #cbd5f5;
+    }
+
+    .stat-item {
+        border-radius: 10px;
+        padding: 6px 7px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: linear-gradient(145deg, rgba(15,23,42,0.96), rgba(15,23,42,0.9));
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .stat-label {
+        font-size: 10px;
+        color: #9ca3af;
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: #e5e7eb;
+    }
+
+    .stat-bar {
+        margin-top: 1px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(15,23,42,0.95);
+        overflow: hidden;
+        border: 1px solid rgba(148,163,184,0.7);
+    }
+
+    .stat-bar-inner {
+        height: 100%;
+        background: linear-gradient(90deg, #22c55e, #4fd1c5, #3b82f6);
+        width: 78%;
+    }
+
+    .stat-bar-inner.warn {
+        background: linear-gradient(90deg, #f97316, #facc15);
+        width: 42%;
+    }
+
+    /* SECTION: 一键生成文章 & 视频讲解 */
+    .flow-card {
+        border-radius: 18px;
+        padding: 10px 10px 11px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: radial-gradient(circle at 0 0, rgba(56,189,248,0.26), transparent 65%),
+                    radial-gradient(circle at 100% 100%, rgba(168,85,247,0.34), transparent 65%),
+                    linear-gradient(145deg, rgba(15,23,42,0.97), rgba(15,23,42,0.93));
+        box-shadow: 0 20px 60px rgba(15,23,42,0.95);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 12px;
+    }
+
+    .flow-steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    @media (max-width: 750px) {
+        .flow-steps {
+            grid-template-columns: minmax(0,1fr);
+        }
+    }
+
+    .flow-step {
+        border-radius: 14px;
+        padding: 8px 8px 9px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: linear-gradient(145deg, rgba(15,23,42,0.97), rgba(15,23,42,0.93));
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: relative;
+    }
+
+    .flow-step-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #e5e7eb;
+    }
+
+    .flow-step-index {
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: #9ca3af;
+        background: rgba(15,23,42,0.9);
+    }
+
+    .flow-step-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #e5e7eb;
+    }
+
+    .flow-step-desc {
+        font-size: 11px;
+        color: #9ca3af;
+        line-height: 1.6;
+    }
+
+    .flow-mini {
+        margin-top: 3px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: 10px;
+        color: #a5b4fc;
+    }
+
+    .flow-pill {
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(129,140,248,0.8);
+        background: rgba(15,23,42,0.95);
+    }
+
+    .video-preview {
+        margin-top: 4px;
+        border-radius: 14px;
+        padding: 8px 8px 9px;
+        border: 1px solid rgba(148,163,184,0.7);
+        background: radial-gradient(circle at 0 0, rgba(56,189,248,0.4), transparent 60%),
+                    radial-gradient(circle at 100% 0, rgba(168,85,247,0.3), transparent 60%),
+                    linear-gradient(145deg, rgba(15,23,42,0.97), rgba(15,23,42,0.94));
+        display: grid;
+        grid-template-columns: minmax(0,6fr) minmax(0,5fr);
+        gap: 8px;
+        align-items: center;
+    }
+
+    @media (max-width: 750px) {
+        .video-preview {
+            grid-template-columns: minmax(0,1fr);
+        }
+    }
+
+    .video-window {
+        border-radius: 12px;
+        padding: 8px;
+        border: 1px solid rgba(148,163,184,0.8);
+        background: radial-gradient(circle at 0 0, rgba(251,191,36,0.3), transparent 60%),
+                    linear-gradient(150deg, rgba(15,23,42,0.97), rgba(15,23,42,0.94));
+        position: relative;
+        overflow: hidden;
+    }
+
+    .video-screen {
+        position: relative;
+        border-radius: 10px;
+        padding: 10px 9px 9px;
+        border: 1px solid rgba(15,23,42,0.96);
+        background: linear-gradient(135deg, #0f172a, #020617);
+        color: #e5e7eb;
+        font-size: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .video-screen .code-line {
+        font-family: Menlo, Consolas, monospace;
+        color: #a5b4fc;
+    }
+
+    .video-screen .code-line span.kw {
+        color: #4ade80;
+    }
+
+    .video-screen .code-line span.jp {
+        color: #f9a8d4;
+    }
+
+    .video-timeline {
+        margin-top: 6px;
+        height: 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(148,163,184,0.8);
+        background: rgba(15,23,42,0.9);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .video-timeline-inner {
+        position: absolute;
+        inset: 0;
+        width: 42%;
+        background: linear-gradient(90deg, #f97316, #facc15);
+    }
+
+    .video-play {
+        position: absolute;
+        inset: auto 10px 10px auto;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        border: 1px solid rgba(251,191,36,0.9);
+        background: radial-gradient(circle, #facc15 0, #ea580c 70%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0b1120;
+        font-size: 10px;
+        box-shadow: 0 0 18px rgba(250,204,21,0.7);
+    }
+
+    .video-info {
+        font-size: 11px;
+        color: #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .video-info p {
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .video-tags {
+        margin-top: 3px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 10px;
+        color: #a5b4fc;
+    }
+
+    .video-tag {
+        padding: 2px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(129,140,248,0.8);
+        background: rgba(15,23,42,0.95);
+    }
+
+    /* CTA SECTION */
+    .cta {
+        margin-top: 18px;
+        border-radius: 22px;
+        padding: 12px 12px 14px;
+        border: 1px solid rgba(156,163,175,0.7);
+        background: radial-gradient(circle at 0 0, rgba(34,197,94,0.32), transparent 60%),
+                    radial-gradient(circle at 100% 100%, rgba(56,189,248,0.3), transparent 60%),
+                    linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.94));
+        box-shadow: 0 24px 60px rgba(15,23,42,0.96);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+    }
+
+    .cta-text {
+        max-width: 420px;
+        font-size: 12px;
+        color: #e5e7eb;
+    }
+
+    .cta-text h2 {
+        font-size: 16px;
+        margin-bottom: 4px;
+        background: linear-gradient(120deg, #bbf7d0, #e0f2fe);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .cta-text p {
+        margin: 0;
+        line-height: 1.7;
+        color: #cbd5f5;
+    }
+
+    .cta-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .cta-inline-note {
+        font-size: 10px;
+        color: #9ca3af;
+    }
+
+    .cta-inline-note span {
+        color: #bbf7d0;
+    }
+
+    footer {
+        margin-top: 10px;
+        font-size: 10px;
+        color: #6b7280;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    footer span.highlight {
+        color: #a5b4fc;
+    }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="glass-shell">
+        <header>
+            <div class="logo-area">
+                <div class="logo-mark"></div>
+                <div>
+                    <div class="logo-text-main">NIPPO WORDS</div>
+                    <div class="logo-text-sub">多维度·沉浸式日语单词记忆</div>
+                </div>
+            </div>
+            <nav>
+                <div class="nav-pill">
+                    <div class="nav-dot"></div>
+                    <span>Beta 体验版 · 记忆效率 ×3</span>
+                </div>
+                <div class="nav-links">
+                    <span class="nav-link active">首页介绍</span>
+                    <span class="nav-link">学习流程</span>
+                    <span class="nav-link">功能亮点</span>
+                    <span class="nav-link badge">
+                        <span class="nav-pill-icon">▶</span>
+                        快速开始 3 分钟体验
+                    </span>
+                </div>
+            </nav>
+        </header>
+
+        <main>
+            <!-- HERO LEFT -->
+            <section class="hero-left">
+                <div class="hero-tag-row">
+                    <div class="hero-tag">
+                        <span class="dot"></span>
+                        <span>为单词配上</span>
+                        <span class="key-word">场景 · 语境 · 声音</span>
+                    </div>
+                    <div class="hero-tag">
+                        <span class="pulse"></span>
+                        <span>专注日语单词的</span>
+                        <span class="key-word">多维记忆引擎</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h1>
+                        <span class="h1-grad">从一个词，看到一整个世界</span>
+                        <div class="h1-sub">日语单词 × 句子搭配 × 场景画面 × 音频讲解</div>
+                    </h1>
+                </div>
+
+                <p class="hero-desc">
+                    这不是普通的背单词工具，而是一个为<span class="kw">日语学习者</span>设计的
+                    <strong>沉浸式记忆空间</strong>：基于每个单词自动生成
+                    <span class="kw">常用句型搭配</span>、对应<span class="kw">真实使用场景画面</span>，
+                    再配合<span class="kw">原声发音与讲解音频</span>，从视觉、听觉、语境多个维度，帮助你把每一个日语单词刻进记忆。
+                </p>
+
+                <div class="hero-actions">
+                    <button class="btn-primary">
+                        <span class="btn-icon">▶</span>
+                        立即体验一组单词
+                        <span style="font-size:11px;opacity:0.9;">（30 秒内开始）</span>
+                    </button>
+                    <button class="btn-ghost">
+                        <span class="btn-icon">あ</span>
+                        了解学习流程
+                    </button>
+                </div>
+
+                <div class="hero-meta">
+                    <div class="hero-meta-pill">
+                        智能标签 ｜ 熟悉 / 模糊 / 不会
+                        <span class="badge">自动随正确率更新</span>
+                    </div>
+                    <div class="hero-meta-pill">
+                        一键生成
+                        <span class="badge">文章</span>
+                        <span class="badge">语法讲解视频</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HERO RIGHT: Simulated UI -->
+            <section class="hero-right">
+                <div class="device-card">
+                    <div class="device-header">
+                        <div class="device-signal">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                        <div class="device-word-tag">
+                            <span class="jp">今日の単語</span>
+                            <span class="level">N4 场景记忆</span>
+                        </div>
+                        <div>21:36</div>
+                    </div>
+
+                    <div class="device-body">
+                        <!-- Word Panel -->
+                        <div class="device-word-panel">
+                            <div class="word-main">
+                                <div>
+                                    <div class="word-jp">駅</div>
+                                    <div class="word-kana">えき · eki</div>
+                                </div>
+                                <div class="word-zh">车站</div>
+                            </div>
+
+                            <div class="word-tags-row">
+                                <div class="word-tag-chip status-familiar">
+                                    <span>熟悉</span>
+                                    <span style="font-size:9px;opacity:0.9;">✓ 86%</span>
+                                </div>
+                                <div class="word-tag-chip status-blur">
+                                    <span>模糊</span>
+                                    <span style="font-size:9px;opacity:0.9;">复习中</span>
+                                </div>
+                                <div class="word-tag-chip status-none">
+                                    <span>不会</span>
+                                    <span style="font-size:9px;opacity:0.9;">加入考核</span>
+                                </div>
+                            </div>
+
+                            <div class="word-example">
+                                <div class="jp">駅で友だちを待っています。</div>
+                                <div class="zh">我正在车站等朋友。</div>
+                            </div>
+
+                            <div class="audio-bar">
+                                <div class="audio-btn">♪</div>
+                                <div class="audio-wave">
+                                    <span style="height:7px;"></span>
+                                    <span style="height:11px;"></span>
+                                    <span style="height:5px;"></span>
+                                    <span style="height:13px;"></span>
+                                    <span style="height:9px;"></span>
+                                    <span style="height:6px;"></span>
+                                    <span style="height:12px;"></span>
+                                    <span style="height:8px;"></span>
+                                </div>
+                                <div class="audio-time">0:23 / 1:02</div>
+                            </div>
+                        </div>
+
+                        <!-- Scene Panel -->
+                        <div class="device-scene-panel">
+                            <div class="scene-header">
+                                <span>场景联想 · 通勤早晨</span>
+                                <span class="scene-tag">
+                                    🎞
+                                    <span>自动生成场景图</span>
+                                </span>
+                            </div>
+                            <div class="scene-preview">
+                                <div class="scene-layer-sun"></div>
+                                <div class="scene-layer-mount"></div>
+                                <div class="scene-layer-window">
+                                    <div class="label">SCENE NOTE</div>
+                                    <div class="text">清晨的站台，人流慢慢汇聚，你和朋友约好在检票口见面。</div>
+                                </div>
+                            </div>
+                            <div class="scene-footer">
+                                <span>已为 <span class="count">1,248</span> 个单词生成语境</span>
+                                <span>支持视频讲解 · <span class="hot">讲解中</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="device-footer">
+                        <span>今日计划 18 / 30 词</span>
+                        <div class="progress-bar">
+                            <div class="progress-inner"></div>
+                        </div>
+                        <span>记忆进度 68%</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- SECTION 1: 功能亮点 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <div class="section-label">FEATURES</div>
+                    <div class="section-heading">为一个单词，构建一整个记忆宇宙</div>
+                    <div class="section-subtitle">
+                        不再只是「看到 - 念一遍」，而是为每个日语单词配套
+                        场景、句子、画面和声音，全程由系统自动生成，你只需要投入注意力。
+                    </div>
+                </div>
+                <div class="section-badge">
+                    <span class="dot"></span>
+                    多模态记忆引擎 · Visual × Audio × Context
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <!-- Feature 1 -->
+                <article class="feature-card">
+                    <div class="feature-icon audio">♪</div>
+                    <div class="feature-title">一词多声：原音 + 讲解音频</div>
+                    <div class="feature-desc">
+                        每个单词配有标准日语发音与慢速讲解音频。你能听到读音、重音位置，
+                        以及它在句子中的自然节奏，用耳朵建立肌肉记忆。
+                    </div>
+                    <div class="feature-meta">
+                        <span class="feature-tag">标准日语发音</span>
+                        <span class="feature-tag">慢速拆解讲解</span>
+                    </div>
+                </article>
+
+                <!-- Feature 2 -->
+                <article class="feature-card">
+                    <div class="feature-icon scene">景</div>
+                    <div class="feature-title">语境场景图：看见单词所在的世界</div>
+                    <div class="feature-desc">
+                        系统根据单词和句子自动生成对应的场景画面，
+                        帮你把抽象的词汇挂靠在具象的画面中，记忆更牢固、更自然。
+                    </div>
+                    <div class="feature-meta">
+                        <span class="feature-tag">自动场景生成</span>
+                        <span class="feature-tag">生活 & 商务 & 旅行多领域</span>
+                    </div>
+                </article>
+
+                <!-- Feature 3 -->
+                <article class="feature-card">
+                    <div class="feature-icon build">文</div>
+                    <div class="feature-title">从多个单词，一键生成文章和视频</div>
+                    <div class="feature-desc">
+                        选中一组单词后，一键生成短文、例句集甚至讲解视频，
+                        将词汇和语法放在完整语篇中复现，帮助你顺带训练阅读与听力。
+                    </div>
+                    <div class="feature-meta">
+                        <span class="feature-tag">一键生成文章</span>
+                        <span class="feature-tag">视频讲解脚本自动生成</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- SECTION 2: 标签系统 & 智能筛选 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <div class="section-label">PROGRESS · TAG SYSTEM</div>
+                    <div class="section-heading">熟悉 / 模糊 / 不会：给记忆过程装上「仪表盘」</div>
+                    <div class="section-subtitle">
+                        你可以手动标记每个单词的熟悉程度，系统也会根据测验正确率自动调整。
+                        通过智能筛选，把时间精准花在真正需要的那一部分单词上。
+                    </div>
+                </div>
+                <div class="section-badge">
+                    <span class="dot"></span>
+                    记忆曲线追踪 · 自适应复习节奏
+                </div>
+            </div>
+
+            <div class="flex-2">
+                <!-- Tag system -->
+                <article class="card-sub">
+                    <div class="card-title-row">
+                        <div class="title">三种标签，一目了然地管理单词库</div>
+                        <div class="hint">支持手动标记 + 考核自动更新</div>
+                    </div>
+                    <div class="tag-badges-row">
+                        <span class="status-badge familiar">
+                            <span class="status-dot familiar"></span>
+                            熟悉 · 只需轻量复习
+                        </span>
+                        <span class="status-badge blur">
+                            <span class="status-dot blur"></span>
+                            模糊 · 重点巩固
+                        </span>
+                        <span class="status-badge none">
+                            <span class="status-dot none"></span>
+                            不会 · 集中突破
+                        </span>
+                    </div>
+                    <div class="tags-logic">
+                        你可以在学习过程中随时手动调整标签，也可以交给系统：
+                        在<span><strong>单词测验 / 例句听写 / 场景选择题</strong></span>中，
+                        系统会根据你的<span><strong>正确率、反应时间和重复错误</strong></span>，自动为单词打上合适标签，
+                        动态构建你的<span><strong>专属复习清单</strong></span>。
+                    </div>
+
+                    <div class="filter-preview">
+                        <div class="filter-row">
+                            <div class="filter-chips">
+                                <div class="filter-chip">
+                                    <span class="label">仅看「不会」</span>
+                                    <span class="count">58 词</span>
+                                </div>
+                                <div class="filter-chip">
+                                    <span class="label">含部分「模糊」</span>
+                                    <span class="count">+ 34 词</span>
+                                </div>
+                            </div>
+                            <div class="filter-mode">
+                                <span>智能排序</span>
+                                <span class="switch">
+                                    <span class="knob"></span>
+                                </span>
+                            </div>
+                        </div>
+                        <div style="font-size:10px;color:#9ca3af;margin-top:3px;">
+                            系统根据你的遗忘曲线，自动排定出场顺序，确保每一次学习都击中记忆的薄弱点。
+                        </div>
+                        <div class="filter-footer">
+                            <span>本轮计划：<span class="highlight">92</span> 词 · 预计用时约 <span class="highlight">18 分钟</span></span>
+                            <span>下次复习提醒已设定</span>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Stats / overview -->
+                <article class="card-sub">
+                    <div class="card-title-row">
+                        <div class="title">学习概览：看得见的进步曲线</div>
+                        <div class="hint">自动记录你的每一次正确、每一次模糊</div>
+                    </div>
+                    <div style="font-size:11px;color:#9ca3af;">
+                        学习不只是当下的记住，更是可追踪、可调整的长期过程。
+                        通过标签与统计，你可以清楚知道：今天该学什么、该复习什么。
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">当前词库 · 总数</div>
+                            <div class="stat-value">1,280 个单词</div>
+                            <div class="stat-bar">
+                                <div class="stat-bar-inner"></div>
+                            </div>
+                            <div style="font-size:10px;color:#9ca3af;">其中 532 个已进入熟悉区间</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">需要重点攻克</div>
+                            <div class="stat-value" style="color:#fed7aa;">「不会」+「模糊」 · 312 词</div>
+                            <div class="stat-bar">
+                                <div class="stat-bar-inner warn"></div>
+                            </div>
+                            <div style="font-size:10px;color:#9ca3af;">系统已为你拆分成 7 个学习批次</div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- SECTION 3: 一键生成文章 & 视频 -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <div class="section-label">MULTI-WORD LEARNING</div>
+                    <div class="section-heading">从「背单词」到「读文章 · 看视频」的顺滑跃迁</div>
+                    <div class="section-subtitle">
+                        选择多个单词，一键生成文章、语境故事、语法讲解视频。
+                        让词汇和语法一起出现、一起被理解，而不是孤零零躺在列表里。
+                    </div>
+                </div>
+                <div class="section-badge">
+                    <span class="dot"></span>
+                    一键整合 · 词汇 × 语法 × 场景 × 视频
+                </div>
+            </div>
+
+            <div class="flow-card">
+                <div style="font-size:12px;color:#e5e7eb;">
+                    从选词到学习内容生成，只需 <span style="color:#bbf7d0;">3 步</span>：
+                </div>
+
+                <div class="flow-steps">
+                    <!-- Step 1 -->
+                    <div class="flow-step">
+                        <div class="flow-step-label">
+                            <div class="flow-step-index">1</div>
+                            <div class="flow-step-title">勾选想要强化的单词</div>
+                        </div>
+                        <div class="flow-step-desc">
+                            在你的词库中勾选若干「模糊 / 不会」的词，系统会自动识别它们的词性、主题和难度，构建可学习组合。
+                        </div>
+                        <div class="flow-mini">
+                            <span class="flow-pill">支持手动挑选 & 智能推荐</span>
+                            <span class="flow-pill">按考试 / 话题 / 语法点聚合</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="flow-step">
+                        <div class="flow-step-label">
+                            <div class="flow-step-index">2</div>
+                            <div class="flow-step-title">一键生成文章 / 例句合集</div>
+                        </div>
+                        <div class="flow-step-desc">
+                            系统围绕这些单词生成一篇连贯短文和多组例句，
+                            同时标注出关键语法点，方便你边背单词边复盘语法。
+                        </div>
+                        <div class="flow-mini">
+                            <span class="flow-pill">情景小故事</span>
+                            <span class="flow-pill">考试型阅读段落</span>
+                            <span class="flow-pill">主题会话脚本</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="flow-step">
+                        <div class="flow-step-label">
+                            <div class="flow-step-index">3</div>
+                            <div class="flow-step-title">自动生成讲解视频</div>
+                        </div>
+                        <div class="flow-step-desc">
+                            基于文章和例句，自动生成讲解视频：逐句拆解、标注假名、
+                            高亮关键词，让你边看边跟读，像在上私人日语课。
+                        </div>
+                        <div class="flow-mini">
+                            <span class="flow-pill">字幕 & 假名同步高亮</span>
+                            <span class="flow-pill">停顿处自动适配跟读</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-preview">
+                    <div class="video-window">
+                        <div class="video-screen">
+                            <div class="code-line">
+                                <span class="kw">単語セット</span> =&gt; [ <span class="jp">駅</span>, <span class="jp">改札</span>, <span class="jp">乗り換え</span> ]
+                            </div>
+                            <div class="code-line">
+                                <span class="kw">ストーリー</span> =&gt; 「早朝の駅での乗り換えミス」
+                            </div>
+                            <div class="code-line">
+                                <span class="kw">解説ポイント</span> =&gt; 助詞 <span class="jp">で / に</span> の使い分け
+                            </div>
+                        </div>
+                        <div class="video-timeline">
+                            <div class="video-timeline-inner"></div>
+                        </div>
+                        <div class="video-play">▶</div>
+                    </div>
+
+                    <div class="video-info">
+                        <p>
+                            点击生成后，你将看到一节为你「量身拼装」的微课堂：
+                            上半部分讲词汇，下半部分通过场景故事和视频，把这些词自然串联起来。
+                        </p>
+                        <p>
+                            这样，当你再次在考试题或真实对话中遇到这些词时，
+                            大脑会自动调用起那段视频、那一幅画面、那句熟悉的日语。
+                        </p>
+                        <div class="video-tags">
+                            <span class="video-tag">适合碎片时间刷一节</span>
+                            <span class="video-tag">支持倍速 & 重播跟读</span>
+                            <span class="video-tag">自动更新到学习进度</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="cta">
+            <div class="cta-text">
+                <h2>现在，就从第一个日语单词开始</h2>
+                <p>
+                    选一个你正在学的单词，让系统为它生成句子、场景和音频。
+                    你会发现「背单词」这件事，可以不再枯燥，也不必孤立无聊。
+                </p>
+            </div>
+            <div class="cta-actions">
+                <button class="btn-primary">
+                    <span class="btn-icon">あ</span>
+                    体验一组日语单词
+                </button>
+                <button class="btn-ghost">
+                    <span class="btn-icon">▶</span>
+                    观看示例讲解视频
+                </button>
+                <div class="cta-inline-note">
+                    无需注册 · 直接进入体验 · <span>支持手机 / 平板 / 电脑</span>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <span>© 日语单词学习 · 多维记忆实验项目 · <span class="highlight">NIPPO WORDS</span></span>
+            <span>界面示意仅为设计展示，实际功能以产品上线为准。</span>
+        </footer>
+    </div>
+</div>
+</body>
+</html>

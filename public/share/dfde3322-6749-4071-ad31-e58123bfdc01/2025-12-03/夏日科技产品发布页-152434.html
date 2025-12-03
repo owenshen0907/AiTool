@@ -1,0 +1,141 @@
+```html
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>夏日科技产品发布页</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #10A5A6, #5AE1A0);
+            color: #333;
+        }
+
+        h1, h2, h3 {
+            margin: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin: 40px 0;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin: 10px;
+            flex: 1 1 calc(30% - 20px);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .scene-showcase {
+            text-align: center;
+            margin: 40px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .cta {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .cta-button {
+            background: #10A5A6;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .cta-button:hover {
+            background: #0f7b79;
+        }
+
+        @media (max-width: 768px) {
+            .feature-card {
+                flex: 1 1 100%;
+            }
+
+            .hero {
+                height: auto;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="hero">
+            <h1>夏日科技产品发布</h1>
+            <h2>开启科技新体验</h2>
+            <p>结合先进科技与时尚设计，提升生活的每一个瞬间。</p>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>核心卖点一</h3>
+                <p>让您体验前所未有的快速反应。</p>
+            </div>
+            <div class="feature-card">
+                <h3>核心卖点二</h3>
+                <p>智能化控制，让生活更简单。</p>
+            </div>
+            <div class="feature-card">
+                <h3>核心卖点三</h3>
+                <p>高效能，持久耐用，随时为您服务。</p>
+            </div>
+        </div>
+
+        <div class="scene-showcase">
+            <h2>场景展示</h2>
+            <p>无论是家庭、办公还是户外，我们的产品都能提升您的生活品质。</p>
+        </div>
+
+        <div class="cta">
+            <h2>准备好了吗？</h2>
+            <button class="cta-button">立即购买</button>
+        </div>
+    </div>
+</body>
+
+</html>
+```
