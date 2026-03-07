@@ -16,7 +16,7 @@ export default function FeaturesSection() {
         { title: 'Prompt 管理', desc: ['管理用例', '生成 Prompt', '调试'], href: '/prompt/manage' },
         { title: '知识库', desc: ['库管理', '文件管理'], href: '/kb/manage' },
         { title: '模型微调', desc: ['管理微调', '数据集管理'], href: '/fine-tune/manage' },
-        { title: '语音处理', desc: ['ASR', 'TTS', 'Real-Time'], href: '/speech/asr' },
+        { title: '语音处理', desc: ['ASR', 'TTS'], href: '/audio/asr' },
         { title: '图片生成', desc: ['单张', '批量'], href: '/image/generate' },
     ];
 

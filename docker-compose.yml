@@ -8,9 +8,8 @@ services:
     container_name: aitool
     ports:
       - "3000:3000"   # Next.js
-      - "3001:3001"   # WS-Proxy
     env_file:
-      - .env.local    # Next.js、proxy 共用的 Key 等
+      - .env.local
     volumes:
       # 挂代码方便热更新；生产可去掉
       - ./src:/app/src

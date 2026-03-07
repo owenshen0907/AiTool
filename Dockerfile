@@ -29,9 +29,8 @@ RUN npm i -g pm2
 # ⑦ 生产环境变量
 ENV NODE_ENV=production
 
-# ⑧ 暴露 Next.js (3000) + WS-Proxy (3001)
-EXPOSE 3000 3001
+# ⑧ 暴露 Next.js
+EXPOSE 3000
 
-# ⑨ 启动两个进程：web / proxy
-#    pm2-runtime 会阻塞 PID=1，Docker 可感知健康
+# ⑨ 启动 Web 进程
 CMD ["pm2-runtime", "ecosystem.config.cjs"]

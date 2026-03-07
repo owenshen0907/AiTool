@@ -2,12 +2,29 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { CASDOOR_CONFIG } from '@/config';
-import { upsertUser } from '@/lib/repositories/userRepository';
+import { buildLoginModalHomePath, normalizeLoginNext } from '@/lib/auth/loginModal';
+import {
+    fetchCasdoorAccount,
+    setAuthCookies,
+    syncCasdoorAccount,
+} from '@/lib/auth/casdoorServer';
 
 export async function GET(request: NextRequest) {
+    const redirectUri = `${request.nextUrl.origin}/api/auth/callback`;
+    const postLoginRedirect = normalizeLoginNext(
+        request.cookies.get('postLoginRedirect')?.value
+    );
+    const redirectToLoginModal = () => {
+        const response = NextResponse.redirect(
+            new URL(buildLoginModalHomePath(postLoginRedirect), request.nextUrl.origin)
+        );
+        response.cookies.set('postLoginRedirect', '', { maxAge: 0, path: '/' });
+        return response;
+    };
+
     // 1. 拿 code
     const code = request.nextUrl.searchParams.get('code');
-    if (!code) return NextResponse.redirect('/login');
+    if (!code) return redirectToLoginModal();
 
     // 2. 换 token
     const tokenRes = await fetch(
@@ -19,52 +36,27 @@ export async function GET(request: NextRequest) {
                 client_id:     CASDOOR_CONFIG.clientId,
                 client_secret: CASDOOR_CONFIG.clientSecret,
                 code,
-                redirect_uri:  CASDOOR_CONFIG.redirectUri,
+                redirect_uri:  redirectUri,
                 grant_type:    'authorization_code',
             }),
         }
     );
     if (!tokenRes.ok) {
         console.error('Token 交换失败', await tokenRes.text());
-        return NextResponse.redirect('/login');
+        return redirectToLoginModal();
     }
     const { access_token: accessToken } = await tokenRes.json();
 
     // 3. 拉用户
-    const accountRes = await fetch(
-        `${CASDOOR_CONFIG.endpoint}/api/get-account`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    if (!accountRes.ok) {
-        console.error('获取账户失败', await accountRes.text());
-        return NextResponse.redirect('/login');
-    }
-    const accountData = (await accountRes.json()).data;
-    const userId      = accountData.id;
-    // （可选）同步到你自己的 DB
+    let accountData;
     try {
-        await upsertUser({
-            id:           userId,
-            nickname:     accountData.displayName || accountData.name,
-            email:        accountData.email  || '',
-            phone:        accountData.phone  || '',
-            wechat:       accountData.wechat || '',
-            accountLevel: 1,
-        });
-    } catch (e) {
-        console.error('同步用户失败', e);
+        accountData = await fetchCasdoorAccount(accessToken);
+        await syncCasdoorAccount(accountData);
+    } catch (error) {
+        console.error('获取账户失败', error);
+        return redirectToLoginModal();
     }
-
-    // 4. 写 Cookie
-    const isProd = process.env.NODE_ENV === 'production';
-    const cookieOpts = {
-        httpOnly: true,
-        secure:   isProd,
-        sameSite: 'lax' as const,
-        path:     '/',
-        // 生产环境固定写给主域 .owenshen.top，开发时留空（localhost）
-        ...(isProd ? { domain: '.owenshen.top' } : {}),
-    };
+    const userId = accountData.id;
 
     // 5. 返回一个自定义 HTML，脚本做一次顶层跳转——带上新 Cookie
     const page = `<!DOCTYPE html>
@@ -72,8 +64,7 @@ export async function GET(request: NextRequest) {
 <head><meta charset="utf-8"><title>登录中…</title></head>
 <body>
   <script>
-    // 请稍候，正在跳回首页…
-    window.location.href = '/';
+    window.location.href = ${JSON.stringify(postLoginRedirect)};
   </script>
 </body>
 </html>`;
@@ -83,8 +74,7 @@ export async function GET(request: NextRequest) {
         headers: { 'Content-Type': 'text/html' },
     });
     // 在这里写 Cookie，浏览器会在后续页面导航中带上
-    res.cookies.set('sessionToken', accessToken, cookieOpts);
-    res.cookies.set('userId',       userId,       cookieOpts);
+    setAuthCookies(res, accessToken, userId);
 
     return res;
 }

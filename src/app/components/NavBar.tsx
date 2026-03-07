@@ -1,129 +1,248 @@
-
-// src/app/components/NavBar.tsx
 'use client';
 
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { ChevronDown, Github, Sparkles } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
 import UserInfoModal from './info/UserInfoModal';
 import SupplierModelManagement from './info/SupplierModelManagement';
 import AgentManagement from './info/agentConfig/AgentManagement';
 import { menuData, MenuItem } from './menuData';
-import { CASDOOR_CONFIG } from '@/config';
+import { buildLoginModalPath } from '@/lib/auth/loginModal';
 
-function buildLoginHref(next: string = '/') {
-    const url = new URL(
-        `${process.env.NEXT_PUBLIC_LOGIN_URL}/login/oauth/authorize`
-    );
-    url.searchParams.set('client_id', CASDOOR_CONFIG.clientId);
-    url.searchParams.set('response_type', 'code');
-    url.searchParams.set('redirect_uri', CASDOOR_CONFIG.redirectUri);
-    url.searchParams.set('scope', 'read');
-    url.searchParams.set('state', 'casdoor');
-    url.searchParams.set('next', next);
-    return url.toString();
+function isMenuItemActive(item: MenuItem, pathname: string): boolean {
+    if (item.href) {
+        if (item.href === '/') return pathname === '/';
+        if (pathname === item.href) return true;
+        return pathname.startsWith(`${item.href}/`);
+    }
+
+    return item.children?.some((child) => isMenuItemActive(child, pathname)) ?? false;
 }
 
-function HoverMenu({ item, level = 0 }: { item: MenuItem; level?: number }) {
+function HoverMenu({
+    item,
+    pathname,
+    level = 0,
+}: {
+    item: MenuItem;
+    pathname: string;
+    level?: number;
+}) {
     const [open, setOpen] = useState(false);
     const timer = useRef<number>();
-    const enter = () => { clearTimeout(timer.current); setOpen(true); };
-    const leave = () => { timer.current = window.setTimeout(() => setOpen(false), 50); };
+    const active = isMenuItemActive(item, pathname);
     const isRoot = level === 0;
-    const posClass = isRoot ? 'left-0 top-full mt-1 w-36' : 'left-full top-0 ml-1 w-48';
+
+    const enter = () => {
+        clearTimeout(timer.current);
+        setOpen(true);
+    };
+
+    const leave = () => {
+        timer.current = window.setTimeout(() => setOpen(false), 180);
+    };
+
+    const panelClass = isRoot
+        ? 'left-1/2 top-full mt-3 w-64 -translate-x-1/2'
+        : 'left-full top-0 ml-1 w-60';
+
+    const triggerClass = isRoot
+        ? `inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition ${
+              active || open
+                  ? 'bg-white/80 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.10)]'
+                  : 'text-slate-600 hover:bg-white/65 hover:text-slate-900'
+          }`
+        : `flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition ${
+              active
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
+          }`;
+
     return (
-        <li className="relative" onMouseEnter={enter} onMouseLeave={leave}>
+        <li className="relative shrink-0" onMouseEnter={enter} onMouseLeave={leave}>
             {item.href ? (
-                <Link
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block px-3 py-2 hover:bg-gray-100 rounded">
-                    {item.title}
+                <Link href={item.href} className={triggerClass}>
+                    <span>{item.title}</span>
+                    {item.children ? <ChevronDown size={15} className={open ? 'rotate-180 transition' : 'transition'} /> : null}
                 </Link>
             ) : (
-                <span className="block px-3 py-2 hover:bg-gray-100 rounded cursor-pointer">
-          {item.title}
-        </span>
+                <button type="button" className={triggerClass}>
+                    <span>{item.title}</span>
+                    {item.children ? <ChevronDown size={15} className={open ? 'rotate-180 transition' : 'transition'} /> : null}
+                </button>
             )}
-            {item.children && open && (
+
+            {item.children && open ? (
                 <ul
-                    className={`absolute ${posClass} bg-white border shadow-lg rounded-md py-1`}
-                    style={{ zIndex: 50 + level }}
+                    className={`absolute ${panelClass} rounded-[28px] border border-white/70 bg-white/78 p-2 shadow-[0_22px_70px_rgba(15,23,42,0.14)] backdrop-blur-2xl`}
+                    style={{ zIndex: 80 + level }}
                 >
-                    {item.children.map(child => (
-                        <HoverMenu key={child.title} item={child} level={level+1} />
+                    {item.children.map((child) => (
+                        <HoverMenu
+                            key={`${item.title}-${child.title}`}
+                            item={child}
+                            pathname={pathname}
+                            level={level + 1}
+                        />
                     ))}
                 </ul>
-            )}
+            ) : null}
         </li>
     );
 }
 
 export default function NavBar() {
     const { user, setUser } = useUser();
+    const pathname = usePathname() || '/';
+    const searchParams = useSearchParams();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showUserModal, setShowUserModal] = useState(false);
     const [showSupplierModal, setShowSupplierModal] = useState(false);
-    const hoverTimer = useRef<number>();
-    const router = useRouter();
-    const pathname = usePathname() || '/';
-    const loginHref = buildLoginHref(pathname);
-
-    const handleLogout = async () => {
-        // 本地清用户
-        setUser(null);
-        // 后端清 session
-        await fetch('/api/auth/logout', { credentials: 'include' });
-        router.push('/');
-    };
-
-    const displayName = user?.displayName || 'U';
-    const firstChar = displayName.charAt(0).toUpperCase();
     const [showAgentModal, setShowAgentModal] = useState(false);
+    const hoverTimer = useRef<number>();
+
+    if (pathname === '/login-confirm') {
+        return null;
+    }
+
+    const search = searchParams?.toString() ? `?${searchParams.toString()}` : '';
+    const loginHref = buildLoginModalPath(pathname, search);
+    const displayName = user?.displayName || 'User';
+    const firstChar = displayName.charAt(0).toUpperCase();
+
+    const handleLogout = () => {
+        setUser(null);
+        window.location.href = '/api/auth/logout';
+    };
 
     return (
         <>
-            <nav className="flex items-center justify-between px-8 h-14 bg-white shadow-md relative z-50">
-                <div className="text-2xl font-semibold text-blue-600 cursor-pointer" onClick={() => router.push('/')}>AiTool</div>
-                <ul className="flex space-x-4">
-                    {menuData.map(item => <HoverMenu key={item.title} item={item}/>)}
-                </ul>
-                <div className="flex items-center space-x-4">
-                    <a href="https://github.com/owenshen0907/AiTool" target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
-                        <Image src="/icons/github.svg" alt="GitHub" width={24} height={24}/>
-                    </a>
-                    {user ? (
-                        <div
-                            className="relative flex items-center"
-                            onMouseEnter={() => { clearTimeout(hoverTimer.current); setDropdownOpen(true); }}
-                            onMouseLeave={() => { hoverTimer.current = window.setTimeout(() => setDropdownOpen(false), 150); }}
-                        >
-                            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                                {firstChar}
-                            </div>
-                            {dropdownOpen && (
-                                <div className="absolute right-0 top-full mt-1 w-44 bg-white border rounded-md shadow-lg">
-                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { setShowUserModal(true); setDropdownOpen(false); }}>个人信息</div>
-                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => { setShowSupplierModal(true); setDropdownOpen(false); }}>供应商＆模型管理</div>
-                                    <div
-                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"   // NEW
-                                        onClick={() => { setShowAgentModal(true); setDropdownOpen(false); }}
-                                    >Agent管理</div>
-                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" onClick={handleLogout}>注销登录</div>
-                                </div>
-                            )}
+            <div className="sticky top-0 z-[90] px-3 pt-3 md:px-5">
+                <nav className="mx-auto flex max-w-7xl items-center gap-3 rounded-[30px] border border-white/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(244,247,251,0.70)_100%)] px-3 py-3 shadow-[0_18px_60px_rgba(15,23,42,0.10)] backdrop-blur-2xl md:px-4">
+                    <Link
+                        href="/"
+                        className="flex shrink-0 items-center gap-3 rounded-[22px] px-2 py-1.5 transition hover:bg-white/70"
+                    >
+                        <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#0f172a_0%,#334155_55%,#64748b_100%)] text-white shadow-[0_10px_30px_rgba(15,23,42,0.20)]">
+                            <Sparkles size={18} />
                         </div>
-                    ) : (
-                        <a href={loginHref} className="px-3 py-2 hover:bg-gray-100 rounded">登录</a>
-                    )}
-                </div>
-            </nav>
-            {showUserModal && user && <UserInfoModal data={user} onClose={() => setShowUserModal(false)}/>}
-            {showSupplierModal && <SupplierModelManagement onClose={() => setShowSupplierModal(false)}/>}
-            {showAgentModal && <AgentManagement onClose={() => setShowAgentModal(false)} />} {/* NEW */}
+                        <div className="hidden sm:block">
+                            <div className="text-lg font-semibold tracking-tight text-slate-900">AiTool</div>
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                                AI Workspace
+                            </div>
+                        </div>
+                    </Link>
+
+                    <div className="min-w-0 flex-1 overflow-x-auto md:overflow-visible">
+                        <ul className="flex min-w-max items-center gap-2 px-1">
+                            {menuData.map((item) => (
+                                <HoverMenu key={item.title} item={item} pathname={pathname} />
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                        <a
+                            href="https://github.com/owenshen0907/AiTool"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/60 bg-white/60 text-slate-600 transition hover:bg-white hover:text-slate-900"
+                            aria-label="GitHub"
+                        >
+                            <Github size={18} />
+                        </a>
+
+                        {user ? (
+                            <div
+                                className="relative"
+                                onMouseEnter={() => {
+                                    clearTimeout(hoverTimer.current);
+                                    setDropdownOpen(true);
+                                }}
+                                onMouseLeave={() => {
+                                    hoverTimer.current = window.setTimeout(() => setDropdownOpen(false), 140);
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    className="flex items-center gap-3 rounded-full border border-white/65 bg-white/70 px-2 py-2 pr-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition hover:bg-white"
+                                >
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2563eb_0%,#0f172a_100%)] text-sm font-semibold text-white">
+                                        {firstChar}
+                                    </div>
+                                    <div className="hidden text-left md:block">
+                                        <div className="max-w-[132px] truncate text-sm font-medium text-slate-900">
+                                            {displayName}
+                                        </div>
+                                        <div className="text-xs text-slate-500">Workspace Owner</div>
+                                    </div>
+                                    <ChevronDown
+                                        size={16}
+                                        className={dropdownOpen ? 'text-slate-500 transition rotate-180' : 'text-slate-500 transition'}
+                                    />
+                                </button>
+
+                                {dropdownOpen ? (
+                                    <div className="absolute right-0 top-full mt-3 w-60 rounded-[28px] border border-white/70 bg-white/80 p-2 shadow-[0_22px_70px_rgba(15,23,42,0.16)] backdrop-blur-2xl">
+                                        <button
+                                            type="button"
+                                            className="block w-full rounded-2xl px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-white hover:text-slate-900"
+                                            onClick={() => {
+                                                setShowUserModal(true);
+                                                setDropdownOpen(false);
+                                            }}
+                                        >
+                                            个人信息
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="block w-full rounded-2xl px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-white hover:text-slate-900"
+                                            onClick={() => {
+                                                setShowSupplierModal(true);
+                                                setDropdownOpen(false);
+                                            }}
+                                        >
+                                            供应商＆模型管理
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="block w-full rounded-2xl px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-white hover:text-slate-900"
+                                            onClick={() => {
+                                                setShowAgentModal(true);
+                                                setDropdownOpen(false);
+                                            }}
+                                        >
+                                            Agent 管理
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="block w-full rounded-2xl px-4 py-3 text-left text-sm text-rose-600 transition hover:bg-rose-50"
+                                            onClick={handleLogout}
+                                        >
+                                            注销登录
+                                        </button>
+                                    </div>
+                                ) : null}
+                            </div>
+                        ) : (
+                            <Link
+                                href={loginHref}
+                                scroll={false}
+                                className="inline-flex h-11 items-center rounded-full border border-white/70 bg-[linear-gradient(135deg,#0f172a_0%,#334155_100%)] px-5 text-sm font-medium text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)] transition hover:opacity-92"
+                            >
+                                登录
+                            </Link>
+                        )}
+                    </div>
+                </nav>
+            </div>
+
+            {showUserModal && user ? <UserInfoModal data={user} onClose={() => setShowUserModal(false)} /> : null}
+            {showSupplierModal ? <SupplierModelManagement onClose={() => setShowSupplierModal(false)} /> : null}
+            {showAgentModal ? <AgentManagement onClose={() => setShowAgentModal(false)} /> : null}
         </>
     );
 }

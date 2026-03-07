@@ -1,14 +1,20 @@
-// src/lib/fetchPatch.ts
-const LOGIN_URL =
-    'https://login.owenshen.top/login/oauth/authorize' +
-    '?client_id=bebdd6aebe8d08bba1a1' +
-    '&response_type=code' +
-    '&redirect_uri=https://owenshen.top/api/auth/callback' +
-    '&scope=read' +
-    '&state=casdoor';
+import { buildLoginModalPath, isLoginModalOpen } from '@/lib/auth/loginModal';
 
 function shouldRedirect(res: Response) {
-    return res.redirected || res.status === 401;
+    if (res.status === 401) return true;
+    if (!res.redirected || !res.url) return false;
+
+    try {
+        const finalUrl = new URL(res.url, window.location.origin);
+        return (
+            finalUrl.origin === window.location.origin &&
+            (isLoginModalOpen(finalUrl.search) ||
+                finalUrl.pathname.startsWith('/login-confirm') ||
+                finalUrl.pathname.startsWith('/api/auth/login'))
+        );
+    } catch {
+        return false;
+    }
 }
 
 // —— 小工具：安全拿到 URL（避免跨 realm 的 instanceof 失效）——
@@ -68,9 +74,13 @@ export function patchFetchOnce() {
             if (DEBUG) console.debug('[FETCH_PATCH] response:', res.status, res.redirected, res.url);
 
             if (shouldRedirect(res)) {
-                if (DEBUG) console.debug('[FETCH_PATCH] redirect to login:', LOGIN_URL);
+                const loginUrl = buildLoginModalPath(
+                    window.location.pathname,
+                    window.location.search
+                );
+                if (DEBUG) console.debug('[FETCH_PATCH] redirect to login:', loginUrl);
                 // 触发浏览器跳转
-                window.location.href = LOGIN_URL;
+                window.location.href = loginUrl;
                 // 同时返回一个 401 Response，避免调用方 await 一个永不 resolve 的 Promise
                 return new Response(null, { status: 401 });
             }

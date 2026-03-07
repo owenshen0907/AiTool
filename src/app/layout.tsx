@@ -1,9 +1,9 @@
 // app/layout.tsx
 import './globals.css';
-import Script from 'next/script';
 import { cookies } from 'next/headers';
 import { Inter } from 'next/font/google';
 import NavBar from './components/NavBar';
+import LoginModal from './components/LoginModal';
 import { CASDOOR_CONFIG } from '@/config';
 import { UserProvider, User } from './providers/UserProvider';
 import ClientBoot from './ClientBoot';
@@ -47,13 +47,13 @@ export default async function RootLayout({
     return (
         <html lang="en">
         <head>
-            {/*<Script src="/fetchPatch.js" strategy="beforeInteractive" />*/}
         </head>
         <body className={inter.className}>
         <UserProvider initialUser={initialUser}>
             <ClientBoot />
             <NavBar />
             {children}
+            <LoginModal />
         </UserProvider>
         </body>
         </html>

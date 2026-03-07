@@ -1,6 +1,7 @@
 // File: middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { buildLoginModalHomePath } from '@/lib/auth/loginModal';
 
 /* ────────────────────────────── 工具函数 ────────────────────────────── */
 // function decodeJwtPayload(token: string) {
@@ -22,11 +23,7 @@ function isExpired(payload: any) {
 
 /* ────────────────────────────── 中间件主体 ────────────────────────────── */
 export function middleware(request: NextRequest) {
-    const { pathname, origin, hostname } = request.nextUrl;
-
-    // —— 日志开始 ——
-    console.log(`[middleware] → 请求 path: ${pathname}`);
-    console.log(`  Cookies:`, request.cookies.getAll());
+    const { pathname, origin, hostname, search } = request.nextUrl;
 
     /* 0️⃣ 放行  ── 登录域名（Casdoor 自己的页面） */
     const loginHost = process.env.NEXT_PUBLIC_LOGIN_URL!.replace(/^https?:\/\//, '');
@@ -39,9 +36,9 @@ export function middleware(request: NextRequest) {
         pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon.ico') ||
         pathname.startsWith('/public') ||
-        pathname.startsWith('/login-confirm')||               // 新增：确认页本身也要放行
+        pathname.startsWith('/login-confirm') ||
         pathname.startsWith('/stepfun')
-) {
+    ) {
         return NextResponse.next();
     }
 
@@ -50,7 +47,6 @@ export function middleware(request: NextRequest) {
     if (token) {
         try {
             const payload = decodeJwtPayload(token);
-            console.log('JWT payload:', payload);
             if (!isExpired(payload)) {
                 const userId = payload.sub ?? payload.username;
                 if (userId) {
@@ -64,9 +60,8 @@ export function middleware(request: NextRequest) {
         }
     }
 
-    /* 3️⃣ 未登录 ── 跳转到 /login-confirm?next=<原始路径> */
-    const confirmUrl = new URL('/login-confirm', origin);
-    confirmUrl.searchParams.set('next', pathname);
+    /* 3️⃣ 未登录 ── 回到首页并拉起登录弹层 */
+    const confirmUrl = new URL(buildLoginModalHomePath(`${pathname}${search}`), origin);
 
     // 同时把失效 token 清掉，避免死循环
     const res = NextResponse.redirect(confirmUrl);

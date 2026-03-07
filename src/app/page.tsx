@@ -1,182 +1,220 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Globe, Database, Cpu, Mic, FileText } from 'lucide-react';
+import { ArrowRight, BookOpenText, FolderKanban, Languages, Sparkles, Wand2 } from 'lucide-react';
+import { planStatusMeta, systemPlan } from '@/lib/sitePlan';
 
-interface Slide {
-    gradient: string;
-    headline: string;
-    subheadline: string;
-    ctaHref: string;
-    ctaLabel: string;
-}
-
-const slides: Slide[] = [
+const pillars = [
     {
-        gradient: 'from-indigo-500 to-purple-700',
-        headline: '一站式 AI 能力平台',
-        subheadline: '从 Prompt 到微调，从知识库到多模态 Agent，全面提升开发效率',
-        ctaHref: '/prompt/manage', ctaLabel: '立即体验',
+        title: 'Workspace',
+        description: '把提示词、文档、任务与最近产出收束成一个真正可每天打开的入口。',
+        icon: Sparkles,
     },
     {
-        gradient: 'from-green-400 to-blue-500',
-        headline: '多模态 Agent 支持',
-        subheadline: '自动生成视频脚本、图像标注与文档总结，一键完成',
-        ctaHref: '/agent/video/summary', ctaLabel: '场景演示',
+        title: 'Create',
+        description: '继续保留 Prompt、图片、音频、视频等已有强项，但作为创作能力层存在。',
+        icon: Wand2,
     },
     {
-        gradient: 'from-yellow-300 to-red-500',
-        headline: '智能微调 & 知识库',
-        subheadline: '定制模型训练，知识库管理，一站式数据驱动',
-        ctaHref: '/kb/manage', ctaLabel: '查看详情',
+        title: 'Learn',
+        description: '把日语学习、阅读、TTS 练习变成持续积累的个人学习流。',
+        icon: Languages,
+    },
+    {
+        title: 'Library',
+        description: '让模板、资料、生成结果和复用资产可沉淀、可回看、可继续加工。',
+        icon: BookOpenText,
     },
 ];
 
-const features = [
+const routes = [
     {
-        icon: Globe,
-        title: '项目愿景',
-        desc: '记录与实践大模型应用：文本、视觉、音频、多模态',
+        title: 'Prompt Studio',
+        description: 'AiTool 当前最成熟的能力，继续承担核心生产流入口。',
+        href: '/prompt/manage',
     },
     {
-        icon: Database,
-        title: '可控性技术',
-        desc: '知识库 & 微调，避免模型幻想',
+        title: 'Japanese Notes',
+        description: '把学习内容沉淀成可回顾、可检索、可语音练习的长期资产。',
+        href: '/docs/japanese',
     },
     {
-        icon: Cpu,
-        title: '实用 Agent',
-        desc: '基于模型基础能力的场景应用',
-    },
-    {
-        icon: Mic,
-        title: '交互方式',
-        desc: '语音与文本的流畅自然互动',
-    },
-    {
-        icon: FileText,
-        title: '笔记与工作台',
-        desc: '统一文字、图片、语音记录，模型为您保管',
+        title: 'Image Generate',
+        description: '保留图像生成与模板化工作流，后续并入 Create 体系。',
+        href: '/agent/image/generate',
     },
 ];
 
-export default function HomePage(): JSX.Element {
-    const [active, setActive] = useState(0);
-    const count = slides.length;
-
-    useEffect(() => {
-        const iv = setInterval(() => setActive(i => (i + 1) % count), 6000);
-        return () => clearInterval(iv);
-    }, [count]);
+export default function HomePage() {
+    const currentPhase = systemPlan.phases.find((phase) => phase.status === 'in_progress') || systemPlan.phases[0];
+    const currentPhaseMeta = planStatusMeta[currentPhase.status];
 
     return (
-        <main className="flex flex-col min-h-screen font-sans bg-gray-100">
-            {/* 上：幻灯片 */}
-            <section className="relative h-72 overflow-hidden">
-                {slides.map((s, idx) => (
-                    <div
-                        key={idx}
-                        className={`absolute inset-0 bg-gradient-to-r ${s.gradient} transition-opacity duration-1000 ${idx === active ? 'opacity-100' : 'opacity-0'}`}
-                    >
-                        <div className="h-full flex flex-col items-center justify-center text-center text-white px-4 space-y-3">
-                            <h1 className="text-3xl md:text-4xl font-bold drop-shadow-lg">{s.headline}</h1>
-                            <p className="text-base md:text-lg drop-shadow-md max-w-2xl">{s.subheadline}</p>
+        <main className="min-h-screen bg-[linear-gradient(180deg,#eef4fb_0%,#ffffff_42%,#f8fafc_100%)] text-slate-900">
+            <section className="px-4 pb-12 pt-10 md:px-8 md:pt-14">
+                <div className="mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-[0_28px_100px_rgba(15,23,42,0.08)] md:grid-cols-[1.08fr_0.92fr]">
+                    <div className="px-6 py-8 md:px-10 md:py-12">
+                        <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700">
+                            AI-native workspace
+                        </div>
+                        <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">
+                            AiTool 正在从“工具集合”重构成“可持续使用的 AI 工作台”
+                        </h1>
+                        <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
+                            这里不再只是展示很多功能，而是围绕创作、学习、开发执行与个人资产沉淀，建立一个你每天都能重新打开的入口。
+                        </p>
+                        <div className="mt-8 flex flex-wrap gap-3">
                             <Link
-                                href={s.ctaHref}
-                                className="mt-1 inline-block bg-white text-black px-5 py-2 rounded-full font-medium hover:shadow-md"
+                                href="/roadmap"
+                                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-700"
                             >
-                                {s.ctaLabel}
+                                查看系统规划
+                                <ArrowRight size={16} />
+                            </Link>
+                            <Link
+                                href="/prompt/manage"
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                            >
+                                进入 Prompt Studio
                             </Link>
                         </div>
                     </div>
-                ))}
-                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                    {slides.map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setActive(i)}
-                            className={`w-2 h-2 rounded-full ${i === active ? 'bg-white' : 'bg-gray-500'} hover:scale-125 transition-transform`}
-                            type="button"
-                        />
-                    ))}
+
+                    <div className="bg-[radial-gradient(circle_at_top,#dce8f8_0%,#edf3fb_42%,#f8fafc_100%)] px-6 py-8 md:px-8 md:py-10">
+                        <div className="rounded-[28px] border border-white/70 bg-white/75 p-6 shadow-[0_18px_45px_rgba(148,163,184,0.18)] backdrop-blur">
+                            <div className="flex items-center gap-3">
+                                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${currentPhaseMeta.badgeClass}`}>
+                                    {currentPhaseMeta.label}
+                                </span>
+                                <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                                    Current Phase
+                                </span>
+                            </div>
+                            <h2 className="mt-5 text-2xl font-semibold text-slate-900">
+                                {currentPhase.name}
+                            </h2>
+                            <p className="mt-4 text-sm leading-7 text-slate-600 md:text-base md:leading-8">
+                                {currentPhase.goal}
+                            </p>
+                            <div className="mt-6 space-y-3">
+                                {currentPhase.tasks.map((task) => {
+                                    const meta = planStatusMeta[task.status];
+                                    return (
+                                        <div
+                                            key={task.title}
+                                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                        >
+                                            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                <span className={`h-2.5 w-2.5 rounded-full ${meta.dotClass}`} />
+                                                {meta.label}
+                                            </div>
+                                            <div className="mt-2 text-base font-semibold text-slate-900">
+                                                {task.title}
+                                            </div>
+                                            <div className="mt-2 text-sm leading-7 text-slate-600">
+                                                {task.note}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            {/* 中：图文介绍与进度 */}
-            <section className="py-12 px-4 bg-white">
-                <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-                    {/* 左：图文介绍，占4/5 */}
-                    <div className="lg:col-span-4 grid grid-cols-2 md:grid-cols-3 gap-6">
-                        {features.map((f, idx) => (
-                            <div
-                                key={idx}
-                                className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-lg shadow-sm"
-                            >
-                                <f.icon size={40} className="text-indigo-500 mb-2" />
-                                <h3 className="font-semibold text-gray-800 mb-1">{f.title}</h3>
-                                <p className="text-sm text-gray-600">{f.desc}</p>
+            <section className="px-4 py-6 md:px-8 md:py-10">
+                <div className="mx-auto max-w-6xl">
+                    <div className="flex items-end justify-between gap-4">
+                        <div>
+                            <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                                Product Pillars
                             </div>
+                            <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+                                以后所有功能，都要回到这四个骨架里
+                            </h2>
+                        </div>
+                    </div>
+                    <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                        {pillars.map((pillar) => (
+                            <article
+                                key={pillar.title}
+                                className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]"
+                            >
+                                <div className="inline-flex rounded-2xl bg-slate-100 p-3 text-slate-700">
+                                    <pillar.icon size={24} />
+                                </div>
+                                <h3 className="mt-5 text-2xl font-semibold text-slate-900">
+                                    {pillar.title}
+                                </h3>
+                                <p className="mt-4 text-sm leading-7 text-slate-600">
+                                    {pillar.description}
+                                </p>
+                            </article>
                         ))}
                     </div>
-
-                    {/* 右：开发进度，占1/5 */}
-                    <div className="lg:col-span-1 bg-gray-50 p-4 rounded-lg shadow-md">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-800">开发进度</h3>
-                        <ul className="space-y-2 text-gray-700 text-sm">
-                            <li><span className="text-green-500 mr-2">✓</span>Prompt 管理 完成</li>
-                            <li><span className="text-yellow-500 mr-2">⟳</span>Prompt 调试 进行中</li>
-                            <li><span className="text-gray-400 mr-2">○</span>知识库 模块</li>
-                            <li><span className="text-gray-400 mr-2">○</span>微调 模块</li>
-                            <li><span className="text-gray-400 mr-2">○</span>智能 Agent</li>
-                            <li><span className="text-gray-400 mr-2">○</span>语音 交互</li>
-                            <li><span className="text-gray-400 mr-2">○</span>笔记 & 工作台</li>
-                        </ul>
-                    </div>
                 </div>
             </section>
 
-            {/* 页脚 */}
-            <footer className="bg-black text-gray-400 py-12 px-6 mt-auto">
-                <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
-                    {/* 快速入口 */}
-                    <div>
-                        <h4 className="font-semibold text-white mb-2">快速入口</h4>
-                        <ul className="space-y-1">
-                            <li><Link href="/prompt/manage" className="hover:text-white">Prompt 管理</Link></li>
-                            <li><Link href="/prompt/case" className="hover:text-white">Prompt 调试</Link></li>
-                            <li><Link href="/kb/manage" className="hover:text-white">知识库管理</Link></li>
-                            <li><Link href="/fine-tune/manage" className="hover:text-white">模型微调</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-white mb-2">Agent 场景</h4>
-                        <ul className="space-y-1">
-                            <li><Link href="/agent/video/summary" className="hover:text-white">视频总结</Link></li>
-                            <li><Link href="/agent/image/batch-analysis" className="hover:text-white">图像分析</Link></li>
-                            <li><Link href="/agent/file/text-summary" className="hover:text-white">文件总结</Link></li>
-                            <li><Link href="/agent/code/docs" className="hover:text-white">代码文档</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-white mb-2">欧文的个人中心</h4>
-                        <ul className="space-y-1">
-                            <li><Link href="/docs/study" className="hover:text-white">学习笔记</Link></li>
-                            <li><Link href="/docs/travel" className="hover:text-white">游记攻略</Link></li>
-                            <li><Link href="/docs/japanese" className="hover:text-white">日语学习</Link></li>
-                            <li><Link href="/docs/photos" className="hover:text-white">照片集</Link></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 className="font-semibold text-white mb-2">友情链接</h4>
-                        <ul className="space-y-1">
-                            <li><a href="https://everything.cafe" target="_blank" rel="noopener noreferrer" className="hover:text-white">Everything Café</a></li>
-                        </ul>
-                    </div>
+            <section className="px-4 py-6 md:px-8 md:py-10">
+                <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-[0.92fr_1.08fr]">
+                    <article className="rounded-[32px] border border-slate-200 bg-slate-900 p-6 text-white shadow-[0_20px_80px_rgba(15,23,42,0.18)] md:p-8">
+                        <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-slate-200">
+                            系统规划
+                        </div>
+                        <h2 className="mt-5 text-3xl font-semibold tracking-tight">
+                            首页展示方向，独立页面沉淀执行状态
+                        </h2>
+                        <p className="mt-4 text-sm leading-8 text-slate-300 md:text-base">
+                            你刚刚提到的“把系统规划直接放到首页”，我理解成两层：一层对外解释产品正在往哪儿走，一层对内记录当前阶段、完成项和下一步，避免规划只躺在文档里。
+                        </p>
+                        <div className="mt-6 rounded-[24px] border border-white/10 bg-white/5 p-5">
+                            <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-300">
+                                <FolderKanban size={18} />
+                                当前 Focus
+                            </div>
+                            <p className="mt-3 text-sm leading-7 text-slate-200 md:text-base md:leading-8">
+                                {systemPlan.currentFocus}
+                            </p>
+                        </div>
+                        <Link
+                            href="/roadmap"
+                            className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
+                        >
+                            打开完整规划页
+                            <ArrowRight size={16} />
+                        </Link>
+                    </article>
+
+                    <article className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
+                        <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                            Current Entrypoints
+                        </div>
+                        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
+                            当前先保留这些高价值入口
+                        </h2>
+                        <div className="mt-6 grid gap-4">
+                            {routes.map((route) => (
+                                <Link
+                                    key={route.title}
+                                    href={route.href}
+                                    className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+                                >
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-slate-900">
+                                                {route.title}
+                                            </h3>
+                                            <p className="mt-2 text-sm leading-7 text-slate-600">
+                                                {route.description}
+                                            </p>
+                                        </div>
+                                        <ArrowRight size={18} className="shrink-0 text-slate-400" />
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </article>
                 </div>
-                <p className="text-center text-xs text-gray-500 mt-6">© 2025 AiTool · 欧文</p>
-            </footer>
+            </section>
         </main>
     );
 }

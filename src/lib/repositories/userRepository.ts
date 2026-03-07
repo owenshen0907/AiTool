@@ -25,8 +25,7 @@ export interface Model {
         | 'asr'
         | 'tts'
         | 'streaming_asr'
-        | 'streaming_tts'
-        | 'real-time';
+        | 'streaming_tts';
     notes?: string;
     passedTest: boolean;
     userId: string;
