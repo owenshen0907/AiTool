@@ -1,11 +1,15 @@
 export const LOGIN_MODAL_QUERY_KEY = 'login';
 export const LOGIN_MODAL_NEXT_QUERY_KEY = 'loginNext';
+export const DEFAULT_POST_LOGIN_PATH = '/workspace';
 
 function toSearchParams(search: string = '') {
     return new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
 }
 
-export function normalizeLoginNext(next: string | null | undefined, fallback: string = '/') {
+export function normalizeLoginNext(
+    next: string | null | undefined,
+    fallback: string = DEFAULT_POST_LOGIN_PATH
+) {
     if (!next) return fallback;
     if (!next.startsWith('/') || next.startsWith('//')) return fallback;
     return next;

@@ -70,6 +70,11 @@ const pinnedShortcuts = [
         href: '/workspace/home-builder',
     },
     {
+        title: '查看内部需求',
+        description: '把产品迭代、验证备注和下一步都集中收进 Requirements Space。',
+        href: '/requirements',
+    },
+    {
         title: '进入 TTS',
         description: '为 Japanese Today 预留语音练习和内容输出的承接入口。',
         href: '/audio/tts',

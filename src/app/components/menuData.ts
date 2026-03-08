@@ -66,6 +66,7 @@ export const menuData: MenuItem[] = [
         title: '资料',
         children: [
             { title: '系统规划', href: '/roadmap' },
+            { title: '内部需求', href: '/requirements' },
         ],
     },
 ];

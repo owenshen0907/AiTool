@@ -50,7 +50,7 @@ export const systemPlan: SystemPlan = {
     title: 'AiTool 系统规划',
     summary:
         '让 AiTool 从“功能堆叠的 AI 工具箱”收敛成一个面向创作、学习与开发执行的 AI 工作台。',
-    currentFocus: '继续把 Workspace 做成可个性化的默认入口，并在下一轮接上登录跳转与 Requirements 内部需求流。',
+    currentFocus: 'Requirements 内容页和看板卡片的状态迁移现在都会把 handoff context 写回正文；Doing / Validating 卡片也已经把结构化 handoff 信号压成更紧凑的 rail。下一步根据交接时间暴露更直接的 freshness / stale 提示。',
     principles: [
         '先做稳定入口，再扩展能力，不继续横向铺新模块。',
         '公开首页负责解释产品，登录后 Workspace 负责承接日常使用。',
@@ -96,8 +96,8 @@ export const systemPlan: SystemPlan = {
                 },
                 {
                     title: '登录成功默认跳转到 Workspace',
-                    note: '把认证流真正接入新的日常入口。',
-                    status: 'next' as const,
+                    note: '已将认证默认落点改为 /workspace，同时保留显式 next 路由覆盖。',
+                    status: 'done' as const,
                 },
                 {
                     title: '个性化首页模板与生成器',
@@ -114,22 +114,22 @@ export const systemPlan: SystemPlan = {
         {
             name: 'Phase 3 / 内部需求系统',
             goal: '让 AiTool 直接管理自己的产品迭代与验证。',
-            status: 'planned' as const,
+            status: 'in_progress' as const,
             tasks: [
                 {
                     title: 'Requirements 页面',
-                    note: '承接 feature、bug、design、infra、content 等类型。',
-                    status: 'planned' as const,
+                    note: '已落地首版页面骨架，包含状态列、seed 条目，以及从导航和 Workspace 进入的入口。',
+                    status: 'done' as const,
                 },
                 {
                     title: '需求生命周期',
-                    note: '支持 Inbox、Ready、Doing、Validating、Archived。',
-                    status: 'planned' as const,
+                    note: '继续固化 Inbox、Shaping、Ready、Doing、Validating、Archived 的字段与迁移规则；当前内容页和看板卡片迁移都已开始写入 handoff context，Doing / Validating 也已用紧凑 rail 显示交接信号，下一步把交接时间转成更直接的 freshness 提示。',
+                    status: 'in_progress' as const,
                 },
                 {
                     title: '页面与需求互链',
-                    note: '让需求能回链到模块、路由和验证结果。',
-                    status: 'planned' as const,
+                    note: '已让 /requirements 看板直接读取 requirements 文档空间、回链到真实需求文档，并按生命周期状态展示不同的轻量元数据、场景、验证与执行向预览字段；内容页和看板卡片里也可直接迁移状态。',
+                    status: 'done' as const,
                 },
             ],
         },

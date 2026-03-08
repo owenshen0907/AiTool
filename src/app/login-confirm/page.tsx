@@ -1,5 +1,9 @@
 import { redirect } from 'next/navigation';
-import { buildLoginModalHomePath, normalizeLoginNext } from '@/lib/auth/loginModal';
+import {
+    buildLoginModalHomePath,
+    DEFAULT_POST_LOGIN_PATH,
+    normalizeLoginNext,
+} from '@/lib/auth/loginModal';
 
 export default function LoginConfirm({
     searchParams,
@@ -10,5 +14,5 @@ export default function LoginConfirm({
         ? searchParams?.next[0]
         : searchParams?.next;
 
-    redirect(buildLoginModalHomePath(normalizeLoginNext(rawNext)));
+    redirect(buildLoginModalHomePath(normalizeLoginNext(rawNext, DEFAULT_POST_LOGIN_PATH)));
 }

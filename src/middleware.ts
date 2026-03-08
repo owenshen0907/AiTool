@@ -4,17 +4,10 @@ import type { NextRequest } from 'next/server';
 import { buildLoginModalHomePath } from '@/lib/auth/loginModal';
 
 /* ────────────────────────────── 工具函数 ────────────────────────────── */
-// function decodeJwtPayload(token: string) {
-//     const [, b64] = token.split('.');
-//     const json = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
-//     return JSON.parse(json);
-// }
 function decodeJwtPayload(token: string) {
     const [, b64] = token.split('.');
-    const json = Buffer.from(
-        b64.replace(/-/g, '+').replace(/_/g, '/'),
-        'base64'
-    ).toString('utf8');
+    // Use atob() — Edge Runtime compatible (Buffer is not available in Edge Runtime)
+    const json = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
     return JSON.parse(json);
 }
 function isExpired(payload: any) {
