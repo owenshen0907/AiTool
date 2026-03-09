@@ -34,7 +34,9 @@ export async function GET(request: NextRequest) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 client_id:     CASDOOR_CONFIG.clientId,
-                client_secret: CASDOOR_CONFIG.clientSecret,
+                ...(CASDOOR_CONFIG.clientSecret
+                    ? { client_secret: CASDOOR_CONFIG.clientSecret }
+                    : {}),
                 code,
                 redirect_uri:  redirectUri,
                 grant_type:    'authorization_code',

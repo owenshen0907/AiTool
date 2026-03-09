@@ -18,6 +18,7 @@ import {
 import { useUser } from '@/app/providers/UserProvider';
 import { getAppliedHomeConfigKey, type GeneratedHomepagePlan } from '@/lib/personalHome';
 import { planStatusMeta, systemPlan } from '@/lib/sitePlan';
+import DevTaskFeedSection from './DevTaskFeedSection';
 
 const quickCapture = [
     {
@@ -576,6 +577,8 @@ export default function WorkspaceHomeClient({
                         </article>
                     </div>
                 </section>
+
+                <DevTaskFeedSection />
             </div>
         </main>
     );

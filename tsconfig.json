@@ -56,7 +56,7 @@
   },
 
   // 指定要纳入编辑器 / 编译的文件
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.d.ts", ".next/types/**/*.ts"],
 
   // 排除 node_modules 目录
   "exclude": ["node_modules"]

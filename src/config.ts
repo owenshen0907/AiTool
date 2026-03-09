@@ -1,12 +1,50 @@
 // src/config.ts
 
+function readEnv(...keys: string[]) {
+    for (const key of keys) {
+        const value = process.env[key]?.trim();
+        if (value) {
+            return value;
+        }
+    }
+
+    return '';
+}
+
+function readOptionalEnv(keys: string[], placeholders: string[] = []) {
+    const value = readEnv(...keys);
+    if (!value) return '';
+    if (/^\*+$/.test(value)) return '';
+    if (placeholders.includes(value)) return '';
+    return value;
+}
+
 export const CASDOOR_CONFIG = {
-    endpoint: process.env.NEXT_PUBLIC_CASDOOR_ENDPOINT || "https://your-casdoor-domain",
-    clientId: process.env.NEXT_PUBLIC_CASDOOR_CLIENT_ID || "your_client_id",
-    clientSecret: process.env.NEXT_PUBLIC_CASDOOR_CLIENT_SECRET || "your_client_secret",
-    appName: process.env.NEXT_PUBLIC_CASDOOR_APP_NAME || "your_app_name",
-    orgName: process.env.NEXT_PUBLIC_CASDOOR_ORG_NAME || "your_org_name",
-    redirectUri: process.env.NEXT_PUBLIC_CASDOOR_REDIRECT_URI || "https://your-domain.com/api/auth/callback",
+    endpoint:
+        readOptionalEnv(['CASDOOR_ENDPOINT', 'NEXT_PUBLIC_CASDOOR_ENDPOINT'], [
+            'https://your-casdoor-domain',
+        ]) || 'https://your-casdoor-domain',
+    clientId:
+        readOptionalEnv(['CASDOOR_CLIENT_ID', 'NEXT_PUBLIC_CASDOOR_CLIENT_ID'], [
+            'your_client_id',
+        ]) || 'your_client_id',
+    clientSecret: readOptionalEnv(
+        ['CASDOOR_CLIENT_SECRET', 'NEXT_PUBLIC_CASDOOR_CLIENT_SECRET'],
+        ['your_client_secret']
+    ),
+    appName:
+        readOptionalEnv(['CASDOOR_APP_NAME', 'NEXT_PUBLIC_CASDOOR_APP_NAME'], [
+            'your_app_name',
+        ]) || 'your_app_name',
+    orgName:
+        readOptionalEnv(['CASDOOR_ORG_NAME', 'NEXT_PUBLIC_CASDOOR_ORG_NAME'], [
+            'your_org_name',
+        ]) || 'your_org_name',
+    redirectUri:
+        readOptionalEnv(
+            ['CASDOOR_REDIRECT_URI', 'NEXT_PUBLIC_CASDOOR_REDIRECT_URI'],
+            ['https://your-domain.com/api/auth/callback']
+        ) || 'https://your-domain.com/api/auth/callback',
 };
 
 

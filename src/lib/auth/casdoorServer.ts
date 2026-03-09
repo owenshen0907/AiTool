@@ -12,6 +12,25 @@ export interface CasdoorAccount {
 }
 
 const isProd = process.env.NODE_ENV === 'production';
+const hasCasdoorClientSecret = Boolean(CASDOOR_CONFIG.clientSecret);
+
+function withClientSecret(params: URLSearchParams) {
+    if (hasCasdoorClientSecret) {
+        params.set('client_secret', CASDOOR_CONFIG.clientSecret);
+    }
+}
+
+function withClientSecretQuery(url: URL) {
+    if (hasCasdoorClientSecret) {
+        url.searchParams.set('clientSecret', CASDOOR_CONFIG.clientSecret);
+    }
+}
+
+function requireClientSecret(action: string) {
+    if (!hasCasdoorClientSecret) {
+        throw new Error(`Casdoor client secret 未配置，暂时无法${action}`);
+    }
+}
 
 function getAuthCookieOptions() {
     return {
@@ -98,11 +117,11 @@ export async function exchangePasswordForAccessToken(loginId: string, password: 
     const body = new URLSearchParams({
         grant_type: 'password',
         client_id: CASDOOR_CONFIG.clientId,
-        client_secret: CASDOOR_CONFIG.clientSecret,
         username: loginId,
         password,
         scope: 'read',
     });
+    withClientSecret(body);
 
     const response = await fetch(`${CASDOOR_CONFIG.endpoint}/api/login/oauth/access_token`, {
         method: 'POST',
@@ -134,6 +153,8 @@ export async function exchangePasswordForAccessToken(loginId: string, password: 
 }
 
 export async function getUserByEmail(email: string) {
+    requireClientSecret('查询 Casdoor 用户');
+
     const url = new URL(`${CASDOOR_CONFIG.endpoint}/api/get-users`);
     url.searchParams.set('owner', CASDOOR_CONFIG.orgName);
     url.searchParams.set('p', '1');
@@ -141,7 +162,7 @@ export async function getUserByEmail(email: string) {
     url.searchParams.set('field', 'email');
     url.searchParams.set('value', email);
     url.searchParams.set('clientId', CASDOOR_CONFIG.clientId);
-    url.searchParams.set('clientSecret', CASDOOR_CONFIG.clientSecret);
+    withClientSecretQuery(url);
 
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
@@ -158,6 +179,8 @@ function buildGeneratedUsername() {
 }
 
 export async function createCasdoorUser(email: string, password: string, displayName?: string) {
+    requireClientSecret('创建 Casdoor 用户');
+
     const payload = {
         owner: CASDOOR_CONFIG.orgName,
         name: buildGeneratedUsername(),
@@ -169,7 +192,7 @@ export async function createCasdoorUser(email: string, password: string, display
 
     const url = new URL(`${CASDOOR_CONFIG.endpoint}/api/add-user`);
     url.searchParams.set('clientId', CASDOOR_CONFIG.clientId);
-    url.searchParams.set('clientSecret', CASDOOR_CONFIG.clientSecret);
+    withClientSecretQuery(url);
 
     const response = await fetch(url, {
         method: 'POST',

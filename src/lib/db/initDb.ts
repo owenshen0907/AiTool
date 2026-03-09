@@ -6,6 +6,7 @@ import {dubbingContent} from "./migrations/dubbingMigration.js";
 import {imageGenerateContent} from "./migrations/imageGenerateMigration.js";
 import {demoContent} from "./migrations/demoMigration.js";
 import {requirementsContent} from "./migrations/requirementsMigration.js";
+import {devTaskMigration} from "./migrations/devTaskMigration.js";
 
 export async function initDb() {
     if (process.env.DB_INIT !== 'true') {
@@ -308,6 +309,7 @@ CREATE INDEX IF NOT EXISTS idx_bad_cases_videos_gin
         await imageGenerateContent(client);
         await demoContent(client);
         await requirementsContent(client);
+        await devTaskMigration(client);
 
         console.log('Database initialized successfully.');
     } catch (err) {
