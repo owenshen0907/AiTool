@@ -13,7 +13,7 @@ export default function DubbingPage() {
     return (
         <DirectoryLayout
             feature="dubbing"
-            modelName="agent/视频/配音"
+            modelName="智能体/视频/配音"
             initialDirId={dirId}
             initialItemId={docId}
         >

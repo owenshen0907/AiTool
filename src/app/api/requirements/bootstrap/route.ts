@@ -2,7 +2,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { NextRequest, NextResponse } from 'next/server';
 import { withUser } from '@/lib/api/auth';
 import { pool } from '@/lib/db/client';
-import { requirementsSeedTemplates } from '@/lib/requirements';
+import {
+    getRequirementStatusFromDirectoryName,
+    requirementStatusMeta,
+    requirementStatuses,
+    requirementsSeedTemplates,
+    type RequirementStatus,
+} from '@/lib/requirements';
 
 const REQUIREMENTS_FEATURE = 'requirements';
 
@@ -14,6 +20,12 @@ interface DirectoryRow {
 
 interface ContentRow {
     id: string;
+}
+
+function getSeedTemplateByStatus(status: RequirementStatus) {
+    return requirementsSeedTemplates.find(
+        (seed) => seed.directoryName === requirementStatusMeta[status].directoryName
+    );
 }
 
 export const POST = withUser(async (_req: NextRequest, userId: string) => {
@@ -33,8 +45,67 @@ export const POST = withUser(async (_req: NextRequest, userId: string) => {
             [REQUIREMENTS_FEATURE, userId]
         );
 
-        if (existingDirectories.length > 0) {
-            const targetDirId = existingDirectories[0].id;
+        const matchedDirectoryByStatus = new Map<RequirementStatus, DirectoryRow>();
+        for (const directory of existingDirectories) {
+            const status = getRequirementStatusFromDirectoryName(directory.name);
+            if (status && !matchedDirectoryByStatus.has(status)) {
+                matchedDirectoryByStatus.set(status, directory);
+            }
+        }
+
+        let seeded = false;
+        let normalized = false;
+        let firstDirId: string | null = null;
+        let firstDocId: string | null = null;
+
+        for (const [index, status] of requirementStatuses.entries()) {
+            const expectedName = requirementStatusMeta[status].directoryName;
+            const seed = getSeedTemplateByStatus(status);
+            const existingDirectory = matchedDirectoryByStatus.get(status);
+
+            let directoryId: string;
+            if (existingDirectory) {
+                directoryId = existingDirectory.id;
+                if (existingDirectory.name !== expectedName || existingDirectory.position !== index) {
+                    await client.query(
+                        `
+                            UPDATE directories
+                            SET name = $2,
+                                position = $3,
+                                updated_at = NOW()
+                            WHERE id = $1
+                        `,
+                        [directoryId, expectedName, index]
+                    );
+                    normalized = true;
+                }
+            } else {
+                directoryId = uuidv4();
+                await client.query(
+                    `
+                        INSERT INTO directories (
+                            id,
+                            feature,
+                            parent_id,
+                            name,
+                            position,
+                            created_by
+                        ) VALUES ($1, $2, $3, $4, $5, $6)
+                    `,
+                    [directoryId, REQUIREMENTS_FEATURE, null, expectedName, index, userId]
+                );
+                matchedDirectoryByStatus.set(status, {
+                    id: directoryId,
+                    name: expectedName,
+                    position: index,
+                });
+                seeded = true;
+            }
+
+            if (!firstDirId) {
+                firstDirId = directoryId;
+            }
+
             const { rows: existingDocs } = await client.query<ContentRow>(
                 `
                     SELECT id
@@ -43,49 +114,18 @@ export const POST = withUser(async (_req: NextRequest, userId: string) => {
                     ORDER BY position ASC, created_at ASC
                     LIMIT 1
                 `,
-                [targetDirId]
+                [directoryId]
             );
 
-            await client.query('COMMIT');
-
-            return NextResponse.json({
-                seeded: false,
-                dirId: targetDirId,
-                docId: existingDocs[0]?.id ?? null,
-            });
-        }
-
-        const createdDirectories = new Map<string, string>();
-
-        for (const [index, seed] of requirementsSeedTemplates.entries()) {
-            const directoryId = uuidv4();
-            await client.query(
-                `
-                    INSERT INTO directories (
-                        id,
-                        feature,
-                        parent_id,
-                        name,
-                        position,
-                        created_by
-                    ) VALUES ($1, $2, $3, $4, $5, $6)
-                `,
-                [directoryId, REQUIREMENTS_FEATURE, null, seed.directoryName, index, userId]
-            );
-            createdDirectories.set(seed.directoryName, directoryId);
-        }
-
-        let firstDirId: string | null = null;
-        let firstDocId: string | null = null;
-
-        for (const [index, seed] of requirementsSeedTemplates.entries()) {
-            const directoryId = createdDirectories.get(seed.directoryName);
-            if (!directoryId) {
-                throw new Error(`Missing seeded directory: ${seed.directoryName}`);
+            if (existingDocs[0]?.id) {
+                if (!firstDocId && firstDirId === directoryId) {
+                    firstDocId = existingDocs[0].id;
+                }
+                continue;
             }
 
-            if (!firstDirId) {
-                firstDirId = directoryId;
+            if (!seed) {
+                continue;
             }
 
             const contentId = uuidv4();
@@ -101,18 +141,19 @@ export const POST = withUser(async (_req: NextRequest, userId: string) => {
                         created_by
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                 `,
-                [contentId, directoryId, seed.title, seed.summary, seed.body, index, userId]
+                [contentId, directoryId, seed.title, seed.summary, seed.body, 0, userId]
             );
-
-            if (!firstDocId) {
+            if (!firstDocId && firstDirId === directoryId) {
                 firstDocId = contentId;
             }
+            seeded = true;
         }
 
         await client.query('COMMIT');
 
         return NextResponse.json({
-            seeded: true,
+            seeded,
+            normalized,
             dirId: firstDirId,
             docId: firstDocId,
         });

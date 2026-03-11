@@ -7,13 +7,13 @@ import type {
 } from '@/lib/personalHome';
 
 const availableRoutes: GeneratedHomepageRoute[] = [
-    { title: 'Workspace', href: '/workspace', reason: '回到你的日常入口。' },
-    { title: 'Prompt Studio', href: '/prompt/manage', reason: '继续你的核心创作与提示词流。' },
-    { title: 'Prompt 调试', href: '/prompt/case', reason: '延续用例和结果验证。' },
-    { title: 'Japanese Notes', href: '/docs/japanese', reason: '沉淀学习输入与复习内容。' },
-    { title: 'TTS Practice', href: '/audio/tts', reason: '承接语音练习与输出。' },
-    { title: 'Image Generate', href: '/agent/image/generate', reason: '继续图像创作任务。' },
-    { title: 'Roadmap', href: '/roadmap', reason: '查看当前系统规划与下一步。' },
+    { title: '工作台', href: '/workspace', reason: '回到你的日常入口。' },
+    { title: '提示词工作台', href: '/prompt/manage', reason: '继续你的核心创作与提示词流。' },
+    { title: '提示词调试', href: '/prompt/case', reason: '延续用例和结果验证。' },
+    { title: '日语笔记', href: '/docs/japanese', reason: '沉淀学习输入与复习内容。' },
+    { title: 'TTS 练习', href: '/audio/tts', reason: '承接语音练习与输出。' },
+    { title: '图片生成', href: '/agent/image/generate', reason: '继续图像创作任务。' },
+    { title: '系统规划', href: '/roadmap', reason: '查看当前系统规划与下一步。' },
     { title: '文件工具', href: '/stepfun/file', reason: '快速处理文件和资料。' },
 ];
 
@@ -43,13 +43,13 @@ function pickRoutes(template: PersonalHomeTemplate, answers: HomepageFormAnswers
 
     const scored = availableRoutes.map((route) => {
         let score = 0;
-        if (/prompt/i.test(preferred) && /Prompt/.test(route.title)) score += 2;
-        if (/日语|学习|shadowing|复习|TTS/i.test(preferred) && /(Japanese|TTS)/.test(route.title)) score += 2;
-        if (/图片|图像|创作/i.test(preferred) && /Image/.test(route.title)) score += 2;
-        if (/规划|路线|roadmap/i.test(preferred) && /Roadmap/.test(route.title)) score += 2;
+        if (/(prompt|提示词)/i.test(preferred) && /提示词/.test(route.title)) score += 2;
+        if (/日语|学习|shadowing|复习|TTS|跟读/i.test(preferred) && /(日语|TTS)/.test(route.title)) score += 2;
+        if (/图片|图像|创作/i.test(preferred) && /图片/.test(route.title)) score += 2;
+        if (/规划|路线|roadmap/i.test(preferred) && /系统规划/.test(route.title)) score += 2;
         if (route.href === '/workspace') score += 1;
-        if (template.id === 'work' && /Prompt|Roadmap/.test(route.title)) score += 1;
-        if (template.id === 'learning' && /(Japanese|TTS)/.test(route.title)) score += 1;
+        if (template.id === 'work' && /(提示词|系统规划)/.test(route.title)) score += 1;
+        if (template.id === 'learning' && /(日语|TTS)/.test(route.title)) score += 1;
         return { route, score };
     });
 
@@ -145,7 +145,7 @@ export default function PersonalHomePage() {
 
           <aside className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-              Quick Routes
+              常用入口
             </div>
             <div className="mt-5 space-y-4">
               {routes.map((route) => (
@@ -217,7 +217,7 @@ export function buildFallbackHomepagePlan(template: PersonalHomeTemplate, answer
         recommendedRoutes: pickRoutes(template, answers),
         aiNotes: [
             `首页风格关键词：${style}`,
-            '建议先把这份首页应用到 Workspace，再继续补保存和版本管理。',
+            '建议先把这份首页应用到工作台，再继续补保存和版本管理。',
             '后续可以把真实最近记录、任务和学习数据接入这些模块。',
         ],
     };

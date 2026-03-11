@@ -131,7 +131,7 @@ export default function NavBar() {
                         <div className="hidden sm:block">
                             <div className="text-lg font-semibold tracking-tight text-slate-900">AiTool</div>
                             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
-                                AI Workspace
+                                AI 工作台
                             </div>
                         </div>
                     </Link>
@@ -177,7 +177,7 @@ export default function NavBar() {
                                         <div className="max-w-[132px] truncate text-sm font-medium text-slate-900">
                                             {displayName}
                                         </div>
-                                        <div className="text-xs text-slate-500">Workspace Owner</div>
+                                        <div className="text-xs text-slate-500">当前账号</div>
                                     </div>
                                     <ChevronDown
                                         size={16}

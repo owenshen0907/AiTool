@@ -157,7 +157,7 @@ export default function HomeBuilderPage() {
             getAppliedHomeConfigKey(userKey),
             JSON.stringify(generatedPlan)
         );
-        setNotice('已经应用到你的 Workspace。现在回去就能看到个性化首页。');
+        setNotice('已经应用到你的工作台。现在回去就能看到个性化首页。');
     };
 
     const handleCopyCode = async () => {
@@ -177,10 +177,10 @@ export default function HomeBuilderPage() {
                     <article className="overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
                         <div className="bg-[radial-gradient(circle_at_top_left,#dceafe_0%,#eef4fb_38%,#ffffff_100%)] px-6 py-8 md:px-10 md:py-10">
                             <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700">
-                                Personalized Home Builder
+                                个性首页生成器
                             </div>
                             <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-slate-900 md:text-6xl">
-                                先选一个首页模板，再让 AI 把它变成你的专属 Workspace
+                                先选一个首页模板，再让 AI 把它变成你的专属工作台
                             </h1>
                             <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600 md:text-lg">
                                 这里不是随便拼几块卡片，而是先确定生活、学习、工作或综合导向，再用少量关键信息生成完整首页结构、文案和 React 页面代码。
@@ -210,7 +210,7 @@ export default function HomeBuilderPage() {
                                     href="/workspace"
                                     className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                                 >
-                                    返回 Workspace
+                                    返回工作台
                                 </Link>
                             </div>
                         </div>
@@ -218,18 +218,18 @@ export default function HomeBuilderPage() {
 
                     <article className="rounded-[36px] border border-slate-200 bg-slate-900 p-6 text-white shadow-[0_24px_90px_rgba(15,23,42,0.16)] md:p-8">
                         <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-300">
-                            How It Works
+                            使用方式
                         </div>
                         <div className="mt-4 space-y-4">
                             {[
                                 '选择一个适合你的首页模板：生活向、学习向、工作向或综合向。',
                                 '填写 5 个左右的关键问题，让 AI 理解你真正想先看到什么。',
                                 '系统生成首页结构、区块文案、推荐入口和可继续修改的 React 代码。',
-                                '满意后点击“应用到 Workspace”，你的工作台就会切换成个性化首页。',
+                                '满意后点击“应用到工作台”，你的工作台就会切换成个性化首页。',
                             ].map((item, index) => (
                                 <div key={item} className="rounded-[24px] border border-white/10 bg-white/5 px-4 py-4">
                                     <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                        Step {index + 1}
+                                        步骤 {index + 1}
                                     </div>
                                     <div className="mt-2 text-sm leading-7 text-slate-200">{item}</div>
                                 </div>
@@ -241,7 +241,7 @@ export default function HomeBuilderPage() {
                 <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
                     <article className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
                         <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                            Template Library
+                            模板库
                         </div>
                         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
                             我先给用户 4 个足够清晰的首页起点
@@ -350,7 +350,7 @@ export default function HomeBuilderPage() {
                                     onClick={handleApply}
                                     className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                                 >
-                                    应用到 Workspace
+                                    应用到工作台
                                 </button>
                             ) : null}
                         </div>

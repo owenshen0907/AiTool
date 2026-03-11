@@ -75,7 +75,7 @@ export default function RequirementsContentPage() {
                 const result = (await response.json().catch(() => null)) as BootstrapResult | null;
 
                 if (!response.ok) {
-                    throw new Error(result?.error || '初始化 Requirements 空间失败');
+                    throw new Error(result?.error || '初始化需求空间失败');
                 }
 
                 if (cancelled) return;
@@ -89,7 +89,7 @@ export default function RequirementsContentPage() {
             } catch (error) {
                 if (cancelled) return;
                 setBootstrapError(
-                    error instanceof Error ? error.message : '初始化 Requirements 空间失败'
+                    error instanceof Error ? error.message : '初始化需求空间失败'
                 );
             }
         };
@@ -107,20 +107,20 @@ export default function RequirementsContentPage() {
                 <div className="mx-auto flex max-w-4xl items-center justify-center">
                     <section className="w-full rounded-[36px] border border-slate-200 bg-white p-8 shadow-[0_24px_80px_rgba(15,23,42,0.08)] md:p-10">
                         <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700">
-                            Requirements Bootstrap
+                            需求空间初始化
                         </div>
                         <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
-                            正在准备 Requirements 默认目录和模板
+                            正在准备需求空间的默认目录和模板
                         </h1>
                         <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
-                            首次进入会自动初始化 Inbox、Shaping、Ready、Doing、Validating、Archived
-                            目录，并放入对应 starter template。这样需求空间不是空壳，打开后就能直接开始写。
+                            首次进入会自动初始化待处理、需求梳理、待开始、开发中、验证中、已归档
+                            目录，并放入对应模板。这样需求空间不是空壳，打开后就能直接开始写。
                         </p>
 
                         {bootstrapError ? (
                             <div className="mt-8 rounded-[24px] border border-rose-200 bg-rose-50 p-5">
                                 <div className="text-sm font-semibold uppercase tracking-[0.18em] text-rose-600">
-                                    Bootstrap Failed
+                                    初始化失败
                                 </div>
                                 <p className="mt-3 text-sm leading-7 text-rose-700">
                                     {bootstrapError}
@@ -145,7 +145,7 @@ export default function RequirementsContentPage() {
                             </div>
                         ) : (
                             <div className="mt-8 rounded-[24px] border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600">
-                                正在调用事务式 bootstrap，完成后会自动打开第一个默认需求文档。
+                                正在执行事务式初始化，完成后会自动打开第一个默认需求文档。
                             </div>
                         )}
                     </section>

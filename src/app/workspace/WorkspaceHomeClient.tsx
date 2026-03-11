@@ -37,7 +37,7 @@ import DevTaskFeedSection from './DevTaskFeedSection';
 const quickCapture = [
     {
         title: '记一条 Prompt 灵感',
-        description: '把临时想到的结构、场景和变量快速沉到 Prompt Studio。',
+        description: '把临时想到的结构、场景和变量快速沉到提示词工作台。',
         href: '/prompt/manage',
         icon: MessageSquarePlus,
     },
@@ -57,17 +57,17 @@ const quickCapture = [
 
 const recentEntries = [
     {
-        title: 'Prompt Studio',
+        title: '提示词工作台',
         note: '当前最成熟的生产流，适合继续承担日常创作主入口。',
         href: '/prompt/manage',
     },
     {
-        title: 'Prompt 调试',
+        title: '提示词调试',
         note: '延续用例调试和对比测试，继续强化 AiTool 的核心差异点。',
         href: '/prompt/case',
     },
     {
-        title: 'Japanese Notes',
+        title: '日语笔记',
         note: '把学习内容沉淀成长期资产，后续再接 review 和 TTS practice。',
         href: '/docs/japanese',
     },
@@ -86,17 +86,17 @@ const pinnedShortcuts = [
     },
     {
         title: '查看内部需求',
-        description: '把产品迭代、验证备注和下一步都集中收进 Requirements Space。',
+        description: '把产品迭代、验证备注和下一步都集中收进需求空间。',
         href: '/requirements',
     },
     {
         title: '进入 TTS',
-        description: '为 Japanese Today 预留语音练习和内容输出的承接入口。',
+        description: '为今日日语预留语音练习和内容输出的承接入口。',
         href: '/audio/tts',
     },
     {
         title: '查看文件工具',
-        description: '继续保留高频可用工具，但从 Workspace 统一进入。',
+        description: '继续保留高频可用工具，但从工作台统一进入。',
         href: '/stepfun/file',
     },
 ];
@@ -116,7 +116,7 @@ const todayLearningStack = [
     },
     {
         title: '回到学习流入口',
-        note: '继续把学习入口收回 Workspace，而不是把复习、跟读和笔记拆散在不同页面。',
+        note: '继续把学习入口收回工作台，而不是把复习、跟读和笔记拆散在不同页面。',
         href: '/roadmap',
         cta: '查看系统规划',
     },
@@ -236,7 +236,7 @@ function buildSuggestedActions(
     if (primaryAttentionItem) {
         pushAction({
             id: `attention:${primaryAttentionItem.id}`,
-            source: 'Needs Attention',
+            source: '需关注',
             title: `回看需求：${primaryAttentionItem.title}`,
             note: primaryAttentionItem.signal
                 ? `${describeFreshness(primaryAttentionItem.freshness)} 当前焦点：${primaryAttentionItem.signal}`
@@ -250,7 +250,7 @@ function buildSuggestedActions(
         const focusItem = devTaskSummary.focusItem;
         pushAction({
             id: `dev-task:${focusItem.taskId}`,
-            source: 'Dev Task',
+            source: '开发任务',
             title: `跟进任务：${focusItem.projectName}`,
             note: focusItem.nextStep?.trim()
                 || devTaskStatusMeta[focusItem.status].description,
@@ -262,9 +262,9 @@ function buildSuggestedActions(
     if (reqSummary && reqSummary.countByStatus.inbox > 0) {
         pushAction({
             id: 'requirements:inbox',
-            source: 'Inbox',
+            source: '待处理',
             title: `清理 ${reqSummary.countByStatus.inbox} 条待判断需求`,
-            note: '先过滤掉不该继续做的项，再把值得推进的需求移进 Shaping。',
+            note: '先过滤掉不该继续做的项，再把值得推进的需求移进需求梳理。',
             href: '/requirements',
             cta: '开始清理',
         });
@@ -273,7 +273,7 @@ function buildSuggestedActions(
     if (devTaskSummary && devTaskSummary.attention > 0) {
         pushAction({
             id: 'dev-task:attention',
-            source: 'Dev Task',
+            source: '开发任务',
             title: `处理 ${devTaskSummary.attention} 个需要回应的共享任务`,
             note: '优先看 Awaiting Approval、Needs Tuning、Failed 和 Interrupted，避免共享任务长时间卡住。',
             href: '/workspace',
@@ -284,9 +284,9 @@ function buildSuggestedActions(
     if (reqSummary && reqSummary.countByStatus.validating > 0) {
         pushAction({
             id: 'requirements:validating',
-            source: 'Validate',
+            source: '验证中',
             title: `补齐 ${reqSummary.countByStatus.validating} 条验证结论`,
-            note: '把验证结果、剩余风险和最终结论写回文档，避免状态长时间卡在 Validating。',
+            note: '把验证结果、剩余风险和最终结论写回文档，避免状态长时间卡在验证中。',
             href: '/requirements',
             cta: '查看验证项',
         });
@@ -295,9 +295,9 @@ function buildSuggestedActions(
     if (devTaskSummary && devTaskSummary.active > 0) {
         pushAction({
             id: 'dev-task:active',
-            source: 'Dev Task',
+            source: '开发任务',
             title: `继续跟进 ${devTaskSummary.active} 个活跃共享任务`,
-            note: '有 Agent 正在推进时，Workspace 应该优先暴露当前 revision 的下一步和阻塞点。',
+            note: '有 Agent 正在推进时，工作台应该优先暴露当前 revision 的下一步和阻塞点。',
             href: '/workspace',
             cta: '查看执行流',
         });
@@ -306,11 +306,11 @@ function buildSuggestedActions(
     if (reqSummary && reqSummary.countByStatus.ready > 0) {
         pushAction({
             id: 'requirements:ready',
-            source: 'Ready',
-            title: `拆分 ${reqSummary.countByStatus.ready} 条 Ready 需求`,
-            note: '把范围切成下一轮可交付的小步，再决定进入 Doing 的顺序。',
+            source: '待开始',
+            title: `拆分 ${reqSummary.countByStatus.ready} 条待开始需求`,
+            note: '把范围切成下一轮可交付的小步，再决定进入开发中的顺序。',
             href: '/requirements',
-            cta: '打开 Ready',
+            cta: '打开待开始',
         });
     }
 
@@ -319,7 +319,7 @@ function buildSuggestedActions(
             .filter((task) => task.status === 'in_progress')
             .map((task) => ({
                 id: `roadmap:${phase.name}:${task.title}`,
-                source: 'Roadmap',
+                source: '系统规划',
                 title: task.title,
                 note: task.note,
                 href: '/roadmap',
@@ -333,7 +333,7 @@ function buildSuggestedActions(
 
     pushAction({
         id: 'workspace:builder',
-        source: 'Workspace',
+        source: '工作台',
         title: '继续微调首页入口',
         note: '如果今天的主路径已经稳定，可以继续压缩首页信息密度，让入口更短更准。',
         href: '/workspace/home-builder',
@@ -342,9 +342,9 @@ function buildSuggestedActions(
 
     pushAction({
         id: 'learn:japanese',
-        source: 'Learn',
+        source: '学习',
         title: '把学习流接回日语笔记',
-        note: '继续补 Japanese Today 的复习和 TTS 承接，让学习入口不再漂在导航里。',
+        note: '继续补今日日语的复习和 TTS 承接，让学习入口不再漂在导航里。',
         href: '/docs/japanese',
         cta: '打开日语笔记',
     });
@@ -413,13 +413,13 @@ function buildDailySummary(
     const summaryParts = [
         reqSummary
             ? reqStale > 0
-                ? `Requirements 里有 ${reqStale} 条 stale 项需要回看`
+                ? `需求看板里有 ${reqStale} 条搁置项需要回看`
                 : reqActive > 0
-                    ? `Requirements 里有 ${reqActive} 条活跃项可以继续推进`
+                    ? `需求看板里有 ${reqActive} 条活跃项可以继续推进`
                     : reqInbox > 0
-                        ? `Requirements 里还有 ${reqInbox} 条待判断项`
-                        : 'Requirements 当前没有明显阻塞'
-            : 'Requirements pulse 暂时不可用',
+                        ? `需求看板里还有 ${reqInbox} 条待判断项`
+                        : '需求看板当前没有明显阻塞'
+            : '需求脉搏暂时不可用',
         signedIn
             ? devAttention > 0
                 ? `共享任务里有 ${devAttention} 个待回应项`
@@ -443,10 +443,10 @@ function buildDailySummary(
     const sources: DailySummarySource[] = [];
 
     sources.push({
-        label: 'Requirements Pulse',
+        label: '需求脉搏',
         summary: reqSummary
             ? reqStale > 0
-                ? `${reqStale} 条 stale / ${reqActive} 条活跃`
+                ? `${reqStale} 条搁置 / ${reqActive} 条活跃`
                 : `${reqActive} 条活跃 / ${reqInbox} 条待判断`
             : '暂时不可用',
         detail: reqSummary?.attentionItems[0]
@@ -457,7 +457,7 @@ function buildDailySummary(
     });
 
     sources.push({
-        label: 'Dev Task Pulse',
+        label: '开发任务脉搏',
         summary: signedIn
             ? `${devAttention} 个待回应 / ${devActive} 个活跃`
             : '登录后可用',
@@ -472,7 +472,7 @@ function buildDailySummary(
 
     if (briefContext) {
         sources.push({
-            label: 'Personal Lens',
+            label: '个性主轴',
             summary: briefContext.focusTitle || briefContext.templateName,
             detail: briefContext.routeTitles.length
                 ? `推荐入口：${briefContext.routeTitles.join(' / ')}`
@@ -484,7 +484,7 @@ function buildDailySummary(
 
     if (primaryAction) {
         sources.push({
-            label: 'Suggested Next',
+            label: '建议下一步',
             summary: primaryAction.title,
             detail: primaryAction.note,
             href: primaryAction.href,
@@ -494,8 +494,8 @@ function buildDailySummary(
 
     return {
         eyebrow: briefContext
-            ? `${briefContext.accentLabel} / AI Daily Brief`
-            : 'Workspace / AI Daily Summary',
+            ? `${briefContext.accentLabel} / AI 每日简报`
+            : '工作台 / AI 每日摘要',
         title,
         summary: `${summaryParts.join('，')}。`,
         highlights: [
@@ -503,7 +503,7 @@ function buildDailySummary(
                 label: '需求',
                 value: reqSummary
                     ? reqStale > 0
-                        ? `${reqStale} 条 stale，${reqInbox} 条待判断`
+                        ? `${reqStale} 条搁置，${reqInbox} 条待判断`
                         : `${reqActive} 条活跃，${reqValidating} 条验证中`
                     : '等待实时脉搏',
             },
@@ -515,13 +515,13 @@ function buildDailySummary(
             },
             {
                 label: '主轴',
-                value: briefContext?.focusTitle || briefContext?.templateName || 'Workspace 默认入口',
+                value: briefContext?.focusTitle || briefContext?.templateName || '工作台默认入口',
             },
             {
                 label: '入口',
                 value: briefContext?.routeTitles.length
                     ? briefContext.routeTitles.join(' / ')
-                    : primaryAction?.cta || '打开 Workspace',
+                    : primaryAction?.cta || '打开工作台',
             },
         ],
         sources,
@@ -555,7 +555,7 @@ function BriefSourcesGrid({
         <div className="mt-6 border-t border-slate-200/80 pt-6" style={sectionStyle}>
             <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 <ActivitySquare size={14} />
-                Brief Sources
+                摘要来源
             </div>
             <p className="mt-3 text-sm leading-7 text-slate-600">
                 这张 daily brief 主要由这些实时脉搏和入口主轴推出来。
@@ -697,7 +697,7 @@ function PersonalizedWorkspaceHome({
                         </p>
                         <div className="mt-6 rounded-[24px] border border-white/10 bg-white/10 p-5">
                             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
-                                AI Notes
+                                AI 说明
                             </div>
                             <div className="mt-4 space-y-3">
                                 {plan.aiNotes.map((note) => (
@@ -816,7 +816,7 @@ function PersonalizedWorkspaceHome({
                                 </div>
                                 <div>
                                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                        Quick Routes
+                                        常用入口
                                     </div>
                                     <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                                         你的首页优先展示这些入口
@@ -847,7 +847,7 @@ function PersonalizedWorkspaceHome({
                             style={{ borderColor: plan.palette.accentSoft }}
                         >
                             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                Suggested Next
+                                建议下一步
                             </div>
                             <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                                 这套首页之外，当前更值得先推进的动作
@@ -889,10 +889,10 @@ function PersonalizedWorkspaceHome({
                             style={{ borderColor: plan.palette.accentSoft }}
                         >
                             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                Generation
+                                生成状态
                             </div>
                             <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-                                这套首页已应用到你的 Workspace
+                                这套首页已应用到你的工作台
                             </div>
                             <p className="mt-4 text-sm leading-8 text-slate-600 md:text-base">
                                 当前模式：{plan.generationMode === 'ai' ? 'AI 生成' : '规则回退生成'}。你可以继续编辑模板信息，重新生成更细的首页结构。
@@ -1036,7 +1036,7 @@ export default function WorkspaceHomeClient({
                         <div className="bg-[radial-gradient(circle_at_top_left,#dfeaf9_0%,#eef4fb_40%,#ffffff_100%)] px-6 py-8 md:px-10 md:py-10">
                             <div className="flex flex-wrap items-center gap-3">
                                 <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700">
-                                    Workspace / Daily Entry
+                                    工作台 / 每日入口
                                 </div>
                                 <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50/80 px-4 py-2 text-sm font-medium text-emerald-700">
                                     {getGreeting()}
@@ -1046,7 +1046,7 @@ export default function WorkspaceHomeClient({
                                 从这里开始今天的创作、学习和下一步开发
                             </h1>
                             <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
-                                Workspace 首版先不追求复杂，而是把你真正会反复打开的入口收进来：今天要做什么、先记到哪里、最近做到哪、接下来该推进什么。
+                                工作台首版先不追求复杂，而是把你真正会反复打开的入口收进来：今天要做什么、先记到哪里、最近做到哪、接下来该推进什么。
                             </p>
                             <div className="mt-8 flex flex-wrap gap-3">
                                 {signedIn ? (
@@ -1059,7 +1059,7 @@ export default function WorkspaceHomeClient({
                                         scroll={false}
                                         className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-700"
                                     >
-                                        登录后把 Workspace 作为默认入口
+                                        登录后把工作台作为默认入口
                                         <ArrowRight size={16} />
                                     </Link>
                                 )}
@@ -1077,7 +1077,7 @@ export default function WorkspaceHomeClient({
                         <div className="flex items-center justify-between gap-4">
                             <div>
                                 <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-300">
-                                    Today
+                                    今日
                                 </div>
                                 <div className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
                                     {getTodayLabel()}
@@ -1105,7 +1105,7 @@ export default function WorkspaceHomeClient({
                         <div className="mt-4 rounded-[24px] border border-white/10 bg-white/5 p-5">
                             <div className="flex items-center justify-between gap-3">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-                                    Requirements Pulse
+                                    需求脉搏
                                 </div>
                                 <Link
                                     href="/requirements"
@@ -1187,7 +1187,7 @@ export default function WorkspaceHomeClient({
                                         </div>
                                     ) : (
                                         <div className="mt-4 rounded-[18px] border border-emerald-400/20 bg-emerald-500/10 px-3 py-3 text-sm leading-7 text-emerald-100">
-                                            当前没有需要优先回看的 Doing / Validating 项。
+                                            当前没有需要优先回看的开发中 / 验证中项。
                                         </div>
                                     )}
                                     {reqSummary.recentItems.length > 0 ? (
@@ -1217,7 +1217,7 @@ export default function WorkspaceHomeClient({
                                 </>
                             ) : (
                                 <div className="mt-4 rounded-[18px] border border-white/10 bg-white/5 px-3 py-3 text-sm leading-7 text-slate-300">
-                                    当前没有拿到需求概览，直接打开 Requirements 看板查看实时状态。
+                                    当前没有拿到需求概览，直接打开需求看板查看实时状态。
                                 </div>
                             )}
                         </div>
@@ -1276,7 +1276,7 @@ export default function WorkspaceHomeClient({
                             </div>
                             <div>
                                 <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                    Quick Capture
+                                    快速记录
                                 </div>
                                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                                     先把想法收进去，再决定做成什么
@@ -1311,13 +1311,13 @@ export default function WorkspaceHomeClient({
                             </div>
                             <div>
                                 <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                    Suggested Next
+                                    建议下一步
                                 </div>
                                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                                     根据当前状态，先推进这 3 件事
                                 </h2>
                                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                                    这里优先参考 Requirements Pulse，其次回落到系统规划中的进行中任务。
+                                    这里优先参考需求脉搏，其次回落到系统规划中的进行中任务。
                                 </p>
                             </div>
                         </div>
@@ -1360,7 +1360,7 @@ export default function WorkspaceHomeClient({
                             </div>
                             <div>
                                 <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                    Recents
+                                    最近常用
                                 </div>
                                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                                     当前值得频繁回来的高价值入口
@@ -1398,7 +1398,7 @@ export default function WorkspaceHomeClient({
                                 </div>
                                 <div>
                                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                        Pinned Shortcuts
+                                        固定入口
                                     </div>
                                     <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                                         先把你会反复打开的入口钉住
@@ -1430,7 +1430,7 @@ export default function WorkspaceHomeClient({
                                 </div>
                                 <div>
                                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-amber-800/70">
-                                        Today Stack
+                                        今日学习流
                                     </div>
                                     <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                                         把学习流和执行流压回今天的上下文
@@ -1439,7 +1439,7 @@ export default function WorkspaceHomeClient({
                             </div>
                             <div className="mt-6">
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-800/60">
-                                    Learn Today
+                                    今日学习
                                 </div>
                                 <div className="mt-3 space-y-3">
                                     {todayLearningStack.map((item) => (
@@ -1465,7 +1465,7 @@ export default function WorkspaceHomeClient({
                             <div className="mt-6 rounded-[24px] border border-white/70 bg-white/60 p-4">
                                 <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                                     <ActivitySquare size={14} />
-                                    Dev Task Pulse
+                                    开发任务脉搏
                                 </div>
                                 {!signedIn ? (
                                     <div className="mt-3 text-sm leading-7 text-slate-600">

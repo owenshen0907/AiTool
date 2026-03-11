@@ -30,14 +30,14 @@ export default function RoadmapPage() {
                                     href="/prompt/manage"
                                     className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                                 >
-                                    进入 Prompt Studio
+                                    进入提示词工作台
                                 </Link>
                             </div>
                         </div>
 
                         <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6">
                             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                Current Focus
+                                当前重点
                             </div>
                             <p className="mt-4 text-lg leading-8 text-slate-700">
                                 {systemPlan.currentFocus}
@@ -74,7 +74,7 @@ export default function RoadmapPage() {
                                                 {phaseMeta.label}
                                             </span>
                                             <span className="text-sm uppercase tracking-[0.18em] text-slate-400">
-                                                Product Iteration
+                                                产品迭代
                                             </span>
                                         </div>
                                         <h2 className="mt-4 text-2xl font-semibold text-slate-900 md:text-3xl">

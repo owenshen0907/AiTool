@@ -217,10 +217,10 @@ export default function RequirementsContentPanel({
             try {
                 await onUpdateItem(selectedItem, { body: nextBody });
                 setBody(nextBody);
-                setSaveMessage(`已移动到 ${target.label}，并写入 handoff context。`);
+                setSaveMessage(`已移动到 ${target.label}，并写入交接说明。`);
             } catch (error) {
                 setSaveMessage(
-                    `已移动到 ${target.label}，但 handoff context 保存失败：${error instanceof Error ? error.message : '未知错误'}`
+                    `已移动到 ${target.label}，但交接说明保存失败：${error instanceof Error ? error.message : '未知错误'}`
                 );
             }
         } catch (error) {
@@ -235,31 +235,31 @@ export default function RequirementsContentPanel({
             <div className="flex min-h-full items-center justify-center p-6">
                 <div className="max-w-3xl rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-8 shadow-[0_22px_80px_rgba(15,23,42,0.08)] md:p-10">
                     <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700">
-                        Requirements Content Space
+                        需求文档空间
                     </div>
                     <h2 className="mt-6 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
                         这里开始承接真实的需求说明和验证记录
                     </h2>
                     <p className="mt-5 text-base leading-8 text-slate-600">
-                        左侧目录树已经复用现有 DirectoryLayout。先创建一个目录，再在目录里新增需求文档，就可以把需求背景、范围、验证备注和相关路由沉淀进 AiTool 自己的工作流。
+                        左侧目录树已经复用现有目录布局。先创建一个目录，再在目录里新增需求文档，就可以把需求背景、范围、验证备注和相关路由沉淀进 AiTool 自己的工作流。
                     </p>
                     <div className="mt-8 grid gap-4 md:grid-cols-2">
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
                             <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                                 <FolderPlus size={16} />
-                                Suggested Folders
+                                建议目录
                             </div>
                             <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
-                                <div className="rounded-2xl bg-white px-4 py-3">Inbox</div>
-                                <div className="rounded-2xl bg-white px-4 py-3">Ready</div>
-                                <div className="rounded-2xl bg-white px-4 py-3">Doing</div>
-                                <div className="rounded-2xl bg-white px-4 py-3">Validating</div>
+                                <div className="rounded-2xl bg-white px-4 py-3">待处理</div>
+                                <div className="rounded-2xl bg-white px-4 py-3">待开始</div>
+                                <div className="rounded-2xl bg-white px-4 py-3">开发中</div>
+                                <div className="rounded-2xl bg-white px-4 py-3">验证中</div>
                             </div>
                         </div>
                         <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
                             <div className="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                                 <FileText size={16} />
-                                Starter Template
+                                起始模板
                             </div>
                             <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
                                 {suggestedSections.slice(0, 3).map((section) => (
@@ -294,13 +294,13 @@ export default function RequirementsContentPanel({
                     <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                         <div>
                             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                Requirement Docs
+                                需求文档
                             </div>
                             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
                                 当前目录下的需求文档
                             </h2>
                             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
-                                这里开始复用现有内容系统，单条需求可以记录背景、范围、验证方式和回链路由。正文里的 Meta block 会被 `/requirements` 看板直接读取。
+                                这里开始复用现有内容系统，单条需求可以记录背景、范围、验证方式和回链路由。正文里的元信息区块会被 `/requirements` 看板直接读取。
                             </p>
                         </div>
                         {currentDir ? (
@@ -319,7 +319,7 @@ export default function RequirementsContentPanel({
                 <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                     <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
                         <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                            Visible Items
+                            当前文档
                         </div>
                         <div className="mt-5 space-y-4">
                             {visibleItems.length === 0 ? (
@@ -456,7 +456,7 @@ export default function RequirementsContentPanel({
                     <div className="mt-5 grid gap-4 rounded-[24px] border border-slate-200 bg-slate-50 p-4 lg:grid-cols-2">
                         <label className="block">
                             <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                Why This Move
+                                迁移原因
                             </span>
                             <input
                                 value={moveReason}
@@ -467,7 +467,7 @@ export default function RequirementsContentPanel({
                         </label>
                         <label className="block">
                             <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                Validate Next
+                                下一步验证
                             </span>
                             <input
                                 value={moveValidationFollowUp}
@@ -477,7 +477,7 @@ export default function RequirementsContentPanel({
                             />
                         </label>
                         <div className="lg:col-span-2 text-xs leading-6 text-slate-500">
-                            移动状态时，会把这两条写进正文的 `# Handoff Log`，避免切目录后丢掉“为什么移动”和“接下来验证什么”。
+                            移动状态时，会把这两条写进正文的 `# 交接记录`，避免切目录后丢掉“为什么移动”和“接下来验证什么”。
                         </div>
                     </div>
                 ) : null}
@@ -515,7 +515,7 @@ export default function RequirementsContentPanel({
                                     需求正文
                                 </span>
                                 <span className="text-xs text-slate-500">
-                                    建议在正文顶部保留 `# Meta` 区块，供看板读取
+                                    建议在正文顶部保留 `# 元信息` 区块，供看板读取
                                 </span>
                             </div>
                             <textarea
@@ -661,34 +661,34 @@ export default function RequirementsContentPanel({
                         <div className="mt-4 rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm leading-7 text-slate-200">
                             把下面三行放在正文顶部，`/requirements` 看板就会自动读到：
                             <pre className="mt-3 whitespace-pre-wrap text-xs leading-6 text-slate-300">
-{`# Meta
-- Type: feature
-- Priority: P1
-- Related Route: /workspace`}
+{`# 元信息
+- 类型: 功能
+- 优先级: P1
+- 相关路由: /workspace`}
                             </pre>
                         </div>
                         <div className="mt-4 rounded-[20px] border border-white/10 bg-white/5 px-4 py-3 text-sm leading-7 text-slate-200">
-                            看板预览会从这些 section 抽取：
+                            看板预览会从这些章节抽取：
                             <pre className="mt-3 whitespace-pre-wrap text-xs leading-6 text-slate-300">
-{`# Scene
-- workspace requirements board
+{`# 场景
+- 工作台里的需求看板
 
-# Expected Value
+# 预期价值
 - 让看板能直接展示这条需求解决了什么问题
 
-# Handoff Log
-- 2026-03-08 14:10 JST | Ready -> Doing | Why: 范围已经收敛到单个小步 | Validate Next: 完成实现后跑 build 和关键路径检查
+# 交接记录
+- 2026-03-08 14:10 JST | 待开始 -> 开发中 | 原因: 范围已经收敛到单个小步 | 下一步验证: 完成实现后跑 build 和关键路径检查
 
-# Validation Result
-- npm run build passed
+# 验证结果
+- npm run build 通过
 
-# User Impact
+# 用户影响
 - 日常判断是否可以继续推进或归档时不需要再先打开正文
 
-# Open Risks
+# 未决风险
 - 独立 tsc 仍受 .next/types include 影响
 
-# Next Step
+# 下一步
 - 继续整理需求生命周期字段和迁移规则`}
                             </pre>
                         </div>

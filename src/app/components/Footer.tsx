@@ -3,7 +3,7 @@ import { Github, Sparkles } from 'lucide-react';
 
 const footerLinks = [
     { title: '工作台', href: '/workspace' },
-    { title: 'Prompt Studio', href: '/prompt/manage' },
+    { title: '提示词工作台', href: '/prompt/manage' },
     { title: '需求看板', href: '/requirements' },
     { title: '系统规划', href: '/roadmap' },
 ];
@@ -18,7 +18,7 @@ export default function Footer() {
                     </div>
                     <div>
                         <div className="text-sm font-semibold tracking-tight text-slate-900">AiTool</div>
-                        <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">AI Workspace</div>
+                        <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">AI 工作台</div>
                     </div>
                 </div>
 

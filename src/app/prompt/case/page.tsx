@@ -9,7 +9,7 @@ export default function CaseManagePage() {
     return (
         <DirectoryLayout
             feature="case"
-            modelName="prompt/调试"
+            modelName="提示词/调试"
         >
             {({
                   currentDir,

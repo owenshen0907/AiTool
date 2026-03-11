@@ -4,22 +4,22 @@ import { planStatusMeta, systemPlan } from '@/lib/sitePlan';
 
 const pillars = [
     {
-        title: 'Workspace',
+        title: '工作台',
         description: '把提示词、文档、任务与最近产出收束成一个真正可每天打开的入口。',
         icon: Sparkles,
     },
     {
-        title: 'Create',
+        title: '创作',
         description: '继续保留 Prompt、图片、音频、视频等已有强项，但作为创作能力层存在。',
         icon: Wand2,
     },
     {
-        title: 'Learn',
+        title: '学习',
         description: '把日语学习、阅读、TTS 练习变成持续积累的个人学习流。',
         icon: Languages,
     },
     {
-        title: 'Library',
+        title: '资料库',
         description: '让模板、资料、生成结果和复用资产可沉淀、可回看、可继续加工。',
         icon: BookOpenText,
     },
@@ -27,18 +27,18 @@ const pillars = [
 
 const routes = [
     {
-        title: 'Prompt Studio',
+        title: '提示词工作台',
         description: 'AiTool 当前最成熟的能力，继续承担核心生产流入口。',
         href: '/prompt/manage',
     },
     {
-        title: 'Japanese Notes',
+        title: '日语笔记',
         description: '把学习内容沉淀成可回顾、可检索、可语音练习的长期资产。',
         href: '/docs/japanese',
     },
     {
-        title: 'Image Generate',
-        description: '保留图像生成与模板化工作流，后续并入 Create 体系。',
+        title: '图片生成',
+        description: '保留图像生成与模板化工作流，后续并入创作体系。',
         href: '/agent/image/generate',
     },
 ];
@@ -53,7 +53,7 @@ export default function HomePage() {
                 <div className="animate-fade-in-up mx-auto grid max-w-6xl gap-8 overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-[0_28px_100px_rgba(15,23,42,0.08)] md:grid-cols-[1.08fr_0.92fr]">
                     <div className="px-6 py-8 md:px-10 md:py-12">
                         <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700">
-                            AI-native workspace
+                            AI 原生工作台
                         </div>
                         <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">
                             AiTool 正在从“工具集合”重构成“可持续使用的 AI 工作台”
@@ -73,7 +73,7 @@ export default function HomePage() {
                                 href="/prompt/manage"
                                 className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                             >
-                                进入 Prompt Studio
+                                进入提示词工作台
                             </Link>
                         </div>
                     </div>
@@ -85,7 +85,7 @@ export default function HomePage() {
                                     {currentPhaseMeta.label}
                                 </span>
                                 <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                                    Current Phase
+                                    当前阶段
                                 </span>
                             </div>
                             <h2 className="mt-5 text-2xl font-semibold text-slate-900">
@@ -126,7 +126,7 @@ export default function HomePage() {
                     <div className="flex items-end justify-between gap-4">
                         <div>
                             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                Product Pillars
+                                产品骨架
                             </div>
                             <h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
                                 以后所有功能，都要回到这四个骨架里
@@ -186,7 +186,7 @@ export default function HomePage() {
 
                     <article className="animate-fade-in-up stagger-2 card-hover rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
                         <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                            Current Entrypoints
+                            当前入口
                         </div>
                         <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
                             当前先保留这些高价值入口

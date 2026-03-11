@@ -70,7 +70,7 @@ export default function WebPageGenerator() {
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
             <div className="max-w-6xl mx-auto px-6 py-12">
                 <div className="mb-8">
-                    <p className="text-xs uppercase tracking-[0.35em] text-slate-300">Web Agent</p>
+                    <p className="text-xs uppercase tracking-[0.35em] text-slate-300">网页智能体</p>
                     <h1 className="text-3xl md:text-4xl font-semibold mt-2">静态网页生成器</h1>
                     <p className="text-slate-300 mt-2">填写页面需求，调用 Agent 生成可分享的 H5，并自动存到 public/share。</p>
                 </div>

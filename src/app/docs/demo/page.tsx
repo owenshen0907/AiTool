@@ -10,7 +10,7 @@ export default function DemoDocsPage() {
     const dirId = params?.get('dir') ?? undefined;
     const docId = params?.get('doc') ?? undefined;
     const feature = 'demo';
-    const modelName = '智能文档/demo';
+    const modelName = '智能文档/演示文档';
 
     return (
         <DirectoryLayout

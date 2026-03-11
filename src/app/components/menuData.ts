@@ -7,10 +7,10 @@ export interface MenuItem {
 export const menuData: MenuItem[] = [
     { title: '工作台', href: '/workspace' },
     {
-        title: 'Create',
+        title: '创作',
         children: [
-            { title: 'Prompt 管理', href: '/prompt/manage' },
-            { title: 'Prompt 调试', href: '/prompt/case' },
+            { title: '提示词工作台', href: '/prompt/manage' },
+            { title: '提示词调试', href: '/prompt/case' },
             { title: '图片生成', href: '/agent/image/generate' },
             { title: '配音生成', href: '/agent/video/dubbing' },
             { title: '网页生成', href: '/agent/web/generate' },
@@ -18,19 +18,19 @@ export const menuData: MenuItem[] = [
         ],
     },
     {
-        title: 'Learn',
+        title: '学习',
         children: [
             { title: '日语笔记', href: '/docs/japanese' },
-            { title: 'Demo', href: '/docs/demo' },
+            { title: '演示文档', href: '/docs/demo' },
         ],
     },
     {
-        title: 'Library',
+        title: '资料库',
         children: [
             { title: '系统规划', href: '/roadmap' },
             { title: '内部需求', href: '/requirements' },
             { title: '首页定制', href: '/workspace/home-builder' },
-            { title: '文件管理', href: '/stepfun/file' },
+            { title: '文件工具', href: '/stepfun/file' },
         ],
     },
 ];

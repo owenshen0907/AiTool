@@ -10,7 +10,7 @@ export default function ImageGeneratePage() {
     const dirId = params?.get('dir') ?? undefined;
     const docId = params?.get('doc') ?? undefined;
     const feature = 'imageGenerate';
-    const modelName = 'Agent/图片生成';
+    const modelName = '智能体/图片生成';
 
     return (
         <DirectoryLayout

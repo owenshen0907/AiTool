@@ -171,25 +171,18 @@ export default function RequirementsBoardClient() {
             setErrorMessage('');
 
             try {
-                let directories = await fetchDirectories('requirements');
-                let matchedDirectories = directories.filter((directory) =>
+                const response = await fetch('/api/requirements/bootstrap', {
+                    method: 'POST',
+                });
+                const payload = (await response.json().catch(() => null)) as RequirementsBootstrapResponse | null;
+                if (!response.ok) {
+                    throw new Error(payload?.error || '初始化需求看板失败');
+                }
+
+                const directories = await fetchDirectories('requirements');
+                const matchedDirectories = directories.filter((directory) =>
                     Boolean(getRequirementStatusFromDirectoryName(directory.name))
                 );
-
-                if (matchedDirectories.length === 0) {
-                    const response = await fetch('/api/requirements/bootstrap', {
-                        method: 'POST',
-                    });
-                    const payload = (await response.json().catch(() => null)) as RequirementsBootstrapResponse | null;
-                    if (!response.ok) {
-                        throw new Error(payload?.error || '初始化 Requirements 看板失败');
-                    }
-
-                    directories = await fetchDirectories('requirements');
-                    matchedDirectories = directories.filter((directory) =>
-                        Boolean(getRequirementStatusFromDirectoryName(directory.name))
-                    );
-                }
 
                 const itemsByStatus = createEmptyBoardState().itemsByStatus;
                 const directoryIdByStatus = createEmptyBoardState().directoryIdByStatus;
@@ -229,7 +222,7 @@ export default function RequirementsBoardClient() {
             } catch (error) {
                 if (cancelled) return;
                 setErrorMessage(
-                    error instanceof Error ? error.message : '加载 Requirements 看板失败'
+                    error instanceof Error ? error.message : '加载需求看板失败'
                 );
             } finally {
                 if (!cancelled) {
@@ -349,11 +342,11 @@ export default function RequirementsBoardClient() {
                     body: nextBody,
                 });
                 setNoticeMessage(
-                    `已将「${item.title}」移到 ${requirementStatusMeta[targetStatus].label}，并写入 handoff context。`
+                    `已将「${item.title}」移到 ${requirementStatusMeta[targetStatus].label}，并写入交接说明。`
                 );
             } catch (error) {
                 setNoticeMessage(
-                    `已将「${item.title}」移到 ${requirementStatusMeta[targetStatus].label}，但 handoff context 保存失败：${error instanceof Error ? error.message : '未知错误'}`
+                    `已将「${item.title}」移到 ${requirementStatusMeta[targetStatus].label}，但交接说明保存失败：${error instanceof Error ? error.message : '未知错误'}`
                 );
             }
             resetMoveDraft(item.id);
@@ -372,7 +365,7 @@ export default function RequirementsBoardClient() {
                     <article className="overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
                         <div className="bg-[radial-gradient(circle_at_top_left,#dce9fb_0%,#edf4fb_42%,#ffffff_100%)] px-6 py-8 md:px-10 md:py-10">
                             <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/85 px-4 py-2 text-sm font-medium text-sky-700">
-                                Requirements Space / Internal Product Ops
+                                需求空间 / 内部产品推进
                             </div>
                             <h1 className="mt-6 max-w-4xl text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
                                 把 AiTool 的下一步，直接放进 AiTool 里推进
@@ -385,7 +378,7 @@ export default function RequirementsBoardClient() {
                                     href="/workspace"
                                     className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-700"
                                 >
-                                    返回 Workspace
+                                    返回工作台
                                     <ArrowRight size={16} />
                                 </Link>
                                 <Link
@@ -408,7 +401,7 @@ export default function RequirementsBoardClient() {
                     <article className="rounded-[36px] border border-slate-200 bg-slate-950 p-6 text-white shadow-[0_24px_90px_rgba(15,23,42,0.18)] md:p-8">
                         <div className="flex items-center gap-3 text-sm font-medium uppercase tracking-[0.18em] text-slate-300">
                             <FolderKanban size={16} />
-                            This Iteration
+                            当前迭代
                         </div>
                         <div className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">
                             让看板直接反映真实需求文档
@@ -416,7 +409,7 @@ export default function RequirementsBoardClient() {
                         <div className="mt-6 space-y-4">
                             <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-                                    Current Move
+                                    当前动作
                                 </div>
                                 <p className="mt-3 text-sm leading-7 text-slate-200">
                                     看板现在直接读取 `/requirements/content` 背后的目录和需求文档，并允许在卡片内直接选择目标生命周期状态、补轻量交接说明，然后直接迁移。
@@ -424,7 +417,7 @@ export default function RequirementsBoardClient() {
                             </div>
                             <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-                                    Why Small
+                                    为什么先做小步
                                 </div>
                                 <p className="mt-3 text-sm leading-7 text-slate-200">
                                     继续复用目录名和共享迁移逻辑，不急着提前引入更多字段、审批流或单独的 requirements 表结构。
@@ -432,10 +425,10 @@ export default function RequirementsBoardClient() {
                             </div>
                             <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
                                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-                                    Next Hook
+                                    下一步钩子
                                 </div>
                                 <p className="mt-3 text-sm leading-7 text-slate-200">
-                                    Doing / Validating 卡片已经开始用紧凑的 handoff rail 表达交接时间、迁移方向和验证提示；下一步把 handoff 时间转成更直接的 freshness 提示。
+                                    开发中 / 验证中卡片已经开始用紧凑的交接轨道表达交接时间、迁移方向和验证提示；下一步把交接时间转成更直接的新鲜度提示。
                                 </p>
                             </div>
                         </div>
@@ -446,7 +439,7 @@ export default function RequirementsBoardClient() {
                     <article className="animate-fade-in-up stagger-1 card-hover rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
                         <div className="flex items-center gap-3 text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
                             <Sparkles size={16} />
-                            Requirement Docs
+                            需求文档
                         </div>
                         <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
                             {isLoading ? '...' : boardState.documentCount}
@@ -459,7 +452,7 @@ export default function RequirementsBoardClient() {
                     <article className="animate-fade-in-up stagger-2 card-hover rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
                         <div className="flex items-center gap-3 text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
                             <Radar size={16} />
-                            Status Folders
+                            状态目录
                         </div>
                         <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
                             {isLoading ? '...' : boardState.directoryCount}
@@ -471,13 +464,13 @@ export default function RequirementsBoardClient() {
 
                     <article className="animate-fade-in-up stagger-3 card-hover rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)]">
                         <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                            Lifecycle
+                            生命周期
                         </div>
                         <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
-                            6 States
+                            6 个状态
                         </div>
                         <p className="mt-3 text-sm leading-7 text-slate-600">
-                            Inbox / Shaping / Ready / Doing / Validating / Archived 已开始由真实目录驱动。
+                            待处理 / 需求梳理 / 待开始 / 开发中 / 验证中 / 已归档 已开始由真实目录驱动。
                         </p>
                     </article>
 
@@ -486,7 +479,7 @@ export default function RequirementsBoardClient() {
                             <div>
                                 <div className="flex items-center gap-3 text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
                                     <FileText size={16} />
-                                    Requirement Docs
+                                    需求文档
                                 </div>
                                 <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                                     看板卡片已经回链到真实需求文档
@@ -520,13 +513,13 @@ export default function RequirementsBoardClient() {
                     <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                         <div>
                             <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
-                                Status Board
+                                状态看板
                             </div>
                             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
                                 需求状态看板
                             </h2>
                             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
-                                看板现在直接消费需求目录与需求文档。当前除了 `type / priority / related route`，还会按状态强调不同预览字段，并允许卡片直接迁移到任意目标状态，同时把轻量 handoff context 写回正文；Doing / Validating 也开始用紧凑 rail 显示 handoff 信号。
+                                看板现在直接消费需求目录与需求文档。当前除了 `type / priority / related route`，还会按状态强调不同预览字段，并允许卡片直接迁移到任意目标状态，同时把轻量交接上下文写回正文；开发中 / 验证中也开始用紧凑轨道显示交接信号。
                             </p>
                         </div>
                     </div>
@@ -534,7 +527,7 @@ export default function RequirementsBoardClient() {
                     {errorMessage ? (
                         <div className="mt-6 rounded-[28px] border border-rose-200 bg-rose-50 p-6">
                             <div className="text-sm font-semibold uppercase tracking-[0.18em] text-rose-600">
-                                Board Load Failed
+                                看板加载失败
                             </div>
                             <p className="mt-3 text-sm leading-7 text-rose-700">
                                 {errorMessage}
@@ -843,11 +836,11 @@ export default function RequirementsBoardClient() {
                                                             {showHandoffEditor && selectedMoveStatus ? (
                                                                 <div className="mt-4 space-y-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3">
                                                                     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                                                        Move Handoff
+                                                                        迁移交接
                                                                     </div>
                                                                     <label className="block">
                                                                         <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                                                            Why This Move
+                                                                            迁移原因
                                                                         </span>
                                                                         <input
                                                                             value={moveReason}
@@ -865,7 +858,7 @@ export default function RequirementsBoardClient() {
                                                                     </label>
                                                                     <label className="block">
                                                                         <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                                                            Validate Next
+                                                                            下一步验证
                                                                         </span>
                                                                         <input
                                                                             value={moveValidationFollowUp}
@@ -882,7 +875,7 @@ export default function RequirementsBoardClient() {
                                                                         />
                                                                     </label>
                                                                     <div className="text-xs leading-6 text-slate-500">
-                                                                        不填写也会写入默认 handoff；这里主要用来补“为什么移动”和“下一步验证什么”。
+                                                                        不填写也会写入默认交接说明；这里主要用来补“为什么移动”和“下一步验证什么”。
                                                                     </div>
                                                                 </div>
                                                             ) : null}
