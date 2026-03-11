@@ -1,4 +1,5 @@
 // lib/db/initDb.ts
+import type { PoolClient } from 'pg';
 import { pool } from './client.js';
 import { migrateCaseContent } from './migrations/caseContentMigration.js';
 import {docsJapaneseContent} from "./migrations/docsJapaneseMigration.js";
@@ -7,6 +8,34 @@ import {imageGenerateContent} from "./migrations/imageGenerateMigration.js";
 import {demoContent} from "./migrations/demoMigration.js";
 import {requirementsContent} from "./migrations/requirementsMigration.js";
 import {migrateApiLab} from "./migrations/apiLabMigration.js";
+
+async function tableExists(client: PoolClient, tableName: string) {
+    const res = await client.query<{ exists: boolean }>(
+        `SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = $1
+        ) AS exists`,
+        [tableName],
+    );
+
+    return Boolean(res.rows[0]?.exists);
+}
+
+async function runMigrationIfMissing(
+    client: PoolClient,
+    tableName: string,
+    label: string,
+    migration: (client: PoolClient) => Promise<void>,
+) {
+    if (await tableExists(client, tableName)) {
+        console.log(`Skipping ${label}, table "${tableName}" already exists.`);
+        return;
+    }
+
+    console.log(`Running ${label}...`);
+    await migration(client);
+}
 
 export async function initDb() {
     if (process.env.DB_INIT !== 'true') {
@@ -17,7 +46,10 @@ export async function initDb() {
     const client = await pool.connect();
     try {
         console.log('Initializing database...');
-        await client.query(`
+        const hasBaseSchema = await tableExists(client, 'ai_suppliers');
+        if (!hasBaseSchema) {
+            console.log('Base schema not found, creating core tables...');
+            await client.query(`
 -- 必要的扩展
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -301,15 +333,17 @@ CREATE INDEX IF NOT EXISTS idx_bad_cases_audios_gin
 CREATE INDEX IF NOT EXISTS idx_bad_cases_videos_gin
   ON prompt_bad_cases USING GIN (videos);
         `);
+        } else {
+            console.log('Core tables already exist, skipping base schema bootstrap.');
+        }
 
-        // 执行 case_content 的迁移
-        await migrateCaseContent(client);
-        await migrateApiLab(client);
-        await docsJapaneseContent(client);
-        await dubbingContent(client);
-        await imageGenerateContent(client);
-        await demoContent(client);
-        await requirementsContent(client);
+        await runMigrationIfMissing(client, 'case_content', 'case content migration', migrateCaseContent);
+        await runMigrationIfMissing(client, 'api_lab_envs', 'API Lab migration', migrateApiLab);
+        await runMigrationIfMissing(client, 'japanese_content', 'Japanese docs migration', docsJapaneseContent);
+        await runMigrationIfMissing(client, 'dubbing_content', 'dubbing migration', dubbingContent);
+        await runMigrationIfMissing(client, 'imagegenerate_content', 'image generation migration', imageGenerateContent);
+        await runMigrationIfMissing(client, 'demo_content', 'demo migration', demoContent);
+        await runMigrationIfMissing(client, 'requirements_content', 'requirements migration', requirementsContent);
 
         console.log('Database initialized successfully.');
     } catch (err) {
