@@ -30,6 +30,7 @@ export const menuData: MenuItem[] = [
             { title: '系统规划', href: '/roadmap' },
             { title: '内部需求', href: '/requirements' },
             { title: '首页定制', href: '/workspace/home-builder' },
+            { title: 'API 调试台', href: '/api-lab' },
             { title: '文件工具', href: '/stepfun/file' },
         ],
     },
