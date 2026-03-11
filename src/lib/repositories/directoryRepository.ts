@@ -149,7 +149,6 @@ export async function deleteDirectory(id: string): Promise<void> {
                     throw new Error('DirectoryNotEmpty');
                 case 'case_content_directory_id_fkey':
                 case 'japanese_content_directory_id_fkey':
-                case 'dev_journal_content_directory_id_fkey':
                     // 目录下还有内容项
                     throw new Error('DirectoryHasContent');
             }

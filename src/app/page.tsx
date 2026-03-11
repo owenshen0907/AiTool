@@ -59,7 +59,7 @@ export default function HomePage() {
                             AiTool 正在从“工具集合”重构成“可持续使用的 AI 工作台”
                         </h1>
                         <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
-                            这里不再只是展示很多功能，而是围绕创作、学习、开发执行与个人资产沉淀，建立一个你每天都能重新打开的入口。
+                            这里不再只是展示很多功能，而是围绕创作、学习与个人资产沉淀，建立一个你每天都能重新打开的入口。
                         </p>
                         <div className="mt-8 flex flex-wrap gap-3">
                             <Link

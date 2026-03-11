@@ -17,22 +17,18 @@ import {
     Zap,
 } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
-import { fetchDevTaskSummary } from '@/lib/api/devTasks';
 import {
     getAppliedHomeConfigKey,
     getPersonalHomeTemplate,
     type GeneratedHomepagePlan,
 } from '@/lib/personalHome';
 import { planStatusMeta, systemPlan } from '@/lib/sitePlan';
-import { devTaskStatusMeta } from '@/lib/devTasks/meta';
-import type { DevTaskSummaryResponse } from '@/lib/models/devTask';
 import {
     type RequirementFreshness,
     requirementFreshnessMeta,
     requirementStatusMeta,
     type RequirementsSummaryResponse,
 } from '@/lib/requirements';
-import DevTaskFeedSection from './DevTaskFeedSection';
 
 const quickCapture = [
     {
@@ -221,7 +217,6 @@ function describeFreshness(freshness: RequirementFreshness | null) {
 
 function buildSuggestedActions(
     reqSummary: RequirementsSummaryResponse | null,
-    devTaskSummary: DevTaskSummaryResponse | null,
 ): SuggestedAction[] {
     const actions: SuggestedAction[] = [];
     const seen = new Set<string>();
@@ -246,19 +241,6 @@ function buildSuggestedActions(
         });
     }
 
-    if (devTaskSummary?.focusItem) {
-        const focusItem = devTaskSummary.focusItem;
-        pushAction({
-            id: `dev-task:${focusItem.taskId}`,
-            source: '开发任务',
-            title: `跟进任务：${focusItem.projectName}`,
-            note: focusItem.nextStep?.trim()
-                || devTaskStatusMeta[focusItem.status].description,
-            href: focusItem.href,
-            cta: '打开任务',
-        });
-    }
-
     if (reqSummary && reqSummary.countByStatus.inbox > 0) {
         pushAction({
             id: 'requirements:inbox',
@@ -270,17 +252,6 @@ function buildSuggestedActions(
         });
     }
 
-    if (devTaskSummary && devTaskSummary.attention > 0) {
-        pushAction({
-            id: 'dev-task:attention',
-            source: '开发任务',
-            title: `处理 ${devTaskSummary.attention} 个需要回应的共享任务`,
-            note: '优先看 Awaiting Approval、Needs Tuning、Failed 和 Interrupted，避免共享任务长时间卡住。',
-            href: '/workspace',
-            cta: '查看任务脉搏',
-        });
-    }
-
     if (reqSummary && reqSummary.countByStatus.validating > 0) {
         pushAction({
             id: 'requirements:validating',
@@ -289,17 +260,6 @@ function buildSuggestedActions(
             note: '把验证结果、剩余风险和最终结论写回文档，避免状态长时间卡在验证中。',
             href: '/requirements',
             cta: '查看验证项',
-        });
-    }
-
-    if (devTaskSummary && devTaskSummary.active > 0) {
-        pushAction({
-            id: 'dev-task:active',
-            source: '开发任务',
-            title: `继续跟进 ${devTaskSummary.active} 个活跃共享任务`,
-            note: '有 Agent 正在推进时，工作台应该优先暴露当前 revision 的下一步和阻塞点。',
-            href: '/workspace',
-            cta: '查看执行流',
         });
     }
 
@@ -373,7 +333,6 @@ function buildPersonalBriefContext(plan: GeneratedHomepagePlan | null): Personal
 function buildDailySummary(
     plan: GeneratedHomepagePlan | null,
     reqSummary: RequirementsSummaryResponse | null,
-    devTaskSummary: DevTaskSummaryResponse | null,
     suggestedActions: SuggestedAction[],
     signedIn: boolean,
 ): DailySummary {
@@ -383,19 +342,10 @@ function buildDailySummary(
     const reqActive = reqSummary?.active ?? 0;
     const reqInbox = reqSummary?.countByStatus.inbox ?? 0;
     const reqValidating = reqSummary?.countByStatus.validating ?? 0;
-    const devAttention = signedIn ? devTaskSummary?.attention ?? 0 : 0;
-    const devActive = signedIn ? devTaskSummary?.active ?? 0 : 0;
-    const devQueued = signedIn ? devTaskSummary?.queued ?? 0 : 0;
 
     let title = '今天先沿着已有进度继续推进';
-    if (reqStale > 0 && devAttention > 0) {
-        title = '今天先同时收口需求和共享任务';
-    } else if (reqStale > 0 || reqInbox > 0 || reqValidating > 0) {
+    if (reqStale > 0 || reqInbox > 0 || reqValidating > 0) {
         title = '今天先把需求状态收紧';
-    } else if (devAttention > 0) {
-        title = '今天先回应共享任务';
-    } else if (devActive > 0) {
-        title = '今天适合继续跟进共享执行流';
     } else if (!signedIn) {
         title = '今天先把学习和创作入口收回来';
     } else if (briefContext) {
@@ -420,15 +370,6 @@ function buildDailySummary(
                         ? `需求看板里还有 ${reqInbox} 条待判断项`
                         : '需求看板当前没有明显阻塞'
             : '需求脉搏暂时不可用',
-        signedIn
-            ? devAttention > 0
-                ? `共享任务里有 ${devAttention} 个待回应项`
-                : devActive > 0
-                    ? `共享任务里有 ${devActive} 个活跃执行项`
-                    : devQueued > 0
-                        ? `共享任务里有 ${devQueued} 个排队项`
-                        : '共享任务当前没有明显阻塞'
-            : '登录后可以把共享任务脉搏一起拉进今天的上下文',
         primaryAction ? `建议先 ${primaryAction.title}` : '建议先打开一个核心入口开始推进',
     ];
 
@@ -454,20 +395,6 @@ function buildDailySummary(
             : '当前需求主线没有显著阻塞。',
         href: '/requirements',
         cta: '打开看板',
-    });
-
-    sources.push({
-        label: '开发任务脉搏',
-        summary: signedIn
-            ? `${devAttention} 个待回应 / ${devActive} 个活跃`
-            : '登录后可用',
-        detail: signedIn
-            ? devTaskSummary?.focusItem
-                ? `${devTaskSummary.focusItem.projectName}：${devTaskSummary.focusItem.nextStep?.trim() || devTaskStatusMeta[devTaskSummary.focusItem.status].description}`
-                : '当前共享任务没有明显阻塞。'
-            : '登录后这里会接入共享任务脉搏。',
-        href: signedIn ? devTaskSummary?.focusItem?.href || '/workspace' : undefined,
-        cta: signedIn ? (devTaskSummary?.focusItem ? '打开任务' : '查看任务脉搏') : undefined,
     });
 
     if (briefContext) {
@@ -508,10 +435,10 @@ function buildDailySummary(
                     : '等待实时脉搏',
             },
             {
-                label: '任务',
+                label: '状态',
                 value: signedIn
-                    ? `${devAttention} 个待回应，${devActive} 个活跃，${devQueued} 个排队`
-                    : '登录后显示共享任务脉搏',
+                    ? '已登录，可继续定制工作台入口'
+                    : '未登录，先用公开入口组织今天',
             },
             {
                 label: '主轴',
@@ -943,8 +870,6 @@ export default function WorkspaceHomeClient({
 
     const [reqSummary, setReqSummary] = useState<RequirementsSummaryResponse | null>(null);
     const [isReqSummaryLoading, setIsReqSummaryLoading] = useState(true);
-    const [devTaskSummary, setDevTaskSummary] = useState<DevTaskSummaryResponse | null>(null);
-    const [isDevTaskSummaryLoading, setIsDevTaskSummaryLoading] = useState(signedIn);
 
     useEffect(() => {
         let cancelled = false;
@@ -976,42 +901,10 @@ export default function WorkspaceHomeClient({
         };
     }, []);
 
-    useEffect(() => {
-        if (!signedIn) {
-            setDevTaskSummary(null);
-            setIsDevTaskSummaryLoading(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        setIsDevTaskSummaryLoading(true);
-        fetchDevTaskSummary()
-            .then((data) => {
-                if (!cancelled) {
-                    setDevTaskSummary(data);
-                }
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setDevTaskSummary(null);
-                }
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setIsDevTaskSummaryLoading(false);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [signedIn]);
-
     const activePhase = systemPlan.phases.find((phase) => phase.status === 'in_progress') || systemPlan.phases[0];
     const phaseMeta = planStatusMeta[activePhase.status];
-    const suggestedActions = buildSuggestedActions(reqSummary, devTaskSummary);
-    const dailySummary = buildDailySummary(personalPlan, reqSummary, devTaskSummary, suggestedActions, signedIn);
+    const suggestedActions = buildSuggestedActions(reqSummary);
+    const dailySummary = buildDailySummary(personalPlan, reqSummary, suggestedActions, signedIn);
 
     if (personalPlan) {
         return (
@@ -1433,7 +1326,7 @@ export default function WorkspaceHomeClient({
                                         今日学习流
                                     </div>
                                     <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-                                        把学习流和执行流压回今天的上下文
+                                        把学习流和表达练习压回今天的上下文
                                     </h2>
                                 </div>
                             </div>
@@ -1462,94 +1355,9 @@ export default function WorkspaceHomeClient({
                                     ))}
                                 </div>
                             </div>
-                            <div className="mt-6 rounded-[24px] border border-white/70 bg-white/60 p-4">
-                                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                    <ActivitySquare size={14} />
-                                    开发任务脉搏
-                                </div>
-                                {!signedIn ? (
-                                    <div className="mt-3 text-sm leading-7 text-slate-600">
-                                        登录后这里会显示共享任务的活跃状态、需要回应的任务，以及最新 revision 的下一步。
-                                    </div>
-                                ) : isDevTaskSummaryLoading ? (
-                                    <div className="mt-3 space-y-2">
-                                        {[1, 2].map((item) => (
-                                            <div
-                                                key={item}
-                                                className="h-12 animate-pulse rounded-[18px] bg-white/80"
-                                            />
-                                        ))}
-                                    </div>
-                                ) : devTaskSummary ? (
-                                    <>
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700">
-                                                {devTaskSummary.active} 活跃
-                                            </span>
-                                            <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-sm font-semibold text-rose-700">
-                                                {devTaskSummary.attention} 待回应
-                                            </span>
-                                            <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
-                                                {devTaskSummary.queued} 排队中
-                                            </span>
-                                        </div>
-                                        {devTaskSummary.focusItem ? (
-                                            <Link
-                                                href={devTaskSummary.focusItem.href}
-                                                className="link-card-hover mt-4 block rounded-[20px] border border-white/80 bg-white px-4 py-4 hover:border-slate-200"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${devTaskStatusMeta[devTaskSummary.focusItem.status].badgeClass}`}>
-                                                        {devTaskStatusMeta[devTaskSummary.focusItem.status].label}
-                                                    </span>
-                                                    <span className="text-xs text-slate-400">
-                                                        {formatPulseUpdatedAt(devTaskSummary.focusItem.updatedAt)}
-                                                    </span>
-                                                </div>
-                                                <div className="mt-3 text-base font-semibold text-slate-900">
-                                                    {devTaskSummary.focusItem.projectName}
-                                                </div>
-                                                <p className="mt-2 text-sm leading-7 text-slate-600">
-                                                    {devTaskSummary.focusItem.nextStep?.trim()
-                                                        || devTaskStatusMeta[devTaskSummary.focusItem.status].description}
-                                                </p>
-                                            </Link>
-                                        ) : (
-                                            <div className="mt-4 rounded-[18px] border border-dashed border-slate-200 bg-white/80 px-4 py-3 text-sm leading-7 text-slate-600">
-                                                当前还没有共享任务脉搏，可以在下方创建一条新任务。
-                                            </div>
-                                        )}
-                                        {devTaskSummary.latestItems.length > 0 ? (
-                                            <div className="mt-4 space-y-2">
-                                                {devTaskSummary.latestItems.map((item) => (
-                                                    <Link
-                                                        key={item.taskId}
-                                                        href={item.href}
-                                                        className="flex items-center justify-between gap-3 rounded-[16px] border border-transparent px-1 py-1 text-sm text-slate-700 transition hover:border-white/80 hover:bg-white/70"
-                                                    >
-                                                        <div className="flex min-w-0 items-center gap-2">
-                                                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${devTaskStatusMeta[item.status].badgeClass}`}>
-                                                                {devTaskStatusMeta[item.status].label}
-                                                            </span>
-                                                            <span className="truncate">{item.projectName}</span>
-                                                        </div>
-                                                        <ArrowRight size={14} className="shrink-0 text-slate-400" />
-                                                    </Link>
-                                                ))}
-                                            </div>
-                                        ) : null}
-                                    </>
-                                ) : (
-                                    <div className="mt-3 text-sm leading-7 text-slate-600">
-                                        当前没有拿到共享任务摘要，可以直接查看下方任务流。
-                                    </div>
-                                )}
-                            </div>
                         </article>
                     </div>
                 </section>
-
-                <DevTaskFeedSection />
             </div>
         </main>
     );
