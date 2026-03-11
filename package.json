@@ -9,7 +9,8 @@
     "dev:local": "npm run dev",
     "build": "next build",
     "start": "next start",
-    "init-db": "DB_INIT=true node --loader ts-node/esm src/lib/db/initDb.ts"
+    "init-db": "DB_INIT=true node --loader ts-node/esm src/lib/db/initDb.ts",
+    "db:print-api-lab-sql": "node --loader ts-node/esm src/lib/db/printApiLabMigration.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
