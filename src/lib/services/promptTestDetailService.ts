@@ -15,8 +15,11 @@ export const promptTestService = {
 
     /** 新增一条测试明细 */
     create(payload: Omit<PromptTestDetail, 'id' | 'testTime'>) {
-        // TODO: 在此可做输入校验，例如模型名合法性等
-        return promptTestDetailRepo.create(payload);
+        const modelName = payload.modelName?.trim();
+        if (!modelName || modelName.length > 200 || !/^[\w./:@-]+$/.test(modelName)) {
+            throw new Error('Invalid model name: must be 1-200 chars of alphanumeric, dots, slashes, colons, hyphens, or underscores');
+        }
+        return promptTestDetailRepo.create({ ...payload, modelName });
     },
 
     /** 删除 */

@@ -10,6 +10,7 @@ import {
     promptCaseListRepo,
     promptCaseImageRepo,
 } from '../repositories/promptCaseListRepository';
+import { getPromptCaseContentById } from '../repositories/promptCaseContentRepository';
 import type { PromptCaseList } from '@/lib/models/prompt/promptCase';
 
 export const promptCaseService = {
@@ -19,8 +20,20 @@ export const promptCaseService = {
     },
 
     /** 新建 CaseList（不含图片）*/
-    create(data: Omit<PromptCaseList, 'id' | 'createdAt' | 'updatedAt'>) {
-        // TODO: 如需校验 seq 唯一、权限等，可在此处理
+    async create(data: Omit<PromptCaseList, 'id' | 'createdAt' | 'updatedAt'>, userId?: string) {
+        if (userId) {
+            const caseContent = await getPromptCaseContentById(data.caseContentId);
+            if (!caseContent || (caseContent as any).created_by !== userId) {
+                throw new Error('Forbidden: case content does not belong to this user');
+            }
+        }
+
+        const existing = await promptCaseListRepo.listByContent(data.caseContentId);
+        const seqExists = existing.some((item) => (item as any).seq === data.seq);
+        if (seqExists) {
+            throw new Error(`Duplicate seq: ${data.seq} already exists in this case content`);
+        }
+
         return promptCaseListRepo.create(data);
     },
 

@@ -3,6 +3,7 @@ import './globals.css';
 import { cookies } from 'next/headers';
 import { Inter } from 'next/font/google';
 import NavBar from './components/NavBar';
+import Footer from './components/Footer';
 import LoginModal from './components/LoginModal';
 import { CASDOOR_CONFIG } from '@/config';
 import { UserProvider, User } from './providers/UserProvider';
@@ -53,6 +54,7 @@ export default async function RootLayout({
             <ClientBoot />
             <NavBar />
             {children}
+            <Footer />
             <LoginModal />
         </UserProvider>
         </body>

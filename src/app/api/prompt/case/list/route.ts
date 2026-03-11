@@ -8,10 +8,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withUser } from '@/lib/api/auth';
 import { promptCaseService as svc } from '@/lib/services/promptCaseListService';
+import { getPromptCaseContentById } from '@/lib/repositories/promptCaseContentRepository';
 
 /**
  * GET ?content_id=xxx           → list all CaseList in a content
- * GET ?id=xxx                   → get single CaseList
+ * GET ?id=xxx&content_id=xxx    → get single CaseList
  */
 export const GET = withUser(async (req: NextRequest, userId: string) => {
     const sp = new URL(req.url).searchParams;
@@ -19,8 +20,12 @@ export const GET = withUser(async (req: NextRequest, userId: string) => {
     const id = sp.get('id');
 
     if (id) {
-        // TODO: 权限校验 id 属于 userId
-        const list = await svc.list(contentId || ''); // need retrieval by id; not implemented
+        if (!contentId) return NextResponse.json({ error: 'content_id required when fetching by id' }, { status: 400 });
+        const caseContent = await getPromptCaseContentById(contentId);
+        if (!caseContent || (caseContent as any).created_by !== userId) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+        const list = await svc.list(contentId);
         const item = list.find(i => i.id === id);
         if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
         return NextResponse.json(item);
@@ -40,8 +45,14 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
     const { case_content_id, seq, case_text, ground_truth } = await req.json();
     if (!case_content_id || seq == null || !ground_truth)
         return NextResponse.json({ error: 'case_content_id, seq, ground_truth required' }, { status: 400 });
-    const created = await svc.create({ caseContentId: case_content_id, seq, caseText: case_text, groundTruth: ground_truth });
-    return NextResponse.json(created, { status: 201 });
+    try {
+        const created = await svc.create({ caseContentId: case_content_id, seq, caseText: case_text, groundTruth: ground_truth }, userId);
+        return NextResponse.json(created, { status: 201 });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Create failed';
+        const status = message.includes('Forbidden') ? 403 : message.includes('Duplicate') ? 409 : 500;
+        return NextResponse.json({ error: message }, { status });
+    }
 });
 
 /**

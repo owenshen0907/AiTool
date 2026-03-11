@@ -49,12 +49,12 @@ function HoverMenu({
         : 'left-full top-0 ml-1 w-60';
 
     const triggerClass = isRoot
-        ? `inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition ${
+        ? `relative inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
               active || open
                   ? 'bg-white/80 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.10)]'
                   : 'text-slate-600 hover:bg-white/65 hover:text-slate-900'
           }`
-        : `flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition ${
+        : `flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-sm transition-all duration-200 ${
               active
                   ? 'bg-slate-900 text-white'
                   : 'text-slate-600 hover:bg-white hover:text-slate-900'
@@ -74,9 +74,9 @@ function HoverMenu({
                 </button>
             )}
 
-            {item.children && open ? (
+            {item.children ? (
                 <ul
-                    className={`absolute ${panelClass} rounded-[28px] border border-white/70 bg-white/78 p-2 shadow-[0_22px_70px_rgba(15,23,42,0.14)] backdrop-blur-2xl`}
+                    className={`absolute ${panelClass} rounded-[28px] border border-white/70 bg-white/78 p-2 shadow-[0_22px_70px_rgba(15,23,42,0.14)] backdrop-blur-2xl transition-all duration-200 origin-top ${open ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-95 opacity-0 pointer-events-none'}`}
                     style={{ zIndex: 80 + level }}
                 >
                     {item.children.map((child) => (
@@ -185,8 +185,8 @@ export default function NavBar() {
                                     />
                                 </button>
 
-                                {dropdownOpen ? (
-                                    <div className="absolute right-0 top-full mt-3 w-60 rounded-[28px] border border-white/70 bg-white/80 p-2 shadow-[0_22px_70px_rgba(15,23,42,0.16)] backdrop-blur-2xl">
+                                {
+                                    <div className={`absolute right-0 top-full mt-3 w-60 rounded-[28px] border border-white/70 bg-white/80 p-2 shadow-[0_22px_70px_rgba(15,23,42,0.16)] backdrop-blur-2xl transition-all duration-200 origin-top-right ${dropdownOpen ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-95 opacity-0 pointer-events-none'}`}>
                                         <button
                                             type="button"
                                             className="block w-full rounded-2xl px-4 py-3 text-left text-sm text-slate-700 transition hover:bg-white hover:text-slate-900"
@@ -225,7 +225,7 @@ export default function NavBar() {
                                             注销登录
                                         </button>
                                     </div>
-                                ) : null}
+                                }
                             </div>
                         ) : (
                             <Link
