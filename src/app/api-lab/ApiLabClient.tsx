@@ -272,6 +272,106 @@ function extractLogResult(log: ApiLabRunLog): ApiLabRunResult {
     };
 }
 
+function isExampleRunResult(result: ApiLabRunResult | null): boolean {
+    return Boolean(result?.runLogId?.startsWith('example:'));
+}
+
+function buildRequestUrlPreview(
+    endpoint: ApiLabEndpoint,
+    env: ApiLabEnv | null,
+    queryPayload: JsonObject,
+): string {
+    if (endpoint.method === 'WS') {
+        const wsBaseUrl = env?.websocketUrl || (env ? toWebsocketBaseUrl(env.baseUrl) : '');
+        if (!wsBaseUrl) {
+            return normalizePath(endpoint.path);
+        }
+
+        const wsUrl = new URL(`${trimTrailingSlash(wsBaseUrl)}${normalizePath(endpoint.path)}`);
+        Object.entries(queryPayload).forEach(([key, value]) => {
+            if (value === null || value === undefined || value === '') return;
+            if (Array.isArray(value)) {
+                value.forEach((item) => wsUrl.searchParams.append(key, stringifyValue(item)));
+                return;
+            }
+            wsUrl.searchParams.set(key, stringifyValue(value));
+        });
+        return wsUrl.toString();
+    }
+
+    if (!env?.baseUrl) {
+        return normalizePath(endpoint.path);
+    }
+
+    const url = new URL(`${trimTrailingSlash(env.baseUrl)}${normalizePath(endpoint.path)}`);
+    Object.entries(queryPayload).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === '') return;
+        if (Array.isArray(value)) {
+            value.forEach((item) => url.searchParams.append(key, stringifyValue(item)));
+            return;
+        }
+        url.searchParams.set(key, stringifyValue(value));
+    });
+    return url.toString();
+}
+
+function buildExampleRunResult(args: {
+    endpoint: ApiLabEndpoint;
+    env: ApiLabEnv | null;
+    example: ApiLabExample;
+}): ApiLabRunResult {
+    const { endpoint, env, example } = args;
+    const bodyPayload = mergeObjects(endpoint.requestTemplate, example.requestBody);
+    const queryPayload = mergeObjects(endpoint.queryTemplate, example.requestQuery);
+    const headers = mergeObjects(env?.extraHeaders || {}, endpoint.headerTemplate, example.requestHeaders);
+
+    if (endpoint.authType === 'bearer' && env?.apiKey) {
+        headers[endpoint.authHeaderName || 'Authorization'] = `Bearer ${env.apiKey}`;
+    }
+    if (endpoint.authType === 'x-api-key' && env?.apiKey) {
+        headers[endpoint.authHeaderName || 'x-api-key'] = env.apiKey;
+    }
+    if (endpoint.authType === 'custom' && env?.apiKey && endpoint.authHeaderName) {
+        headers[endpoint.authHeaderName] = env.apiKey;
+    }
+    if (endpoint.contentType === 'application/json') {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    const requestBody =
+        endpoint.method === 'GET' || endpoint.contentType === 'none'
+            ? null
+            : JSON.stringify(bodyPayload, null, 2);
+
+    return {
+        ok: (example.responseStatus ?? 200) < 400,
+        status: example.responseStatus,
+        durationMs: 0,
+        requestUrl: buildRequestUrlPreview(endpoint, env, queryPayload),
+        requestMethod: endpoint.method,
+        requestHeaders: headers,
+        requestQuery: queryPayload,
+        requestBody,
+        requestFiles: {},
+        curlCommand: buildCurlPreview({
+            endpoint,
+            env,
+            bodyText: JSON.stringify(example.requestBody, null, 2),
+            queryText: JSON.stringify(example.requestQuery, null, 2),
+            headerText: JSON.stringify(example.requestHeaders, null, 2),
+            uploadedFileName: null,
+        }),
+        responseHeaders: example.responseHeaders,
+        responseBody: example.responseBody,
+        responseBodyFormat: example.responseBodyFormat,
+        errorMessage:
+            example.responseStatus && example.responseStatus >= 400
+                ? `当前展示的是样例返回，状态码 ${example.responseStatus}。`
+                : null,
+        runLogId: `example:${example.id}`,
+    };
+}
+
 function SectionTitle({ icon: Icon, title, action }: { icon: LucideIcon; title: string; action?: ReactNode }) {
     return (
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -694,7 +794,9 @@ export default function ApiLabClient() {
         if (!res.ok) {
             throw new Error(await res.text());
         }
-        setExamples((await res.json()) as ApiLabExample[]);
+        const data = (await res.json()) as ApiLabExample[];
+        setExamples(data);
+        return data;
     };
 
     const loadLogs = async (endpointId: string) => {
@@ -747,22 +849,45 @@ export default function ApiLabClient() {
         setSelectedFile(null);
         setNotice(null);
         setError(null);
+        setRunResult(null);
 
         const defaultEnv = serviceEnvs.find((env) => env.isDefault) || serviceEnvs[0] || null;
         if (!selectedEnvId || !serviceEnvs.some((env) => env.id === selectedEnvId)) {
             setSelectedEnvId(defaultEnv?.id || '');
         }
+        const resolvedEnv =
+            (selectedEnvId ? serviceEnvs.find((env) => env.id === selectedEnvId) : null) || defaultEnv;
 
-        void Promise.all([loadExamples(selectedEndpoint.id), loadLogs(selectedEndpoint.id)]).catch((loadError) => {
-            setError(loadError instanceof Error ? loadError.message : '加载样例或日志失败。');
-        });
+        void Promise.all([loadExamples(selectedEndpoint.id), loadLogs(selectedEndpoint.id)])
+            .then(([loadedExamples]) => {
+                const recommendedExample =
+                    loadedExamples.find((example) => example.isRecommended) || loadedExamples[0];
+                if (recommendedExample) {
+                    applyExample(recommendedExample, { silent: true, envOverride: resolvedEnv });
+                }
+            })
+            .catch((loadError) => {
+                setError(loadError instanceof Error ? loadError.message : '加载样例或日志失败。');
+            });
     }, [selectedEndpointId, selectedEndpoint, serviceEnvs]);
 
-    const applyExample = (example: ApiLabExample) => {
+    const applyExample = (
+        example: ApiLabExample,
+        options?: { silent?: boolean; envOverride?: ApiLabEnv | null },
+    ) => {
         setBodyText(formatJson(example.requestBody));
         setQueryText(formatJson(example.requestQuery));
         setHeaderText(formatJson(example.requestHeaders));
-        setNotice(`已加载样例：${example.name}`);
+        if (selectedEndpoint) {
+            setRunResult(
+                buildExampleRunResult({
+                    endpoint: selectedEndpoint,
+                    env: options?.envOverride === undefined ? selectedEnv : options.envOverride,
+                    example,
+                }),
+            );
+        }
+        setNotice(options?.silent ? null : `已加载样例：${example.name}，可以直接复制当前 curl 和样例返回。`);
     };
 
     const runRequest = async () => {
@@ -1179,7 +1304,11 @@ export default function ApiLabClient() {
                                                 加入巡检
                                             </button>
                                         </div>
-                                        {runResult ? <div className={`rounded-full px-3 py-1 text-xs font-medium ${runResult.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{runResult.status || 'ERR'} · {runResult.durationMs}ms</div> : null}
+                                        {runResult ? (
+                                            <div className={`rounded-full px-3 py-1 text-xs font-medium ${runResult.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                {runResult.status || 'ERR'} · {isExampleRunResult(runResult) ? '样例' : `${runResult.durationMs}ms`}
+                                            </div>
+                                        ) : null}
                                     </div>
                             </>
                         ) : (
@@ -1193,10 +1322,23 @@ export default function ApiLabClient() {
                                 icon={Globe}
                                 title="响应结果"
                                 action={
-                                    runResult?.curlCommand ? (
-                                        <button type="button" onClick={() => void copyToClipboard(runResult.curlCommand).then(() => setNotice('已复制最近执行生成的 curl。'))} className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                                    runResult ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const curlToCopy = isExampleRunResult(runResult) ? curlPreview : runResult.curlCommand;
+                                                void copyToClipboard(curlToCopy).then(() =>
+                                                    setNotice(
+                                                        isExampleRunResult(runResult)
+                                                            ? '已复制当前样例对应的 curl。'
+                                                            : '已复制最近执行生成的 curl。',
+                                                    ),
+                                                );
+                                            }}
+                                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                                        >
                                             <Copy size={14} />
-                                            最近 curl
+                                            {isExampleRunResult(runResult) ? '当前 curl' : '最近 curl'}
                                         </button>
                                     ) : null
                                 }
@@ -1209,8 +1351,8 @@ export default function ApiLabClient() {
                                             <div className={`mt-1 font-semibold ${runResult.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{runResult.status || 'ERR'}</div>
                                         </div>
                                         <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Duration</div>
-                                            <div className="mt-1 font-semibold text-slate-900">{runResult.durationMs} ms</div>
+                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{isExampleRunResult(runResult) ? 'Preview' : 'Duration'}</div>
+                                            <div className="mt-1 font-semibold text-slate-900">{isExampleRunResult(runResult) ? '样例返回' : `${runResult.durationMs} ms`}</div>
                                         </div>
                                     </div>
                                     <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
@@ -1226,14 +1368,14 @@ export default function ApiLabClient() {
                                     ) : null}
                                     <div className="rounded-[22px] border border-slate-200 bg-slate-950 px-4 py-3 text-white">
                                         <div className="mb-2 flex items-center justify-between gap-3">
-                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Response Body</div>
+                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{isExampleRunResult(runResult) ? 'Example Response' : 'Response Body'}</div>
                                             {runResult.responseBody ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
                                         </div>
                                         <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-100">{runResult.responseBody || '<empty>'}</pre>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="rounded-[26px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">执行一次接口后，这里会显示状态码、耗时和返回体。</div>
+                                <div className="rounded-[26px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">执行一次接口，或加载推荐样例后，这里会显示状态码和返回体。</div>
                             )}
                         </div>
 

@@ -133,7 +133,10 @@ export const apiLabSeedEndpoints: ApiLabSeedEndpoint[] = [
             model: 'step-1x-medium',
             prompt: '保持构图，改成赛博朋克夜景风格。',
             source_url: 'https://example.com/demo.png',
+            source_weight: 0.7,
             size: '1024x1024',
+            steps: 28,
+            cfg_scale: 7.5,
             n: 1,
         },
         queryTemplate: {},
@@ -156,7 +159,7 @@ export const apiLabSeedEndpoints: ApiLabSeedEndpoint[] = [
         contentType: 'multipart/form-data',
         responseType: 'json',
         requestTemplate: {
-            model: 'step-1x-medium',
+            model: 'step-1x-edit',
             prompt: '给人物加上一副复古金边眼镜。',
             size: '1024x1024',
         },
@@ -233,6 +236,7 @@ export const apiLabSeedEndpoints: ApiLabSeedEndpoint[] = [
         contentType: 'application/json',
         responseType: 'json',
         requestTemplate: {
+            model: 'step-tts-mini',
             file_id: 'file-demo-123',
             sample_text: '欢迎来到 AiTool 的音色测试区。',
         },
@@ -479,7 +483,7 @@ export const apiLabSeedEndpoints: ApiLabSeedEndpoint[] = [
         headerTemplate: {},
         fileFieldName: 'file',
         fileAccept: '.txt,.json,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg,.mp3,.wav',
-        docUrl: 'https://platform.stepfun.com/docs/zh/api-reference/files/upload',
+        docUrl: 'https://platform.stepfun.com/docs/zh/api-reference/files/create',
         notes: '适合上传文件后获取 file_id，再串到音色复刻等业务接口中。',
         sortOrder: 170,
     },
@@ -552,10 +556,42 @@ export const apiLabSeedExamples: ApiLabSeedExample[] = [
         isRecommended: true,
     },
     {
+        endpointSlug: 'stepfun-image-to-image',
+        name: '图生图返回样例',
+        requestBody: {
+            model: 'step-1x-medium',
+            prompt: '保持构图，改成赛博朋克夜景风格。',
+            source_url: 'https://example.com/demo.png',
+            source_weight: 0.7,
+            size: '1024x1024',
+            steps: 28,
+            cfg_scale: 7.5,
+            n: 1,
+        },
+        requestQuery: {},
+        requestHeaders: {},
+        responseStatus: 200,
+        responseHeaders: { 'content-type': 'application/json' },
+        responseBody: JSON.stringify(
+            {
+                created: 1741680000,
+                data: [
+                    {
+                        url: 'https://cdn.example.com/generated/cyberpunk-cat.png',
+                    },
+                ],
+            },
+            null,
+            2,
+        ),
+        responseBodyFormat: 'json',
+        isRecommended: true,
+    },
+    {
         endpointSlug: 'stepfun-image-edits',
         name: '图像编辑返回样例',
         requestBody: {
-            model: 'step-1x-medium',
+            model: 'step-1x-edit',
             prompt: '给人物加上一副复古金边眼镜。',
             size: '1024x1024',
         },
@@ -596,9 +632,35 @@ export const apiLabSeedExamples: ApiLabSeedExample[] = [
         isRecommended: true,
     },
     {
+        endpointSlug: 'stepfun-audio-speech-sse',
+        name: 'TTS SSE 流式样例',
+        requestBody: {
+            model: 'step-tts-mini',
+            input: '请用更轻快的语气朗读这句话。',
+            voice: 'cixingnansheng',
+            response_format: 'mp3',
+            stream_format: 'sse',
+        },
+        requestQuery: {},
+        requestHeaders: {},
+        responseStatus: 200,
+        responseHeaders: { 'content-type': 'text/event-stream' },
+        responseBody: `event: audio
+data: {"audio":"<base64-chunk-1>","status":"streaming"}
+
+event: audio
+data: {"audio":"<base64-chunk-2>","status":"streaming"}
+
+event: done
+data: {"status":"completed"}`,
+        responseBodyFormat: 'sse',
+        isRecommended: true,
+    },
+    {
         endpointSlug: 'stepfun-create-voice',
         name: '音色复刻返回样例',
         requestBody: {
+            model: 'step-tts-mini',
             file_id: 'file-demo-123',
             sample_text: '欢迎来到 AiTool 的音色测试区。',
         },
@@ -660,6 +722,28 @@ export const apiLabSeedExamples: ApiLabSeedExample[] = [
         isRecommended: true,
     },
     {
+        endpointSlug: 'stepfun-audio-realtime-ws',
+        name: '实时语音 WS 消息样例',
+        requestBody: {
+            type: 'start',
+            voice: 'cixingnansheng',
+            text: '你好，欢迎来到 AiTool。',
+            response_format: 'mp3',
+            sample_rate: 24000,
+        },
+        requestQuery: {
+            model: 'step-tts-mini',
+        },
+        requestHeaders: {},
+        responseStatus: 101,
+        responseHeaders: {},
+        responseBody: `{"event":"tts.created","data":{"status":"accepted"}}
+{"event":"tts.audio","data":{"audio":"<base64-chunk>","seq":1}}
+{"event":"tts.completed","data":{"status":"completed"}}`,
+        responseBodyFormat: 'text',
+        isRecommended: true,
+    },
+    {
         endpointSlug: 'stepfun-audio-asr-file-submit',
         name: '异步 ASR 提交样例',
         requestBody: {
@@ -705,6 +789,49 @@ export const apiLabSeedExamples: ApiLabSeedExample[] = [
             2,
         ),
         responseBodyFormat: 'json',
+        isRecommended: true,
+    },
+    {
+        endpointSlug: 'stepfun-audio-asr-sse',
+        name: 'ASR SSE 结果样例',
+        requestBody: {
+            audio_format: {
+                type: 'pcm',
+                sample_rate: 16000,
+                channel: 1,
+            },
+        },
+        requestQuery: {},
+        requestHeaders: {},
+        responseStatus: 200,
+        responseHeaders: { 'content-type': 'text/event-stream' },
+        responseBody: `event: transcript
+data: {"text":"你好","is_final":false}
+
+event: transcript
+data: {"text":"你好，欢迎来到 AiTool。","is_final":true}`,
+        responseBodyFormat: 'sse',
+        isRecommended: true,
+    },
+    {
+        endpointSlug: 'stepfun-audio-asr-stream-ws',
+        name: 'ASR WS 消息样例',
+        requestBody: {
+            event: 'start',
+            audio_format: {
+                type: 'pcm',
+                sample_rate: 16000,
+                channel: 1,
+            },
+            vad: true,
+        },
+        requestQuery: {},
+        requestHeaders: {},
+        responseStatus: 101,
+        responseHeaders: {},
+        responseBody: `{"event":"transcript.partial","data":{"text":"你好"}}
+{"event":"transcript.final","data":{"text":"你好，欢迎来到 AiTool。"}}`,
+        responseBodyFormat: 'text',
         isRecommended: true,
     },
     {
