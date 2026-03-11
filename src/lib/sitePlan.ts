@@ -46,11 +46,11 @@ export const planStatusMeta: Record<PlanStatus, { label: string; badgeClass: str
 };
 
 export const systemPlan: SystemPlan = {
-    updatedAt: '2026-03-08',
+    updatedAt: '2026-03-11',
     title: 'AiTool 系统规划',
     summary:
         '让 AiTool 从“功能堆叠的 AI 工具箱”收敛成一个面向创作、学习与开发执行的 AI 工作台。',
-    currentFocus: 'Requirements 内容页和看板卡片的状态迁移现在都会把 handoff context 写回正文；Doing / Validating 卡片也已经把结构化 handoff 信号压成更紧凑的 rail。下一步根据交接时间暴露更直接的 freshness / stale 提示。',
+    currentFocus: 'Workspace 现在已经开始根据 Requirements pulse、Dev Task pulse、系统规划和已应用的个性首页主轴生成启发式 AI daily brief，并把来源卡片挂到摘要下方，让 Suggested next action、Today Stack 和共享任务脉搏收进同一个可解释的 daily context。下一步再继续把这套规则做成更稳定的个性化 daily brief。',
     principles: [
         '先做稳定入口，再扩展能力，不继续横向铺新模块。',
         '公开首页负责解释产品，登录后 Workspace 负责承接日常使用。',
@@ -123,7 +123,7 @@ export const systemPlan: SystemPlan = {
                 },
                 {
                     title: '需求生命周期',
-                    note: '继续固化 Inbox、Shaping、Ready、Doing、Validating、Archived 的字段与迁移规则；当前内容页和看板卡片迁移都已开始写入 handoff context，Doing / Validating 也已用紧凑 rail 显示交接信号，下一步把交接时间转成更直接的 freshness 提示。',
+                    note: '继续固化 Inbox、Shaping、Ready、Doing、Validating、Archived 的字段与迁移规则；当前内容页和看板卡片迁移都已开始写入 handoff context，Doing / Validating 也已显示 freshness 提示，并把实时状态同步到 Workspace 的 Requirements pulse。',
                     status: 'in_progress' as const,
                 },
                 {
@@ -136,17 +136,17 @@ export const systemPlan: SystemPlan = {
         {
             name: 'Phase 4 / AI Native 增强',
             goal: '在稳定骨架上叠加 AI 推荐与自动推进能力。',
-            status: 'planned' as const,
+            status: 'in_progress' as const,
             tasks: [
                 {
                     title: 'AI daily summary',
-                    note: '总结最近完成项、阻塞项和建议下一步。',
-                    status: 'planned' as const,
+                    note: 'Workspace 已开始根据 Requirements pulse、Dev Task pulse、Suggested next action 和已应用首页主轴生成启发式 daily brief，并把来源卡片显式挂到摘要下方，后续再接更稳定的个性化 daily brief。',
+                    status: 'in_progress' as const,
                 },
                 {
                     title: 'Suggested next action',
-                    note: '结合近期编辑和需求状态推荐下一步动作。',
-                    status: 'planned' as const,
+                    note: 'Workspace 已开始根据 Requirements pulse、Dev Task pulse 和系统规划生成启发式下一步建议，后续再继续接 AI 推荐与自动推进。',
+                    status: 'in_progress' as const,
                 },
                 {
                     title: '快捷入口个性化',

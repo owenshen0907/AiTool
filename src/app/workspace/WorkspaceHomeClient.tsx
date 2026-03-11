@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
+    ActivitySquare,
     ArrowRight,
     BookOpenText,
     CheckSquare,
@@ -16,8 +17,21 @@ import {
     Zap,
 } from 'lucide-react';
 import { useUser } from '@/app/providers/UserProvider';
-import { getAppliedHomeConfigKey, type GeneratedHomepagePlan } from '@/lib/personalHome';
+import { fetchDevTaskSummary } from '@/lib/api/devTasks';
+import {
+    getAppliedHomeConfigKey,
+    getPersonalHomeTemplate,
+    type GeneratedHomepagePlan,
+} from '@/lib/personalHome';
 import { planStatusMeta, systemPlan } from '@/lib/sitePlan';
+import { devTaskStatusMeta } from '@/lib/devTasks/meta';
+import type { DevTaskSummaryResponse } from '@/lib/models/devTask';
+import {
+    type RequirementFreshness,
+    requirementFreshnessMeta,
+    requirementStatusMeta,
+    type RequirementsSummaryResponse,
+} from '@/lib/requirements';
 import DevTaskFeedSection from './DevTaskFeedSection';
 
 const quickCapture = [
@@ -87,28 +101,537 @@ const pinnedShortcuts = [
     },
 ];
 
-const japaneseToday = [
-    '继续整理日语笔记的结构，把知识点、例句、复习任务拆开。',
-    '把 TTS 和 shadowing 的入口挂回学习流，而不是单独漂在导航里。',
-    '后续将 review queue 放进 Workspace，而不是继续散落在页面之间。',
+const todayLearningStack = [
+    {
+        title: '先记一条日语表达',
+        note: '把今天遇到的句子、语法点和你自己的改写一起沉到日语笔记里。',
+        href: '/docs/japanese',
+        cta: '打开日语笔记',
+    },
+    {
+        title: '做一轮 TTS / shadowing',
+        note: '把刚整理好的内容送进 TTS，听一遍、跟一遍，再决定哪些句子值得反复练。',
+        href: '/audio/tts',
+        cta: '进入 TTS',
+    },
+    {
+        title: '回到学习流入口',
+        note: '继续把学习入口收回 Workspace，而不是把复习、跟读和笔记拆散在不同页面。',
+        href: '/roadmap',
+        cta: '查看系统规划',
+    },
 ];
+
+const WORKSPACE_TIME_ZONE = 'Asia/Shanghai';
+
+function getCurrentHour() {
+    const hourPart = new Intl.DateTimeFormat('zh-CN', {
+        hour: '2-digit',
+        hourCycle: 'h23',
+        timeZone: WORKSPACE_TIME_ZONE,
+    })
+        .formatToParts(new Date())
+        .find((part) => part.type === 'hour')?.value;
+
+    return Number(hourPart ?? '0');
+}
 
 function getTodayLabel() {
     return new Intl.DateTimeFormat('zh-CN', {
         dateStyle: 'full',
-        timeZone: 'Asia/Tokyo',
+        timeZone: WORKSPACE_TIME_ZONE,
     }).format(new Date());
+}
+
+function getGreeting() {
+    const hour = getCurrentHour();
+    if (hour < 6) return '夜深了，注意休息';
+    if (hour < 9) return '早上好，新的一天开始了';
+    if (hour < 12) return '上午好，保持专注';
+    if (hour < 14) return '中午好，吃饭了吗';
+    if (hour < 18) return '下午好，继续加油';
+    if (hour < 21) return '晚上好，还在忙吗';
+    return '夜间模式，放松一下';
+}
+
+function formatPulseUpdatedAt(value: string) {
+    try {
+        return new Intl.DateTimeFormat('zh-CN', {
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hourCycle: 'h23',
+            timeZone: WORKSPACE_TIME_ZONE,
+        }).format(new Date(value));
+    } catch {
+        return value;
+    }
 }
 
 function getUserStorageKey(userName?: string) {
     return userName?.trim() || 'guest';
 }
 
+interface SuggestedAction {
+    id: string;
+    source: string;
+    title: string;
+    note: string;
+    href: string;
+    cta: string;
+}
+
+interface DailySummaryHighlight {
+    label: string;
+    value: string;
+}
+
+interface DailySummarySource {
+    label: string;
+    summary: string;
+    detail: string;
+    href?: string;
+    cta?: string;
+}
+
+interface DailySummary {
+    eyebrow: string;
+    title: string;
+    summary: string;
+    highlights: DailySummaryHighlight[];
+    sources: DailySummarySource[];
+    primaryAction: SuggestedAction | null;
+}
+
+interface PersonalBriefContext {
+    templateName: string;
+    accentLabel: string;
+    focusTitle: string | null;
+    routeTitles: string[];
+    primaryRouteHref: string | null;
+}
+
+function describeFreshness(freshness: RequirementFreshness | null) {
+    if (freshness === 'stale') return '这条需求已经放了一段时间，应该优先回看。';
+    if (freshness === 'aging') return '这条需求开始变旧，适合补一次 handoff 或验证说明。';
+    if (freshness === 'fresh') return '这条需求刚推进过，适合直接接着往下做。';
+    return '这条需求值得继续推进。';
+}
+
+function buildSuggestedActions(
+    reqSummary: RequirementsSummaryResponse | null,
+    devTaskSummary: DevTaskSummaryResponse | null,
+): SuggestedAction[] {
+    const actions: SuggestedAction[] = [];
+    const seen = new Set<string>();
+
+    const pushAction = (action: SuggestedAction) => {
+        if (seen.has(action.id) || actions.length >= 3) return;
+        seen.add(action.id);
+        actions.push(action);
+    };
+
+    const primaryAttentionItem = reqSummary?.attentionItems[0];
+    if (primaryAttentionItem) {
+        pushAction({
+            id: `attention:${primaryAttentionItem.id}`,
+            source: 'Needs Attention',
+            title: `回看需求：${primaryAttentionItem.title}`,
+            note: primaryAttentionItem.signal
+                ? `${describeFreshness(primaryAttentionItem.freshness)} 当前焦点：${primaryAttentionItem.signal}`
+                : describeFreshness(primaryAttentionItem.freshness),
+            href: primaryAttentionItem.href,
+            cta: '打开需求',
+        });
+    }
+
+    if (devTaskSummary?.focusItem) {
+        const focusItem = devTaskSummary.focusItem;
+        pushAction({
+            id: `dev-task:${focusItem.taskId}`,
+            source: 'Dev Task',
+            title: `跟进任务：${focusItem.projectName}`,
+            note: focusItem.nextStep?.trim()
+                || devTaskStatusMeta[focusItem.status].description,
+            href: focusItem.href,
+            cta: '打开任务',
+        });
+    }
+
+    if (reqSummary && reqSummary.countByStatus.inbox > 0) {
+        pushAction({
+            id: 'requirements:inbox',
+            source: 'Inbox',
+            title: `清理 ${reqSummary.countByStatus.inbox} 条待判断需求`,
+            note: '先过滤掉不该继续做的项，再把值得推进的需求移进 Shaping。',
+            href: '/requirements',
+            cta: '开始清理',
+        });
+    }
+
+    if (devTaskSummary && devTaskSummary.attention > 0) {
+        pushAction({
+            id: 'dev-task:attention',
+            source: 'Dev Task',
+            title: `处理 ${devTaskSummary.attention} 个需要回应的共享任务`,
+            note: '优先看 Awaiting Approval、Needs Tuning、Failed 和 Interrupted，避免共享任务长时间卡住。',
+            href: '/workspace',
+            cta: '查看任务脉搏',
+        });
+    }
+
+    if (reqSummary && reqSummary.countByStatus.validating > 0) {
+        pushAction({
+            id: 'requirements:validating',
+            source: 'Validate',
+            title: `补齐 ${reqSummary.countByStatus.validating} 条验证结论`,
+            note: '把验证结果、剩余风险和最终结论写回文档，避免状态长时间卡在 Validating。',
+            href: '/requirements',
+            cta: '查看验证项',
+        });
+    }
+
+    if (devTaskSummary && devTaskSummary.active > 0) {
+        pushAction({
+            id: 'dev-task:active',
+            source: 'Dev Task',
+            title: `继续跟进 ${devTaskSummary.active} 个活跃共享任务`,
+            note: '有 Agent 正在推进时，Workspace 应该优先暴露当前 revision 的下一步和阻塞点。',
+            href: '/workspace',
+            cta: '查看执行流',
+        });
+    }
+
+    if (reqSummary && reqSummary.countByStatus.ready > 0) {
+        pushAction({
+            id: 'requirements:ready',
+            source: 'Ready',
+            title: `拆分 ${reqSummary.countByStatus.ready} 条 Ready 需求`,
+            note: '把范围切成下一轮可交付的小步，再决定进入 Doing 的顺序。',
+            href: '/requirements',
+            cta: '打开 Ready',
+        });
+    }
+
+    const inProgressTasks = systemPlan.phases.flatMap((phase) =>
+        phase.tasks
+            .filter((task) => task.status === 'in_progress')
+            .map((task) => ({
+                id: `roadmap:${phase.name}:${task.title}`,
+                source: 'Roadmap',
+                title: task.title,
+                note: task.note,
+                href: '/roadmap',
+                cta: '查看规划',
+            })),
+    );
+
+    for (const task of inProgressTasks) {
+        pushAction(task);
+    }
+
+    pushAction({
+        id: 'workspace:builder',
+        source: 'Workspace',
+        title: '继续微调首页入口',
+        note: '如果今天的主路径已经稳定，可以继续压缩首页信息密度，让入口更短更准。',
+        href: '/workspace/home-builder',
+        cta: '打开首页生成器',
+    });
+
+    pushAction({
+        id: 'learn:japanese',
+        source: 'Learn',
+        title: '把学习流接回日语笔记',
+        note: '继续补 Japanese Today 的复习和 TTS 承接，让学习入口不再漂在导航里。',
+        href: '/docs/japanese',
+        cta: '打开日语笔记',
+    });
+
+    return actions.slice(0, 3);
+}
+
+function buildPersonalBriefContext(plan: GeneratedHomepagePlan | null): PersonalBriefContext | null {
+    if (!plan) return null;
+
+    const template = getPersonalHomeTemplate(plan.templateId);
+    const focusSection =
+        plan.sections.find((section) => section.kind === 'focus' || section.kind === 'task')
+        || plan.sections[0]
+        || null;
+
+    return {
+        templateName: template?.name || plan.pageTitle,
+        accentLabel: template?.accentLabel || plan.heroEyebrow,
+        focusTitle: focusSection?.title || null,
+        routeTitles: plan.recommendedRoutes.slice(0, 3).map((route) => route.title),
+        primaryRouteHref: plan.recommendedRoutes[0]?.href || null,
+    };
+}
+
+function buildDailySummary(
+    plan: GeneratedHomepagePlan | null,
+    reqSummary: RequirementsSummaryResponse | null,
+    devTaskSummary: DevTaskSummaryResponse | null,
+    suggestedActions: SuggestedAction[],
+    signedIn: boolean,
+): DailySummary {
+    const briefContext = buildPersonalBriefContext(plan);
+    const primaryAction = suggestedActions[0] ?? null;
+    const reqStale = reqSummary?.freshnessByActiveStatus.stale ?? 0;
+    const reqActive = reqSummary?.active ?? 0;
+    const reqInbox = reqSummary?.countByStatus.inbox ?? 0;
+    const reqValidating = reqSummary?.countByStatus.validating ?? 0;
+    const devAttention = signedIn ? devTaskSummary?.attention ?? 0 : 0;
+    const devActive = signedIn ? devTaskSummary?.active ?? 0 : 0;
+    const devQueued = signedIn ? devTaskSummary?.queued ?? 0 : 0;
+
+    let title = '今天先沿着已有进度继续推进';
+    if (reqStale > 0 && devAttention > 0) {
+        title = '今天先同时收口需求和共享任务';
+    } else if (reqStale > 0 || reqInbox > 0 || reqValidating > 0) {
+        title = '今天先把需求状态收紧';
+    } else if (devAttention > 0) {
+        title = '今天先回应共享任务';
+    } else if (devActive > 0) {
+        title = '今天适合继续跟进共享执行流';
+    } else if (!signedIn) {
+        title = '今天先把学习和创作入口收回来';
+    } else if (briefContext) {
+        if (plan?.templateId === 'learning') {
+            title = '今天先把学习节奏带起来';
+        } else if (plan?.templateId === 'work') {
+            title = '今天先把执行主线压实';
+        } else if (plan?.templateId === 'life') {
+            title = '今天先把生活节奏稳住';
+        } else if (plan?.templateId === 'hybrid') {
+            title = '今天先沿着你的综合主轴推进';
+        }
+    }
+
+    const summaryParts = [
+        reqSummary
+            ? reqStale > 0
+                ? `Requirements 里有 ${reqStale} 条 stale 项需要回看`
+                : reqActive > 0
+                    ? `Requirements 里有 ${reqActive} 条活跃项可以继续推进`
+                    : reqInbox > 0
+                        ? `Requirements 里还有 ${reqInbox} 条待判断项`
+                        : 'Requirements 当前没有明显阻塞'
+            : 'Requirements pulse 暂时不可用',
+        signedIn
+            ? devAttention > 0
+                ? `共享任务里有 ${devAttention} 个待回应项`
+                : devActive > 0
+                    ? `共享任务里有 ${devActive} 个活跃执行项`
+                    : devQueued > 0
+                        ? `共享任务里有 ${devQueued} 个排队项`
+                        : '共享任务当前没有明显阻塞'
+            : '登录后可以把共享任务脉搏一起拉进今天的上下文',
+        primaryAction ? `建议先 ${primaryAction.title}` : '建议先打开一个核心入口开始推进',
+    ];
+
+    if (briefContext?.focusTitle) {
+        summaryParts.push(`当前个性化首页主轴是 ${briefContext.focusTitle}`);
+    }
+
+    if (briefContext?.routeTitles.length) {
+        summaryParts.push(`建议入口优先看 ${briefContext.routeTitles.join('、')}`);
+    }
+
+    const sources: DailySummarySource[] = [];
+
+    sources.push({
+        label: 'Requirements Pulse',
+        summary: reqSummary
+            ? reqStale > 0
+                ? `${reqStale} 条 stale / ${reqActive} 条活跃`
+                : `${reqActive} 条活跃 / ${reqInbox} 条待判断`
+            : '暂时不可用',
+        detail: reqSummary?.attentionItems[0]
+            ? `${reqSummary.attentionItems[0].title}${reqSummary.attentionItems[0].signal ? `：${reqSummary.attentionItems[0].signal}` : ''}`
+            : '当前需求主线没有显著阻塞。',
+        href: '/requirements',
+        cta: '打开看板',
+    });
+
+    sources.push({
+        label: 'Dev Task Pulse',
+        summary: signedIn
+            ? `${devAttention} 个待回应 / ${devActive} 个活跃`
+            : '登录后可用',
+        detail: signedIn
+            ? devTaskSummary?.focusItem
+                ? `${devTaskSummary.focusItem.projectName}：${devTaskSummary.focusItem.nextStep?.trim() || devTaskStatusMeta[devTaskSummary.focusItem.status].description}`
+                : '当前共享任务没有明显阻塞。'
+            : '登录后这里会接入共享任务脉搏。',
+        href: signedIn ? devTaskSummary?.focusItem?.href || '/workspace' : undefined,
+        cta: signedIn ? (devTaskSummary?.focusItem ? '打开任务' : '查看任务脉搏') : undefined,
+    });
+
+    if (briefContext) {
+        sources.push({
+            label: 'Personal Lens',
+            summary: briefContext.focusTitle || briefContext.templateName,
+            detail: briefContext.routeTitles.length
+                ? `推荐入口：${briefContext.routeTitles.join(' / ')}`
+                : briefContext.accentLabel,
+            href: briefContext.primaryRouteHref || undefined,
+            cta: briefContext.primaryRouteHref ? '打开入口' : undefined,
+        });
+    }
+
+    if (primaryAction) {
+        sources.push({
+            label: 'Suggested Next',
+            summary: primaryAction.title,
+            detail: primaryAction.note,
+            href: primaryAction.href,
+            cta: primaryAction.cta,
+        });
+    }
+
+    return {
+        eyebrow: briefContext
+            ? `${briefContext.accentLabel} / AI Daily Brief`
+            : 'Workspace / AI Daily Summary',
+        title,
+        summary: `${summaryParts.join('，')}。`,
+        highlights: [
+            {
+                label: '需求',
+                value: reqSummary
+                    ? reqStale > 0
+                        ? `${reqStale} 条 stale，${reqInbox} 条待判断`
+                        : `${reqActive} 条活跃，${reqValidating} 条验证中`
+                    : '等待实时脉搏',
+            },
+            {
+                label: '任务',
+                value: signedIn
+                    ? `${devAttention} 个待回应，${devActive} 个活跃，${devQueued} 个排队`
+                    : '登录后显示共享任务脉搏',
+            },
+            {
+                label: '主轴',
+                value: briefContext?.focusTitle || briefContext?.templateName || 'Workspace 默认入口',
+            },
+            {
+                label: '入口',
+                value: briefContext?.routeTitles.length
+                    ? briefContext.routeTitles.join(' / ')
+                    : primaryAction?.cta || '打开 Workspace',
+            },
+        ],
+        sources,
+        primaryAction,
+    };
+}
+
+function BriefSourcesGrid({
+    sources,
+    accentColor,
+    accentSoftColor,
+    surfaceColor,
+}: {
+    sources: DailySummarySource[];
+    accentColor?: string;
+    accentSoftColor?: string;
+    surfaceColor?: string;
+}) {
+    if (!sources.length) return null;
+
+    const sectionStyle = accentSoftColor ? { borderColor: accentSoftColor } : undefined;
+    const badgeStyle = accentColor && accentSoftColor
+        ? { backgroundColor: accentSoftColor, color: accentColor }
+        : undefined;
+    const cardStyle = accentSoftColor && surfaceColor
+        ? { borderColor: accentSoftColor, backgroundColor: surfaceColor }
+        : undefined;
+    const ctaStyle = accentColor ? { color: accentColor } : undefined;
+
+    return (
+        <div className="mt-6 border-t border-slate-200/80 pt-6" style={sectionStyle}>
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <ActivitySquare size={14} />
+                Brief Sources
+            </div>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+                这张 daily brief 主要由这些实时脉搏和入口主轴推出来。
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {sources.map((source) => {
+                    const content = (
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                                <div
+                                    className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                                        badgeStyle ? '' : 'bg-slate-100 text-slate-600'
+                                    }`}
+                                    style={badgeStyle}
+                                >
+                                    {source.label}
+                                </div>
+                                <div className="mt-4 text-base font-semibold text-slate-900">
+                                    {source.summary}
+                                </div>
+                                <p className="mt-2 text-sm leading-7 text-slate-600">
+                                    {source.detail}
+                                </p>
+                                {source.cta ? (
+                                    <div
+                                        className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-900"
+                                        style={ctaStyle}
+                                    >
+                                        {source.cta}
+                                        {source.href ? <ArrowRight size={14} /> : null}
+                                    </div>
+                                ) : null}
+                            </div>
+                            {source.href ? (
+                                <ArrowRight size={16} className="mt-1 shrink-0 text-slate-300" />
+                            ) : null}
+                        </div>
+                    );
+
+                    const className = `rounded-[24px] border px-4 py-4 ${
+                        source.href ? 'link-card-hover block' : ''
+                    } ${cardStyle ? '' : 'border-slate-200 bg-slate-50'}`;
+
+                    return source.href ? (
+                        <Link
+                            key={`${source.label}-${source.summary}`}
+                            href={source.href}
+                            className={className}
+                            style={cardStyle}
+                        >
+                            {content}
+                        </Link>
+                    ) : (
+                        <div
+                            key={`${source.label}-${source.summary}`}
+                            className={className}
+                            style={cardStyle}
+                        >
+                            {content}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 function PersonalizedWorkspaceHome({
     plan,
+    dailySummary,
+    suggestedActions,
     onReset,
 }: {
     plan: GeneratedHomepagePlan;
+    dailySummary: DailySummary;
+    suggestedActions: SuggestedAction[];
     onReset: () => void;
 }) {
     return (
@@ -187,6 +710,63 @@ function PersonalizedWorkspaceHome({
                     </article>
                 </section>
 
+                <section>
+                    <article
+                        className="rounded-[32px] border bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8"
+                        style={{ borderColor: plan.palette.accentSoft }}
+                    >
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div className="max-w-3xl">
+                                <div
+                                    className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]"
+                                    style={{ backgroundColor: plan.palette.accentSoft, color: plan.palette.accent }}
+                                >
+                                    <Sparkles size={14} />
+                                    {dailySummary.eyebrow}
+                                </div>
+                                <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+                                    {dailySummary.title}
+                                </h2>
+                                <p className="mt-4 text-sm leading-8 text-slate-600 md:text-base">
+                                    {dailySummary.summary}
+                                </p>
+                            </div>
+                            {dailySummary.primaryAction ? (
+                                <Link
+                                    href={dailySummary.primaryAction.href}
+                                    className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
+                                    style={{ backgroundColor: plan.palette.accent }}
+                                >
+                                    {dailySummary.primaryAction.cta}
+                                    <ArrowRight size={16} />
+                                </Link>
+                            ) : null}
+                        </div>
+                        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {dailySummary.highlights.map((item) => (
+                                <div
+                                    key={item.label}
+                                    className="rounded-[22px] px-4 py-3 text-sm leading-7 text-slate-700"
+                                    style={{ backgroundColor: plan.palette.surface }}
+                                >
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                        {item.label}
+                                    </div>
+                                    <div className="mt-2 text-sm leading-7 text-slate-700">
+                                        {item.value}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <BriefSourcesGrid
+                            sources={dailySummary.sources}
+                            accentColor={plan.palette.accent}
+                            accentSoftColor={plan.palette.accentSoft}
+                            surfaceColor={plan.palette.surface}
+                        />
+                    </article>
+                </section>
+
                 <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
                     <div className="grid gap-6">
                         {plan.sections.map((section) => (
@@ -248,7 +828,7 @@ function PersonalizedWorkspaceHome({
                                     <Link
                                         key={route.href}
                                         href={route.href}
-                                        className="block rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+                                        className="link-card-hover block rounded-[24px] border border-slate-200 bg-slate-50 p-5 hover:border-slate-300 hover:bg-white"
                                     >
                                         <div className="flex items-center justify-between gap-4">
                                             <div>
@@ -256,6 +836,48 @@ function PersonalizedWorkspaceHome({
                                                 <p className="mt-2 text-sm leading-7 text-slate-600">{route.reason}</p>
                                             </div>
                                             <ArrowRight size={18} className="shrink-0 text-slate-400" />
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </article>
+
+                        <article
+                            className="rounded-[32px] border bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8"
+                            style={{ borderColor: plan.palette.accentSoft }}
+                        >
+                            <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                                Suggested Next
+                            </div>
+                            <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
+                                这套首页之外，当前更值得先推进的动作
+                            </div>
+                            <div className="mt-6 space-y-4">
+                                {suggestedActions.map((action) => (
+                                    <Link
+                                        key={action.id}
+                                        href={action.href}
+                                        className="link-card-hover block rounded-[24px] border px-5 py-5"
+                                        style={{ borderColor: plan.palette.accentSoft, backgroundColor: plan.palette.surface }}
+                                    >
+                                        <div
+                                            className="inline-flex rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                                            style={{ backgroundColor: plan.palette.accentSoft, color: plan.palette.accent }}
+                                        >
+                                            {action.source}
+                                        </div>
+                                        <div className="mt-4 text-lg font-semibold text-slate-900">
+                                            {action.title}
+                                        </div>
+                                        <p className="mt-3 text-sm leading-7 text-slate-600">
+                                            {action.note}
+                                        </p>
+                                        <div
+                                            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold"
+                                            style={{ color: plan.palette.accent }}
+                                        >
+                                            {action.cta}
+                                            <ArrowRight size={14} />
                                         </div>
                                     </Link>
                                 ))}
@@ -319,17 +941,84 @@ export default function WorkspaceHomeClient({
         }
     }, [userKey]);
 
+    const [reqSummary, setReqSummary] = useState<RequirementsSummaryResponse | null>(null);
+    const [isReqSummaryLoading, setIsReqSummaryLoading] = useState(true);
+    const [devTaskSummary, setDevTaskSummary] = useState<DevTaskSummaryResponse | null>(null);
+    const [isDevTaskSummaryLoading, setIsDevTaskSummaryLoading] = useState(signedIn);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        setIsReqSummaryLoading(true);
+        fetch('/api/requirements/summary', { cache: 'no-store' })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (cancelled) return;
+                if (data && !data.error) {
+                    setReqSummary(data as RequirementsSummaryResponse);
+                    return;
+                }
+                setReqSummary(null);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setReqSummary(null);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setIsReqSummaryLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!signedIn) {
+            setDevTaskSummary(null);
+            setIsDevTaskSummaryLoading(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        setIsDevTaskSummaryLoading(true);
+        fetchDevTaskSummary()
+            .then((data) => {
+                if (!cancelled) {
+                    setDevTaskSummary(data);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setDevTaskSummary(null);
+                }
+            })
+            .finally(() => {
+                if (!cancelled) {
+                    setIsDevTaskSummaryLoading(false);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [signedIn]);
+
     const activePhase = systemPlan.phases.find((phase) => phase.status === 'in_progress') || systemPlan.phases[0];
     const phaseMeta = planStatusMeta[activePhase.status];
-    const nextTasks = systemPlan.phases
-        .flatMap((phase) => phase.tasks)
-        .filter((task) => task.status === 'next')
-        .slice(0, 3);
+    const suggestedActions = buildSuggestedActions(reqSummary, devTaskSummary);
+    const dailySummary = buildDailySummary(personalPlan, reqSummary, devTaskSummary, suggestedActions, signedIn);
 
     if (personalPlan) {
         return (
             <PersonalizedWorkspaceHome
                 plan={personalPlan}
+                dailySummary={dailySummary}
+                suggestedActions={suggestedActions}
                 onReset={() => {
                     if (typeof window === 'undefined') return;
                     window.localStorage.removeItem(getAppliedHomeConfigKey(userKey));
@@ -343,10 +1032,15 @@ export default function WorkspaceHomeClient({
         <main className="min-h-screen bg-[linear-gradient(180deg,#edf4fb_0%,#f8fafc_44%,#ffffff_100%)] px-4 py-10 md:px-8">
             <div className="mx-auto max-w-6xl space-y-6">
                 <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
-                    <article className="overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
+                    <article className="animate-fade-in-up overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
                         <div className="bg-[radial-gradient(circle_at_top_left,#dfeaf9_0%,#eef4fb_40%,#ffffff_100%)] px-6 py-8 md:px-10 md:py-10">
-                            <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700">
-                                Workspace / Daily Entry
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/80 px-4 py-2 text-sm font-medium text-sky-700">
+                                    Workspace / Daily Entry
+                                </div>
+                                <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50/80 px-4 py-2 text-sm font-medium text-emerald-700">
+                                    {getGreeting()}
+                                </div>
                             </div>
                             <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">
                                 从这里开始今天的创作、学习和下一步开发
@@ -379,7 +1073,7 @@ export default function WorkspaceHomeClient({
                         </div>
                     </article>
 
-                    <article className="rounded-[36px] border border-slate-200 bg-slate-900 p-6 text-white shadow-[0_24px_90px_rgba(15,23,42,0.16)] md:p-8">
+                    <article className="animate-fade-in-up stagger-2 rounded-[36px] border border-slate-200 bg-slate-900 p-6 text-white shadow-[0_24px_90px_rgba(15,23,42,0.16)] md:p-8">
                         <div className="flex items-center justify-between gap-4">
                             <div>
                                 <div className="text-sm font-medium uppercase tracking-[0.18em] text-slate-300">
@@ -408,11 +1102,174 @@ export default function WorkspaceHomeClient({
                                 {activePhase.goal}
                             </div>
                         </div>
+                        <div className="mt-4 rounded-[24px] border border-white/10 bg-white/5 p-5">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+                                    Requirements Pulse
+                                </div>
+                                <Link
+                                    href="/requirements"
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-sky-200 transition hover:text-white"
+                                >
+                                    打开看板
+                                    <ArrowRight size={12} />
+                                </Link>
+                            </div>
+                            {isReqSummaryLoading ? (
+                                <div className="mt-4 space-y-3">
+                                    <div className="flex flex-wrap gap-3">
+                                        {[1, 2, 3, 4].map((item) => (
+                                            <div
+                                                key={item}
+                                                className="h-8 w-20 animate-pulse rounded-full bg-white/10"
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="space-y-2">
+                                        {[1, 2].map((item) => (
+                                            <div
+                                                key={item}
+                                                className="h-14 animate-pulse rounded-[18px] border border-white/8 bg-white/5"
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : reqSummary ? (
+                                <>
+                                    <div className="mt-3 flex flex-wrap gap-3">
+                                        <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-sm font-semibold text-white">
+                                            {reqSummary.total} 总计
+                                        </span>
+                                        <span className="rounded-full border border-sky-400/30 bg-sky-500/20 px-3 py-1 text-sm font-semibold text-sky-200">
+                                            {reqSummary.active} 活跃
+                                        </span>
+                                        <span className="rounded-full border border-rose-400/30 bg-rose-500/20 px-3 py-1 text-sm font-semibold text-rose-200">
+                                            {reqSummary.freshnessByActiveStatus.stale} 需回看
+                                        </span>
+                                        <span className="rounded-full border border-amber-400/30 bg-amber-500/20 px-3 py-1 text-sm font-semibold text-amber-200">
+                                            {reqSummary.countByStatus.inbox} 待判断
+                                        </span>
+                                    </div>
+                                    {reqSummary.attentionItems.length > 0 ? (
+                                        <div className="mt-4 space-y-2">
+                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                                需要关注
+                                            </div>
+                                            {reqSummary.attentionItems.map((item) => (
+                                                <Link
+                                                    key={item.id}
+                                                    href={item.href}
+                                                    className="link-card-hover flex items-start justify-between gap-3 rounded-[18px] border border-white/10 bg-white/5 px-3 py-3 hover:bg-white/10"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${requirementStatusMeta[item.status].badgeClass}`}>
+                                                                {requirementStatusMeta[item.status].label}
+                                                            </span>
+                                                            {item.freshness ? (
+                                                                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${requirementFreshnessMeta[item.freshness].badgeClass}`}>
+                                                                    {requirementFreshnessMeta[item.freshness].label}
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+                                                        <div className="mt-2 truncate text-sm font-semibold text-white">
+                                                            {item.title}
+                                                        </div>
+                                                        {item.signal ? (
+                                                            <div className="mt-1 text-xs leading-6 text-slate-300">
+                                                                {item.signal}
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                    <ArrowRight size={14} className="mt-1 shrink-0 text-slate-400" />
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 rounded-[18px] border border-emerald-400/20 bg-emerald-500/10 px-3 py-3 text-sm leading-7 text-emerald-100">
+                                            当前没有需要优先回看的 Doing / Validating 项。
+                                        </div>
+                                    )}
+                                    {reqSummary.recentItems.length > 0 ? (
+                                        <div className="mt-4 space-y-2">
+                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                                最近更新
+                                            </div>
+                                            {reqSummary.recentItems.map((item) => (
+                                                <Link
+                                                    key={`${item.id}-${item.updatedAt}`}
+                                                    href={item.href}
+                                                    className="flex items-center justify-between gap-3 rounded-[18px] border border-transparent px-1 py-1 text-sm text-slate-300 transition hover:border-white/5 hover:bg-white/5"
+                                                >
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${requirementStatusMeta[item.status].badgeClass}`}>
+                                                            {requirementStatusMeta[item.status].label}
+                                                        </span>
+                                                        <span className="truncate">{item.title}</span>
+                                                    </div>
+                                                    <span className="shrink-0 text-xs text-slate-400">
+                                                        {formatPulseUpdatedAt(item.updatedAt)}
+                                                    </span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                </>
+                            ) : (
+                                <div className="mt-4 rounded-[18px] border border-white/10 bg-white/5 px-3 py-3 text-sm leading-7 text-slate-300">
+                                    当前没有拿到需求概览，直接打开 Requirements 看板查看实时状态。
+                                </div>
+                            )}
+                        </div>
+                    </article>
+                </section>
+
+                <section>
+                    <article className="animate-fade-in-up stagger-3 rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div className="max-w-3xl">
+                                <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+                                    <Sparkles size={14} />
+                                    {dailySummary.eyebrow}
+                                </div>
+                                <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+                                    {dailySummary.title}
+                                </h2>
+                                <p className="mt-4 text-sm leading-8 text-slate-600 md:text-base">
+                                    {dailySummary.summary}
+                                </p>
+                            </div>
+                            {dailySummary.primaryAction ? (
+                                <Link
+                                    href={dailySummary.primaryAction.href}
+                                    className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-700"
+                                >
+                                    {dailySummary.primaryAction.cta}
+                                    <ArrowRight size={16} />
+                                </Link>
+                            ) : null}
+                        </div>
+                        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {dailySummary.highlights.map((item) => (
+                                <div
+                                    key={item.label}
+                                    className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-700"
+                                >
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                        {item.label}
+                                    </div>
+                                    <div className="mt-2 text-sm leading-7 text-slate-700">
+                                        {item.value}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <BriefSourcesGrid sources={dailySummary.sources} />
                     </article>
                 </section>
 
                 <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                    <article className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
+                    <article className="animate-fade-in-up stagger-4 card-hover rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
                         <div className="flex items-center gap-3">
                             <div className="inline-flex rounded-2xl bg-amber-100 p-3 text-amber-700">
                                 <Zap size={22} />
@@ -431,7 +1288,7 @@ export default function WorkspaceHomeClient({
                                 <Link
                                     key={item.title}
                                     href={item.href}
-                                    className="rounded-[26px] border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+                                    className="link-card-hover rounded-[26px] border border-slate-200 bg-slate-50 p-5 hover:border-slate-300 hover:bg-white"
                                 >
                                     <div className="inline-flex rounded-2xl bg-white p-3 text-slate-700 shadow-sm">
                                         <item.icon size={20} />
@@ -447,7 +1304,7 @@ export default function WorkspaceHomeClient({
                         </div>
                     </article>
 
-                    <article className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
+                    <article className="animate-fade-in-up stagger-5 card-hover rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
                         <div className="flex items-center gap-3">
                             <div className="inline-flex rounded-2xl bg-emerald-100 p-3 text-emerald-700">
                                 <CheckSquare size={22} />
@@ -457,33 +1314,46 @@ export default function WorkspaceHomeClient({
                                     Suggested Next
                                 </div>
                                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-                                    当前最值得继续推进的 3 件事
+                                    根据当前状态，先推进这 3 件事
                                 </h2>
+                                <p className="mt-3 text-sm leading-7 text-slate-600">
+                                    这里优先参考 Requirements Pulse，其次回落到系统规划中的进行中任务。
+                                </p>
                             </div>
                         </div>
                         <div className="mt-6 space-y-4">
-                            {nextTasks.map((task) => (
-                                <div
-                                    key={task.title}
-                                    className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                            {suggestedActions.map((action) => (
+                                <Link
+                                    key={action.id}
+                                    href={action.href}
+                                    className="link-card-hover block rounded-[24px] border border-slate-200 bg-slate-50 p-5 hover:border-slate-300 hover:bg-white"
                                 >
-                                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-                                        下一步
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <div className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                                                {action.source}
+                                            </div>
+                                            <div className="mt-4 text-lg font-semibold text-slate-900">
+                                                {action.title}
+                                            </div>
+                                            <p className="mt-3 text-sm leading-7 text-slate-600">
+                                                {action.note}
+                                            </p>
+                                            <div className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                                {action.cta}
+                                                <ArrowRight size={14} />
+                                            </div>
+                                        </div>
+                                        <ArrowRight size={16} className="mt-1 shrink-0 text-slate-300" />
                                     </div>
-                                    <div className="mt-2 text-lg font-semibold text-slate-900">
-                                        {task.title}
-                                    </div>
-                                    <p className="mt-3 text-sm leading-7 text-slate-600">
-                                        {task.note}
-                                    </p>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </article>
                 </section>
 
                 <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-                    <article className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
+                    <article className="animate-fade-in-up stagger-6 card-hover rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
                         <div className="flex items-center gap-3">
                             <div className="inline-flex rounded-2xl bg-sky-100 p-3 text-sky-700">
                                 <BookOpenText size={22} />
@@ -502,7 +1372,7 @@ export default function WorkspaceHomeClient({
                                 <Link
                                     key={entry.title}
                                     href={entry.href}
-                                    className="block rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+                                    className="link-card-hover block rounded-[24px] border border-slate-200 bg-slate-50 p-5 hover:border-slate-300 hover:bg-white"
                                 >
                                     <div className="flex items-center justify-between gap-4">
                                         <div>
@@ -521,7 +1391,7 @@ export default function WorkspaceHomeClient({
                     </article>
 
                     <div className="grid gap-6">
-                        <article className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
+                        <article className="animate-fade-in-up card-hover rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] md:p-8">
                             <div className="flex items-center gap-3">
                                 <div className="inline-flex rounded-2xl bg-violet-100 p-3 text-violet-700">
                                     <LibraryBig size={22} />
@@ -540,7 +1410,7 @@ export default function WorkspaceHomeClient({
                                     <Link
                                         key={shortcut.title}
                                         href={shortcut.href}
-                                        className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 transition hover:border-slate-300 hover:bg-white"
+                                        className="link-card-hover rounded-[24px] border border-slate-200 bg-slate-50 p-5 hover:border-slate-300 hover:bg-white"
                                     >
                                         <div className="text-lg font-semibold text-slate-900">
                                             {shortcut.title}
@@ -560,19 +1430,120 @@ export default function WorkspaceHomeClient({
                                 </div>
                                 <div>
                                     <div className="text-sm font-medium uppercase tracking-[0.18em] text-amber-800/70">
-                                        Japanese Today
+                                        Today Stack
                                     </div>
                                     <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-                                        为学习流预留固定位置
+                                        把学习流和执行流压回今天的上下文
                                     </h2>
                                 </div>
                             </div>
-                            <div className="mt-6 space-y-3">
-                                {japaneseToday.map((item) => (
-                                    <div key={item} className="rounded-[22px] border border-white/70 bg-white/70 px-4 py-3 text-sm leading-7 text-slate-700">
-                                        {item}
+                            <div className="mt-6">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-800/60">
+                                    Learn Today
+                                </div>
+                                <div className="mt-3 space-y-3">
+                                    {todayLearningStack.map((item) => (
+                                        <Link
+                                            key={item.title}
+                                            href={item.href}
+                                            className="link-card-hover block rounded-[22px] border border-white/70 bg-white/70 px-4 py-4 hover:bg-white"
+                                        >
+                                            <div className="text-base font-semibold text-slate-900">
+                                                {item.title}
+                                            </div>
+                                            <p className="mt-2 text-sm leading-7 text-slate-700">
+                                                {item.note}
+                                            </p>
+                                            <div className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-amber-700">
+                                                {item.cta}
+                                                <ArrowRight size={14} />
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="mt-6 rounded-[24px] border border-white/70 bg-white/60 p-4">
+                                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    <ActivitySquare size={14} />
+                                    Dev Task Pulse
+                                </div>
+                                {!signedIn ? (
+                                    <div className="mt-3 text-sm leading-7 text-slate-600">
+                                        登录后这里会显示共享任务的活跃状态、需要回应的任务，以及最新 revision 的下一步。
                                     </div>
-                                ))}
+                                ) : isDevTaskSummaryLoading ? (
+                                    <div className="mt-3 space-y-2">
+                                        {[1, 2].map((item) => (
+                                            <div
+                                                key={item}
+                                                className="h-12 animate-pulse rounded-[18px] bg-white/80"
+                                            />
+                                        ))}
+                                    </div>
+                                ) : devTaskSummary ? (
+                                    <>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700">
+                                                {devTaskSummary.active} 活跃
+                                            </span>
+                                            <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-sm font-semibold text-rose-700">
+                                                {devTaskSummary.attention} 待回应
+                                            </span>
+                                            <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+                                                {devTaskSummary.queued} 排队中
+                                            </span>
+                                        </div>
+                                        {devTaskSummary.focusItem ? (
+                                            <Link
+                                                href={devTaskSummary.focusItem.href}
+                                                className="link-card-hover mt-4 block rounded-[20px] border border-white/80 bg-white px-4 py-4 hover:border-slate-200"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${devTaskStatusMeta[devTaskSummary.focusItem.status].badgeClass}`}>
+                                                        {devTaskStatusMeta[devTaskSummary.focusItem.status].label}
+                                                    </span>
+                                                    <span className="text-xs text-slate-400">
+                                                        {formatPulseUpdatedAt(devTaskSummary.focusItem.updatedAt)}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-3 text-base font-semibold text-slate-900">
+                                                    {devTaskSummary.focusItem.projectName}
+                                                </div>
+                                                <p className="mt-2 text-sm leading-7 text-slate-600">
+                                                    {devTaskSummary.focusItem.nextStep?.trim()
+                                                        || devTaskStatusMeta[devTaskSummary.focusItem.status].description}
+                                                </p>
+                                            </Link>
+                                        ) : (
+                                            <div className="mt-4 rounded-[18px] border border-dashed border-slate-200 bg-white/80 px-4 py-3 text-sm leading-7 text-slate-600">
+                                                当前还没有共享任务脉搏，可以在下方创建一条新任务。
+                                            </div>
+                                        )}
+                                        {devTaskSummary.latestItems.length > 0 ? (
+                                            <div className="mt-4 space-y-2">
+                                                {devTaskSummary.latestItems.map((item) => (
+                                                    <Link
+                                                        key={item.taskId}
+                                                        href={item.href}
+                                                        className="flex items-center justify-between gap-3 rounded-[16px] border border-transparent px-1 py-1 text-sm text-slate-700 transition hover:border-white/80 hover:bg-white/70"
+                                                    >
+                                                        <div className="flex min-w-0 items-center gap-2">
+                                                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${devTaskStatusMeta[item.status].badgeClass}`}>
+                                                                {devTaskStatusMeta[item.status].label}
+                                                            </span>
+                                                            <span className="truncate">{item.projectName}</span>
+                                                        </div>
+                                                        <ArrowRight size={14} className="shrink-0 text-slate-400" />
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        ) : null}
+                                    </>
+                                ) : (
+                                    <div className="mt-3 text-sm leading-7 text-slate-600">
+                                        当前没有拿到共享任务摘要，可以直接查看下方任务流。
+                                    </div>
+                                )}
                             </div>
                         </article>
                     </div>

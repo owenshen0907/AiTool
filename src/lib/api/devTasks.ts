@@ -5,6 +5,7 @@ import type {
     DevTaskFeedCard,
     DevTaskRevisionRow,
     DevTaskRow,
+    DevTaskSummaryResponse,
     DevTaskTuningRequestRow,
 } from '@/lib/models/devTask';
 
@@ -22,6 +23,12 @@ const JSON_HEADER = { 'Content-Type': 'application/json' } as const;
 export async function fetchDevTaskFeed(): Promise<DevTaskFeedCard[]> {
     const res = await fetch('/api/dev-tasks/feed');
     if (!res.ok) throw new Error(`fetchDevTaskFeed ${res.status}`);
+    return res.json();
+}
+
+export async function fetchDevTaskSummary(): Promise<DevTaskSummaryResponse> {
+    const res = await fetch('/api/dev-tasks/summary', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`fetchDevTaskSummary ${res.status}`);
     return res.json();
 }
 

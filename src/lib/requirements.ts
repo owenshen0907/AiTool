@@ -715,6 +715,98 @@ export function extractRequirementSectionPreview(
     return undefined;
 }
 
+export type RequirementFreshness = 'fresh' | 'aging' | 'stale';
+
+export interface RequirementSummaryItem {
+    id: string;
+    title: string;
+    status: RequirementStatus;
+    updatedAt: string;
+    href: string;
+    freshness: RequirementFreshness | null;
+    signal?: string;
+}
+
+export interface RequirementsSummaryResponse {
+    countByStatus: Record<RequirementStatus, number>;
+    freshnessByActiveStatus: Record<RequirementFreshness, number>;
+    total: number;
+    active: number;
+    recentItems: RequirementSummaryItem[];
+    attentionItems: RequirementSummaryItem[];
+}
+
+export const requirementFreshnessMeta: Record<
+    RequirementFreshness,
+    { label: string; badgeClass: string }
+> = {
+    fresh: {
+        label: '< 2d',
+        badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    },
+    aging: {
+        label: '2–7d',
+        badgeClass: 'border-amber-200 bg-amber-50 text-amber-700',
+    },
+    stale: {
+        label: '> 7d',
+        badgeClass: 'border-rose-200 bg-rose-50 text-rose-700',
+    },
+};
+
+export function computeRequirementFreshness(
+    handoffAt: string | undefined,
+    updatedAt: string | undefined,
+): RequirementFreshness | null {
+    const raw = handoffAt || updatedAt;
+    if (!raw) return null;
+
+    const timestamp = Date.parse(raw.replace(/\s*JST$/, '+09:00'));
+    if (Number.isNaN(timestamp)) return null;
+
+    const daysSince = (Date.now() - timestamp) / (1000 * 60 * 60 * 24);
+    if (daysSince < 2) return 'fresh';
+    if (daysSince < 7) return 'aging';
+    return 'stale';
+}
+
+export function buildRequirementsDocHref(directoryId: string, documentId: string) {
+    const params = new URLSearchParams({
+        dir: directoryId,
+        doc: documentId,
+    });
+    return `/requirements/content?${params.toString()}`;
+}
+
+export function getRequirementPulseSignal(
+    status: RequirementStatus,
+    preview: RequirementDocPreview,
+    fallbackSummary?: string | null,
+) {
+    const candidates =
+        status === 'doing' || status === 'validating'
+            ? [
+                  preview.latestHandoffValidateNext,
+                  preview.latestHandoffDirection,
+                  preview.openRisks,
+                  preview.nextStep,
+                  preview.expectedValue,
+                  fallbackSummary,
+              ]
+            : [
+                  preview.nextStep,
+                  preview.expectedValue,
+                  preview.openRisks,
+                  preview.scene,
+                  preview.validationResult,
+                  fallbackSummary,
+              ];
+
+    return candidates
+        .map((value) => value?.trim())
+        .find((value): value is string => Boolean(value));
+}
+
 export function parseRequirementDocPreview(
     body: string | null | undefined
 ): RequirementDocPreview {

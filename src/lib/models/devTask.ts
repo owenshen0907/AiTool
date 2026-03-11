@@ -15,6 +15,21 @@ export type DevTaskStatus =
 export type DevTaskPriority = 'low' | 'normal' | 'high';
 export type DevTaskDeviceType = 'work' | 'personal' | 'any';
 
+export const devTaskStatuses = [
+    'draft',
+    'queued',
+    'claimed',
+    'planning',
+    'awaiting_approval',
+    'executing',
+    'checking',
+    'completed',
+    'needs_tuning',
+    'failed',
+    'cancelled',
+    'interrupted',
+] as const satisfies readonly DevTaskStatus[];
+
 export interface DevTaskRow {
     taskId: string;
     ownerId: string;
@@ -124,6 +139,25 @@ export interface DevTaskFeedCard {
     assignedAgentId: string | null;
     deviceType: string | null;
     updatedAt: string;
+}
+
+export interface DevTaskSummaryItem {
+    taskId: string;
+    projectName: string;
+    status: DevTaskStatus;
+    priority: DevTaskPriority;
+    nextStep: string | null;
+    updatedAt: string;
+    href: string;
+}
+
+export interface DevTaskSummaryResponse {
+    countByStatus: Record<DevTaskStatus, number>;
+    active: number;
+    attention: number;
+    queued: number;
+    latestItems: DevTaskSummaryItem[];
+    focusItem: DevTaskSummaryItem | null;
 }
 
 export const devTaskActiveStatuses: DevTaskStatus[] = [
