@@ -496,6 +496,36 @@ function getRequestTabLabel(tab: 'body' | 'query' | 'headers' | 'file') {
     }
 }
 
+function summarizeJsonDraft(text: string): {
+    title: string;
+    detail: string;
+    isError: boolean;
+} {
+    const parsed = parseJsonText(text);
+    if (parsed.error) {
+        return {
+            title: 'JSON 有误',
+            detail: parsed.error,
+            isError: true,
+        };
+    }
+
+    const keys = Object.keys(parsed.value);
+    if (!keys.length) {
+        return {
+            title: '空对象',
+            detail: '点击弹窗补充内容',
+            isError: false,
+        };
+    }
+
+    return {
+        title: `${keys.length} 个字段`,
+        detail: keys.slice(0, 4).join(' / '),
+        isError: false,
+    };
+}
+
 function SectionTitle({ icon: Icon, title, action }: { icon: LucideIcon; title: string; action?: ReactNode }) {
     return (
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -934,6 +964,8 @@ export default function ApiLabClient() {
     const [showEndpointDetailModal, setShowEndpointDetailModal] = useState(false);
     const [showCurlModal, setShowCurlModal] = useState(false);
     const [showPacketModal, setShowPacketModal] = useState(false);
+    const [showRequestEditorModal, setShowRequestEditorModal] = useState(false);
+    const [showResponseBodyModal, setShowResponseBodyModal] = useState(false);
     const [requestTab, setRequestTab] = useState<'body' | 'query' | 'headers' | 'file'>('body');
     const [activityTab, setActivityTab] = useState<'examples' | 'logs' | 'monitors'>('examples');
     const [responseTab, setResponseTab] = useState<'body' | 'request' | 'headers'>('body');
@@ -1027,6 +1059,29 @@ export default function ApiLabClient() {
             }),
         [selectedEndpoint, selectedEnv, bodyText, queryText, headerText, selectedFile],
     );
+
+    const bodyDraftSummary = useMemo(() => {
+        if (!selectedEndpoint) {
+            return {
+                title: '未选择接口',
+                detail: '先选择接口后再编辑请求体',
+                isError: false,
+            };
+        }
+
+        if (selectedEndpoint.method === 'GET' || selectedEndpoint.contentType === 'none') {
+            return {
+                title: '无需请求体',
+                detail: '当前接口不会发送 body',
+                isError: false,
+            };
+        }
+
+        return summarizeJsonDraft(bodyText);
+    }, [selectedEndpoint, bodyText]);
+
+    const queryDraftSummary = useMemo(() => summarizeJsonDraft(queryText), [queryText]);
+    const headerDraftSummary = useMemo(() => summarizeJsonDraft(headerText), [headerText]);
 
     const packetModalCopyText = useMemo(() => {
         if (currentRequestPreview) {
@@ -1282,6 +1337,11 @@ export default function ApiLabClient() {
         }
         setError(null);
         setNotice(`已格式化${getRequestTabLabel(requestTab)}。`);
+    };
+
+    const openRequestEditor = (tab: 'body' | 'query' | 'headers' | 'file') => {
+        setRequestTab(tab);
+        setShowRequestEditorModal(true);
     };
 
     const runRequest = async () => {
@@ -1926,7 +1986,7 @@ export default function ApiLabClient() {
                                     </div>
                                 </div>
 
-                                <div className="mt-4 min-h-0 flex flex-1 flex-col rounded-[26px] border border-slate-200 bg-white/92">
+                                <div className="mt-4 rounded-[26px] border border-slate-200 bg-white/92">
                                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
                                         <div className="inline-flex flex-wrap rounded-full border border-slate-200 bg-slate-50 p-1">
                                             {[
@@ -1940,7 +2000,11 @@ export default function ApiLabClient() {
                                                 <button
                                                     key={tab.key}
                                                     type="button"
-                                                    onClick={() => setRequestTab(tab.key as 'body' | 'query' | 'headers' | 'file')}
+                                                    onClick={() =>
+                                                        openRequestEditor(
+                                                            tab.key as 'body' | 'query' | 'headers' | 'file',
+                                                        )
+                                                    }
                                                     className={`rounded-full px-3 py-1.5 text-sm transition ${
                                                         requestTab === tab.key
                                                             ? 'bg-slate-900 text-white'
@@ -1952,6 +2016,13 @@ export default function ApiLabClient() {
                                             ))}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowRequestEditorModal(true)}
+                                                className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-700"
+                                            >
+                                                弹窗编辑
+                                            </button>
                                             <button type="button" onClick={formatCurrentRequestTab} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
                                                 格式化当前
                                             </button>
@@ -1960,14 +2031,14 @@ export default function ApiLabClient() {
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="min-h-0 flex-1 overflow-auto p-4">
-                                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                                    <div className="p-4">
+                                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-3">
                                             <div>
                                                 <div className="text-sm font-semibold text-slate-900">
-                                                    正在编辑：{getRequestTabLabel(requestTab)}
+                                                    请求配置改为弹窗编辑
                                                 </div>
                                                 <div className="mt-1 text-xs text-slate-500">
-                                                    当前编辑区会实时影响请求 URL、curl 和报文预览。
+                                                    主界面只保留摘要，点击任意卡片即可打开完整编辑器。
                                                 </div>
                                             </div>
                                             <div className="flex flex-wrap gap-2 text-xs text-slate-500">
@@ -1984,25 +2055,92 @@ export default function ApiLabClient() {
                                                 </span>
                                             </div>
                                         </div>
-                                        {requestTab === 'body' ? (
-                                            <textarea value={bodyText} onChange={(event) => setBodyText(event.target.value)} rows={16} className="h-full min-h-[240px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900 xl:min-h-[280px]" />
-                                        ) : null}
-                                        {requestTab === 'query' ? (
-                                            <textarea value={queryText} onChange={(event) => setQueryText(event.target.value)} rows={16} className="h-full min-h-[240px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900 xl:min-h-[280px]" />
-                                        ) : null}
-                                        {requestTab === 'headers' ? (
-                                            <textarea value={headerText} onChange={(event) => setHeaderText(event.target.value)} rows={16} className="h-full min-h-[240px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900 xl:min-h-[280px]" />
-                                        ) : null}
-                                        {requestTab === 'file' ? (
-                                            <div className="flex h-full min-h-[240px] items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-5 xl:min-h-[280px]">
-                                                <div className="w-full max-w-lg text-center">
-                                                    <div className="mb-3 text-sm font-medium text-slate-700">上传文件</div>
-                                                    <input type="file" accept={selectedEndpoint.fileAccept || undefined} onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700" />
-                                                    <div className="mt-3 text-xs text-slate-500">字段名：{selectedEndpoint.fileFieldName || 'file'} {selectedEndpoint.fileAccept ? `· accept: ${selectedEndpoint.fileAccept}` : ''}</div>
-                                                    {selectedFile ? <div className="mt-3 rounded-full bg-white px-3 py-2 text-xs text-slate-600">已选择：{selectedFile.name}</div> : null}
+
+                                        <div className={`grid gap-3 ${selectedEndpoint.contentType === 'multipart/form-data' ? 'lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+                                            <button
+                                                type="button"
+                                                onClick={() => openRequestEditor('body')}
+                                                className={`rounded-[22px] border px-4 py-4 text-left transition hover:-translate-y-0.5 ${
+                                                    requestTab === 'body'
+                                                        ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_30px_rgba(15,23,42,0.16)]'
+                                                        : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white'
+                                                }`}
+                                            >
+                                                <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${requestTab === 'body' ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                    请求体
                                                 </div>
-                                            </div>
-                                        ) : null}
+                                                <div className="mt-2 text-base font-semibold">
+                                                    {bodyDraftSummary.title}
+                                                </div>
+                                                <div className={`mt-2 text-xs leading-5 ${requestTab === 'body' ? 'text-slate-200' : bodyDraftSummary.isError ? 'text-amber-700' : 'text-slate-500'}`}>
+                                                    {bodyDraftSummary.detail}
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => openRequestEditor('query')}
+                                                className={`rounded-[22px] border px-4 py-4 text-left transition hover:-translate-y-0.5 ${
+                                                    requestTab === 'query'
+                                                        ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_30px_rgba(15,23,42,0.16)]'
+                                                        : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white'
+                                                }`}
+                                            >
+                                                <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${requestTab === 'query' ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                    Query
+                                                </div>
+                                                <div className="mt-2 text-base font-semibold">
+                                                    {queryDraftSummary.title}
+                                                </div>
+                                                <div className={`mt-2 text-xs leading-5 ${requestTab === 'query' ? 'text-slate-200' : queryDraftSummary.isError ? 'text-amber-700' : 'text-slate-500'}`}>
+                                                    {queryDraftSummary.detail}
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => openRequestEditor('headers')}
+                                                className={`rounded-[22px] border px-4 py-4 text-left transition hover:-translate-y-0.5 ${
+                                                    requestTab === 'headers'
+                                                        ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_30px_rgba(15,23,42,0.16)]'
+                                                        : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white'
+                                                }`}
+                                            >
+                                                <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${requestTab === 'headers' ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                    Headers
+                                                </div>
+                                                <div className="mt-2 text-base font-semibold">
+                                                    {headerDraftSummary.title}
+                                                </div>
+                                                <div className={`mt-2 text-xs leading-5 ${requestTab === 'headers' ? 'text-slate-200' : headerDraftSummary.isError ? 'text-amber-700' : 'text-slate-500'}`}>
+                                                    {headerDraftSummary.detail}
+                                                </div>
+                                            </button>
+
+                                            {selectedEndpoint.contentType === 'multipart/form-data' ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openRequestEditor('file')}
+                                                    className={`rounded-[22px] border px-4 py-4 text-left transition hover:-translate-y-0.5 ${
+                                                        requestTab === 'file'
+                                                            ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_30px_rgba(15,23,42,0.16)]'
+                                                            : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white'
+                                                    }`}
+                                                >
+                                                    <div className={`text-xs font-semibold uppercase tracking-[0.16em] ${requestTab === 'file' ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                        文件
+                                                    </div>
+                                                    <div className="mt-2 text-base font-semibold">
+                                                        {selectedFile ? '已选择文件' : '未选择文件'}
+                                                    </div>
+                                                    <div className={`mt-2 text-xs leading-5 ${requestTab === 'file' ? 'text-slate-200' : 'text-slate-500'}`}>
+                                                        {selectedFile
+                                                            ? selectedFile.name
+                                                            : `字段名 ${selectedEndpoint.fileFieldName || 'file'}`}
+                                                    </div>
+                                                </button>
+                                            ) : null}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2078,7 +2216,8 @@ export default function ApiLabClient() {
                                                     ))}
                                                 </div>
                                                 <div className="flex flex-wrap items-center gap-2">
-                                                    {responseTab === 'body' && runResult.responseBody ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
+                                                    {responseTab === 'body' && runResult.responseBody && !isAudioResult(selectedEndpoint, runResult) ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
+                                                    {responseTab === 'body' && runResult.responseBody ? <button type="button" onClick={() => setShowResponseBodyModal(true)} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Eye size={14} />查看代码</button> : null}
                                                     {responseTab === 'request' ? <button type="button" onClick={() => void copyToClipboard(JSON.stringify({ url: runResult.requestUrl, headers: runResult.requestHeaders, query: runResult.requestQuery, body: runResult.requestBody, files: runResult.requestFiles }, null, 2)).then(() => setNotice('已复制请求报文。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
                                                     {responseTab === 'headers' ? <button type="button" onClick={() => void copyToClipboard(formatJson(runResult.responseHeaders)).then(() => setNotice('已复制响应头。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
                                                     <button type="button" onClick={() => setShowCurlModal(true)} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14">
@@ -2091,36 +2230,10 @@ export default function ApiLabClient() {
                                             {responseTab === 'body' ? (
                                                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                                                     {isAudioResult(selectedEndpoint, runResult) && runResult.responseBody ? (
-                                                        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-                                                            <div className="shrink-0 rounded-[18px] border border-slate-800 bg-slate-900 px-3 py-3">
+                                                        <div className="flex h-full flex-col justify-center">
+                                                            <div className="rounded-[18px] border border-slate-800 bg-slate-900 px-3 py-3">
                                                                 <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Audio Preview</div>
                                                                 <audio controls className="w-full" src={`data:${typeof runResult.responseHeaders['content-type'] === 'string' ? runResult.responseHeaders['content-type'] : 'audio/mpeg'};base64,${runResult.responseBody}`} />
-                                                            </div>
-                                                            <div className="shrink-0 rounded-[18px] border border-white/10 bg-white/5 px-3 py-3 text-xs leading-5 text-slate-300">
-                                                                这是音频结果，原始 base64 不再直接铺满右侧面板，避免把播放器和按钮挤出可视区。
-                                                                如需完整原文，可复制当前返回体，或去报文中心查看。
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        void copyToClipboard(
-                                                                            runResult.responseBody || '',
-                                                                        ).then(() => setNotice('已复制音频 base64。'))
-                                                                    }
-                                                                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"
-                                                                >
-                                                                    <Copy size={14} />
-                                                                    复制音频数据
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setShowPacketModal(true)}
-                                                                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"
-                                                                >
-                                                                    <FileCode2 size={14} />
-                                                                    去报文中心
-                                                                </button>
                                                             </div>
                                                         </div>
                                                     ) : (
@@ -2398,6 +2511,166 @@ export default function ApiLabClient() {
                 </QuickViewModal>
             ) : null}
 
+            {showRequestEditorModal && selectedEndpoint ? (
+                <QuickViewModal
+                    title={`请求配置 · ${selectedEndpoint.name}`}
+                    subtitle="请求体 / Query / Headers / 文件都改为弹窗编辑"
+                    onClose={() => setShowRequestEditorModal(false)}
+                    maxWidthClass="max-w-5xl"
+                    action={
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={formatCurrentRequestTab}
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                            >
+                                格式化当前
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setBodyText(formatJson(selectedEndpoint.requestTemplate));
+                                    setQueryText(formatJson(selectedEndpoint.queryTemplate));
+                                    setHeaderText(formatJson(selectedEndpoint.headerTemplate));
+                                    setSelectedFile(null);
+                                    setNotice('已恢复为接口默认模板。');
+                                }}
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                            >
+                                重置为模板
+                            </button>
+                        </div>
+                    }
+                >
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                            <div className="inline-flex flex-wrap rounded-full border border-slate-200 bg-white p-1">
+                                {[
+                                    { key: 'body', label: '请求体' },
+                                    { key: 'query', label: 'Query' },
+                                    { key: 'headers', label: 'Headers' },
+                                    ...(selectedEndpoint.contentType === 'multipart/form-data'
+                                        ? [{ key: 'file', label: '文件' }]
+                                        : []),
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        onClick={() =>
+                                            setRequestTab(
+                                                tab.key as 'body' | 'query' | 'headers' | 'file',
+                                            )
+                                        }
+                                        className={`rounded-full px-3 py-1.5 text-sm transition ${
+                                            requestTab === tab.key
+                                                ? 'bg-slate-900 text-white'
+                                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                                {selectedEnv ? (
+                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                                        环境 · {selectedEnv.name}
+                                    </span>
+                                ) : null}
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                                    Method · {selectedEndpoint.method}
+                                </span>
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                                    {selectedEndpoint.contentType}
+                                </span>
+                            </div>
+                        </div>
+
+                        {requestTab === 'body' ? (
+                            <textarea
+                                value={bodyText}
+                                onChange={(event) => setBodyText(event.target.value)}
+                                rows={22}
+                                className="min-h-[56vh] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900"
+                            />
+                        ) : null}
+                        {requestTab === 'query' ? (
+                            <textarea
+                                value={queryText}
+                                onChange={(event) => setQueryText(event.target.value)}
+                                rows={22}
+                                className="min-h-[56vh] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900"
+                            />
+                        ) : null}
+                        {requestTab === 'headers' ? (
+                            <textarea
+                                value={headerText}
+                                onChange={(event) => setHeaderText(event.target.value)}
+                                rows={22}
+                                className="min-h-[56vh] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900"
+                            />
+                        ) : null}
+                        {requestTab === 'file' ? (
+                            <div className="flex min-h-[56vh] items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-6">
+                                <div className="w-full max-w-2xl text-center">
+                                    <div className="mb-3 text-sm font-medium text-slate-700">上传文件</div>
+                                    <input
+                                        type="file"
+                                        accept={selectedEndpoint.fileAccept || undefined}
+                                        onChange={(event) =>
+                                            setSelectedFile(event.target.files?.[0] || null)
+                                        }
+                                        className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700"
+                                    />
+                                    <div className="mt-3 text-xs text-slate-500">
+                                        字段名：{selectedEndpoint.fileFieldName || 'file'}{' '}
+                                        {selectedEndpoint.fileAccept
+                                            ? `· accept: ${selectedEndpoint.fileAccept}`
+                                            : ''}
+                                    </div>
+                                    {selectedFile ? (
+                                        <div className="mt-3 rounded-full bg-white px-3 py-2 text-xs text-slate-600">
+                                            已选择：{selectedFile.name}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
+                        ) : null}
+                    </div>
+                </QuickViewModal>
+            ) : null}
+
+            {showResponseBodyModal && runResult ? (
+                <QuickViewModal
+                    title={isAudioResult(selectedEndpoint, runResult) ? '音频返回代码' : '返回代码'}
+                    subtitle={selectedEndpoint?.name || '当前响应'}
+                    onClose={() => setShowResponseBodyModal(false)}
+                    maxWidthClass="max-w-5xl"
+                    action={
+                        runResult.responseBody ? (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    void copyToClipboard(runResult.responseBody || '').then(() =>
+                                        setNotice('已复制返回代码。'),
+                                    )
+                                }
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                            >
+                                <Copy size={14} />
+                                复制代码
+                            </button>
+                        ) : null
+                    }
+                >
+                    <DetailBlock
+                        label={isAudioResult(selectedEndpoint, runResult) ? 'Audio Response Data' : 'Response Body'}
+                        value={runResult.responseBody || '<empty>'}
+                        mono
+                    />
+                </QuickViewModal>
+            ) : null}
+
             {showCurlModal ? (
                 <QuickViewModal
                     title={selectedEndpoint?.method === 'WS' ? '连接命令预览' : 'curl 预览'}
@@ -2461,7 +2734,7 @@ export default function ApiLabClient() {
                                     当前待发请求
                                 </span>
                                 <span className="text-sm text-slate-500">
-                                    这里会跟随中间编辑区实时变化。
+                                    这里会跟随当前请求配置实时变化。
                                 </span>
                             </div>
                             <div className="grid gap-4 md:grid-cols-2">
