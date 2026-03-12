@@ -1610,7 +1610,7 @@ export default function ApiLabClient() {
                                 <div className="rounded-[26px] border border-slate-200 bg-slate-50/90 p-4">
                                     <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.92fr)]">
                                         <div className="rounded-[24px] border border-white/80 bg-white px-5 py-5 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-                                            <div className="flex flex-col gap-5">
+                                            <div className="flex flex-col gap-4">
                                                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
@@ -1624,18 +1624,19 @@ export default function ApiLabClient() {
                                                         <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
                                                             {selectedEndpoint.name}
                                                         </h2>
-                                                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                                                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
                                                             {selectedEndpoint.description || '暂无描述'}
                                                         </p>
                                                     </div>
-                                                    <div className="flex flex-wrap gap-2 xl:justify-end">
+                                                    <div className="flex shrink-0 items-center gap-2 xl:justify-end">
                                                         <button
                                                             type="button"
                                                             onClick={() => setShowEndpointDetailModal(true)}
-                                                            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                                                            title="接口详情"
+                                                            aria-label="接口详情"
+                                                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
                                                         >
                                                             <Eye size={15} />
-                                                            接口详情
                                                         </button>
                                                         <button
                                                             type="button"
@@ -1643,20 +1644,22 @@ export default function ApiLabClient() {
                                                                 setEditingEndpoint(selectedEndpoint);
                                                                 setShowEndpointModal(true);
                                                             }}
-                                                            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                                                            title="编辑接口"
+                                                            aria-label="编辑接口"
+                                                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
                                                         >
                                                             <Settings2 size={15} />
-                                                            编辑接口
                                                         </button>
                                                         {selectedEndpoint.docUrl ? (
                                                             <a
                                                                 href={selectedEndpoint.docUrl}
                                                                 target="_blank"
                                                                 rel="noreferrer"
-                                                                className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                                                                title="打开文档"
+                                                                aria-label="打开文档"
+                                                                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
                                                             >
                                                                 <Link2 size={15} />
-                                                                文档
                                                             </a>
                                                         ) : null}
                                                     </div>
@@ -1691,92 +1694,6 @@ export default function ApiLabClient() {
                                                     </div>
                                                     <div className="break-all font-mono text-xs leading-6 text-slate-100">
                                                         {currentRequestPreview?.requestUrl || selectedEndpoint.path}
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid gap-3 md:grid-cols-3">
-                                                    <div className="rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 py-4">
-                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                                            执行上下文
-                                                        </div>
-                                                        <div className="mt-2 text-base font-semibold text-slate-900">
-                                                            {selectedEnv ? selectedEnv.name : '未选择环境'}
-                                                        </div>
-                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-                                                                {selectedEndpoint.serviceName}
-                                                            </span>
-                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-                                                                {selectedEndpoint.category}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 py-4">
-                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                                            当前状态
-                                                        </div>
-                                                        <div className="mt-2 text-base font-semibold text-slate-900">
-                                                            {runResult
-                                                                ? isExampleRunResult(runResult)
-                                                                    ? '已加载样例返回'
-                                                                    : '已完成最近一次执行'
-                                                                : '等待执行'}
-                                                        </div>
-                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                                                            {runResult ? (
-                                                                <span
-                                                                    className={`rounded-full px-2.5 py-1 font-medium ${
-                                                                        runResult.ok
-                                                                            ? 'bg-emerald-100 text-emerald-700'
-                                                                            : 'bg-rose-100 text-rose-700'
-                                                                    }`}
-                                                                >
-                                                                    {runResult.status || 'ERR'} ·{' '}
-                                                                    {isExampleRunResult(runResult)
-                                                                        ? '样例'
-                                                                        : `${runResult.durationMs}ms`}
-                                                                </span>
-                                                            ) : null}
-                                                            <span
-                                                                className={`rounded-full px-2.5 py-1 font-medium ${
-                                                                    currentJsonError
-                                                                        ? 'bg-amber-100 text-amber-700'
-                                                                        : 'bg-emerald-100 text-emerald-700'
-                                                                }`}
-                                                            >
-                                                                {currentJsonError
-                                                                    ? 'JSON 待修正'
-                                                                    : 'JSON 正常'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 py-4">
-                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                                                            请求特征
-                                                        </div>
-                                                        <div className="mt-2 text-base font-semibold text-slate-900">
-                                                            {selectedEndpoint.contentType}
-                                                        </div>
-                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-                                                                返回 · {selectedEndpoint.responseType}
-                                                            </span>
-                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-                                                                {selectedEndpoint.authType === 'none'
-                                                                    ? '免鉴权'
-                                                                    : `Auth · ${selectedEndpoint.authType}`}
-                                                            </span>
-                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-                                                                Path · {selectedEndpoint.path}
-                                                            </span>
-                                                            {selectedFile ? (
-                                                                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
-                                                                    文件 · {selectedFile.name}
-                                                                </span>
-                                                            ) : null}
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1860,6 +1777,17 @@ export default function ApiLabClient() {
                                                             <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
                                                                 Timeout · {selectedEnv?.timeoutMs || '--'}ms
                                                             </span>
+                                                            <span
+                                                                className={`rounded-full px-2.5 py-1 font-medium ${
+                                                                    currentJsonError
+                                                                        ? 'bg-amber-100 text-amber-700'
+                                                                        : 'bg-emerald-100 text-emerald-700'
+                                                                }`}
+                                                            >
+                                                                {currentJsonError
+                                                                    ? 'JSON 待修正'
+                                                                    : 'JSON 正常'}
+                                                            </span>
                                                         </div>
                                                         <div className="mt-3 text-xs leading-5 text-slate-500">
                                                             环境相关操作固定放在这里，不再和执行按钮挤在同一排。
@@ -1896,6 +1824,39 @@ export default function ApiLabClient() {
                                                     {selectedEndpoint.method === 'WS' ? (
                                                         <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-slate-200">
                                                             WS 仅支持命令预览
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                                <div className="mb-3 flex flex-wrap gap-2 text-xs text-slate-300">
+                                                    <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1">
+                                                        {selectedEndpoint.serviceName}
+                                                    </span>
+                                                    <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1">
+                                                        {selectedEndpoint.category}
+                                                    </span>
+                                                    <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1">
+                                                        {selectedEndpoint.contentType}
+                                                    </span>
+                                                    <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1">
+                                                        返回 · {selectedEndpoint.responseType}
+                                                    </span>
+                                                    <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1">
+                                                        {selectedEndpoint.authType === 'none'
+                                                            ? '免鉴权'
+                                                            : `Auth · ${selectedEndpoint.authType}`}
+                                                    </span>
+                                                    {runResult ? (
+                                                        <span
+                                                            className={`rounded-full px-2.5 py-1 font-medium ${
+                                                                runResult.ok
+                                                                    ? 'bg-emerald-400/18 text-emerald-100'
+                                                                    : 'bg-rose-400/18 text-rose-100'
+                                                            }`}
+                                                        >
+                                                            {runResult.status || 'ERR'} ·{' '}
+                                                            {isExampleRunResult(runResult)
+                                                                ? '样例'
+                                                                : `${runResult.durationMs}ms`}
                                                         </span>
                                                     ) : null}
                                                 </div>
@@ -1999,7 +1960,7 @@ export default function ApiLabClient() {
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="min-h-0 flex-1 p-4">
+                                    <div className="min-h-0 flex-1 overflow-auto p-4">
                                         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-3">
                                             <div>
                                                 <div className="text-sm font-semibold text-slate-900">
@@ -2024,16 +1985,16 @@ export default function ApiLabClient() {
                                             </div>
                                         </div>
                                         {requestTab === 'body' ? (
-                                            <textarea value={bodyText} onChange={(event) => setBodyText(event.target.value)} rows={16} className="h-full min-h-[320px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
+                                            <textarea value={bodyText} onChange={(event) => setBodyText(event.target.value)} rows={16} className="h-full min-h-[240px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900 xl:min-h-[280px]" />
                                         ) : null}
                                         {requestTab === 'query' ? (
-                                            <textarea value={queryText} onChange={(event) => setQueryText(event.target.value)} rows={16} className="h-full min-h-[320px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
+                                            <textarea value={queryText} onChange={(event) => setQueryText(event.target.value)} rows={16} className="h-full min-h-[240px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900 xl:min-h-[280px]" />
                                         ) : null}
                                         {requestTab === 'headers' ? (
-                                            <textarea value={headerText} onChange={(event) => setHeaderText(event.target.value)} rows={16} className="h-full min-h-[320px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
+                                            <textarea value={headerText} onChange={(event) => setHeaderText(event.target.value)} rows={16} className="h-full min-h-[240px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900 xl:min-h-[280px]" />
                                         ) : null}
                                         {requestTab === 'file' ? (
-                                            <div className="flex h-full min-h-[320px] items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-5">
+                                            <div className="flex h-full min-h-[240px] items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-5 xl:min-h-[280px]">
                                                 <div className="w-full max-w-lg text-center">
                                                     <div className="mb-3 text-sm font-medium text-slate-700">上传文件</div>
                                                     <input type="file" accept={selectedEndpoint.fileAccept || undefined} onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700" />
@@ -2094,8 +2055,8 @@ export default function ApiLabClient() {
                                             <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Request URL</div>
                                             <div className="break-all font-mono text-xs leading-6 text-slate-700">{runResult.requestUrl}</div>
                                         </div>
-                                        <div className="min-h-0 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 px-4 py-3 text-white">
-                                            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 px-4 py-3 text-white">
+                                            <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3">
                                                 <div className="inline-flex flex-wrap rounded-full border border-white/10 bg-white/5 p-1">
                                                     {[
                                                         { key: 'body', label: isExampleRunResult(runResult) ? '样例返回' : '返回体' },
@@ -2116,7 +2077,7 @@ export default function ApiLabClient() {
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     {responseTab === 'body' && runResult.responseBody ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
                                                     {responseTab === 'request' ? <button type="button" onClick={() => void copyToClipboard(JSON.stringify({ url: runResult.requestUrl, headers: runResult.requestHeaders, query: runResult.requestQuery, body: runResult.requestBody, files: runResult.requestFiles }, null, 2)).then(() => setNotice('已复制请求报文。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
                                                     {responseTab === 'headers' ? <button type="button" onClick={() => void copyToClipboard(formatJson(runResult.responseHeaders)).then(() => setNotice('已复制响应头。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
@@ -2126,20 +2087,49 @@ export default function ApiLabClient() {
                                                     </button>
                                                 </div>
                                             </div>
-                                            {runResult.errorMessage ? <div className="mb-3 rounded-[18px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{runResult.errorMessage}</div> : null}
+                                            {runResult.errorMessage ? <div className="mb-3 shrink-0 rounded-[18px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{runResult.errorMessage}</div> : null}
                                             {responseTab === 'body' ? (
-                                                <>
+                                                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                                                     {isAudioResult(selectedEndpoint, runResult) && runResult.responseBody ? (
-                                                        <div className="mb-3 rounded-[18px] border border-slate-800 bg-slate-900 px-3 py-3">
-                                                            <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Audio Preview</div>
-                                                            <audio controls className="w-full" src={`data:${typeof runResult.responseHeaders['content-type'] === 'string' ? runResult.responseHeaders['content-type'] : 'audio/mpeg'};base64,${runResult.responseBody}`} />
+                                                        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+                                                            <div className="shrink-0 rounded-[18px] border border-slate-800 bg-slate-900 px-3 py-3">
+                                                                <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Audio Preview</div>
+                                                                <audio controls className="w-full" src={`data:${typeof runResult.responseHeaders['content-type'] === 'string' ? runResult.responseHeaders['content-type'] : 'audio/mpeg'};base64,${runResult.responseBody}`} />
+                                                            </div>
+                                                            <div className="shrink-0 rounded-[18px] border border-white/10 bg-white/5 px-3 py-3 text-xs leading-5 text-slate-300">
+                                                                这是音频结果，原始 base64 不再直接铺满右侧面板，避免把播放器和按钮挤出可视区。
+                                                                如需完整原文，可复制当前返回体，或去报文中心查看。
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        void copyToClipboard(
+                                                                            runResult.responseBody || '',
+                                                                        ).then(() => setNotice('已复制音频 base64。'))
+                                                                    }
+                                                                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"
+                                                                >
+                                                                    <Copy size={14} />
+                                                                    复制音频数据
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowPacketModal(true)}
+                                                                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"
+                                                                >
+                                                                    <FileCode2 size={14} />
+                                                                    去报文中心
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    ) : null}
-                                                    <pre className="h-full max-h-full overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-100">{runResult.responseBody || '<empty>'}</pre>
-                                                </>
+                                                    ) : (
+                                                        <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-100">{runResult.responseBody || '<empty>'}</pre>
+                                                    )}
+                                                </div>
                                             ) : null}
                                             {responseTab === 'request' ? (
-                                                <div className="grid h-full max-h-full gap-3 overflow-auto">
+                                                <div className="grid min-h-0 flex-1 gap-3 overflow-auto">
                                                     <DetailBlock label="Request Headers" value={formatJson(runResult.requestHeaders)} mono tone="dark" />
                                                     <DetailBlock label="Request Query" value={formatJson(runResult.requestQuery)} mono tone="dark" />
                                                     <DetailBlock label="Request Body" value={runResult.requestBody || '<empty>'} mono tone="dark" />
@@ -2147,7 +2137,7 @@ export default function ApiLabClient() {
                                                 </div>
                                             ) : null}
                                             {responseTab === 'headers' ? (
-                                                <div className="h-full max-h-full overflow-auto">
+                                                <div className="min-h-0 flex-1 overflow-auto">
                                                     <DetailBlock label="Response Headers" value={formatJson(runResult.responseHeaders)} mono tone="dark" />
                                                 </div>
                                             ) : null}
