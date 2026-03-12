@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withUser } from '@/lib/api/auth';
+import { withApiLabUser } from '@/lib/api-lab/access';
 import {
     createApiLabEndpoint,
     listApiLabEndpoints,
@@ -15,12 +15,12 @@ function parseJsonObject(value: unknown): JsonObject {
     return value as JsonObject;
 }
 
-export const GET = withUser(async (_req: NextRequest, userId: string) => {
+export const GET = withApiLabUser(async (_req: NextRequest, userId: string) => {
     const endpoints = await listApiLabEndpoints(userId);
     return NextResponse.json(endpoints);
 });
 
-export const POST = withUser(async (req: NextRequest, userId: string) => {
+export const POST = withApiLabUser(async (req: NextRequest, userId: string) => {
     const body = (await req.json()) as Record<string, unknown>;
     const slug = String(body.slug || '').trim();
     const serviceKey = String(body.serviceKey || '').trim();
@@ -66,7 +66,7 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
     return NextResponse.json(endpoint, { status: 201 });
 });
 
-export const PATCH = withUser(async (req: NextRequest, userId: string) => {
+export const PATCH = withApiLabUser(async (req: NextRequest, userId: string) => {
     const body = (await req.json()) as Record<string, unknown>;
     const id = String(body.id || '').trim();
     if (!id) {

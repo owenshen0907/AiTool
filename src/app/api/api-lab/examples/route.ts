@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withUser } from '@/lib/api/auth';
+import { withApiLabUser } from '@/lib/api-lab/access';
 import { createApiLabExample, listApiLabExamples } from '@/lib/repositories/apiLabRepository';
 import type { JsonObject } from '@/lib/models/apiLab';
 
@@ -11,7 +11,7 @@ function parseJsonObject(value: unknown): JsonObject {
     return value as JsonObject;
 }
 
-export const GET = withUser(async (req: NextRequest, userId: string) => {
+export const GET = withApiLabUser(async (req: NextRequest, userId: string) => {
     const endpointId = req.nextUrl.searchParams.get('endpoint_id');
     if (!endpointId) {
         return new NextResponse('Missing endpoint_id', { status: 400 });
@@ -21,7 +21,7 @@ export const GET = withUser(async (req: NextRequest, userId: string) => {
     return NextResponse.json(examples);
 });
 
-export const POST = withUser(async (req: NextRequest, userId: string) => {
+export const POST = withApiLabUser(async (req: NextRequest, userId: string) => {
     const body = (await req.json()) as Record<string, unknown>;
     const endpointId = String(body.endpointId || '').trim();
     const name = String(body.name || '').trim();

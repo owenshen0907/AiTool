@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withUser } from '@/lib/api/auth';
+import { withApiLabUser } from '@/lib/api-lab/access';
 import { executeApiLabRequest } from '@/lib/api-lab/runner';
 import {
     createApiLabMonitorRun,
@@ -24,7 +24,7 @@ function getFailureReason(monitor: ApiLabMonitor, result: Awaited<ReturnType<typ
     return null;
 }
 
-export const POST = withUser(async (req: NextRequest, userId: string) => {
+export const POST = withApiLabUser(async (req: NextRequest, userId: string) => {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const monitorId = body.monitorId ? String(body.monitorId) : null;
     const singleMonitor = monitorId ? await getApiLabMonitorById(userId, monitorId) : null;

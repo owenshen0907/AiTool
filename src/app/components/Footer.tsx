@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Github, Sparkles } from 'lucide-react';
 
 const footerLinks = [
@@ -9,6 +12,12 @@ const footerLinks = [
 ];
 
 export default function Footer() {
+    const pathname = usePathname();
+
+    if (pathname === '/api-lab' || pathname?.startsWith('/api-lab/')) {
+        return null;
+    }
+
     return (
         <footer className="border-t border-slate-200 bg-white/60 backdrop-blur-sm">
             <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-10 md:flex-row md:justify-between md:py-12">

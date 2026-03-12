@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withUser } from '@/lib/api/auth';
+import { withApiLabUser } from '@/lib/api-lab/access';
 import { executeApiLabRequest } from '@/lib/api-lab/runner';
 import type { JsonObject } from '@/lib/models/apiLab';
+import { isFileLike } from '@/lib/utils/helpers/is-file';
 
 function parseJsonObject(value: FormDataEntryValue | null): JsonObject {
     if (!value || typeof value !== 'string') {
@@ -19,7 +20,7 @@ function parseJsonObject(value: FormDataEntryValue | null): JsonObject {
     }
 }
 
-export const POST = withUser(async (req: NextRequest, userId: string) => {
+export const POST = withApiLabUser(async (req: NextRequest, userId: string) => {
     const formData = await req.formData();
     const endpointId = String(formData.get('endpointId') || '').trim();
     const envId = String(formData.get('envId') || '').trim();
@@ -29,7 +30,7 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
     }
 
     const uploadedValue = formData.get('upload');
-    const uploadedFile = uploadedValue instanceof File ? uploadedValue : null;
+    const uploadedFile = uploadedValue && isFileLike(uploadedValue) ? uploadedValue : null;
 
     try {
         const result = await executeApiLabRequest({

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withUser } from '@/lib/api/auth';
+import { withApiLabUser } from '@/lib/api-lab/access';
 import { listApiLabEndpoints, listApiLabEnvs } from '@/lib/repositories/apiLabRepository';
 
-export const GET = withUser(async (_req: NextRequest, userId: string) => {
+export const GET = withApiLabUser(async (_req: NextRequest, userId: string) => {
     const [envs, endpoints] = await Promise.all([
         listApiLabEnvs(userId),
         listApiLabEndpoints(userId),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withUser } from '@/lib/api/auth';
+import { withApiLabUser } from '@/lib/api-lab/access';
 import {
     createApiLabMonitor,
     listApiLabMonitorRuns,
@@ -7,7 +7,7 @@ import {
     updateApiLabMonitor,
 } from '@/lib/repositories/apiLabRepository';
 
-export const GET = withUser(async (_req: NextRequest, userId: string) => {
+export const GET = withApiLabUser(async (_req: NextRequest, userId: string) => {
     const [monitors, runs] = await Promise.all([
         listApiLabMonitors(userId),
         listApiLabMonitorRuns(userId, 20),
@@ -16,7 +16,7 @@ export const GET = withUser(async (_req: NextRequest, userId: string) => {
     return NextResponse.json({ monitors, runs });
 });
 
-export const POST = withUser(async (req: NextRequest, userId: string) => {
+export const POST = withApiLabUser(async (req: NextRequest, userId: string) => {
     const body = (await req.json()) as Record<string, unknown>;
     const endpointId = String(body.endpointId || '').trim();
     const envId = String(body.envId || '').trim();
@@ -39,7 +39,7 @@ export const POST = withUser(async (req: NextRequest, userId: string) => {
     return NextResponse.json(monitor, { status: 201 });
 });
 
-export const PATCH = withUser(async (req: NextRequest, userId: string) => {
+export const PATCH = withApiLabUser(async (req: NextRequest, userId: string) => {
     const body = (await req.json()) as Record<string, unknown>;
     const id = String(body.id || '').trim();
     if (!id) {

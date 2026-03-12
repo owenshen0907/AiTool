@@ -3,7 +3,10 @@
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import {
     Activity,
+    ChevronDown,
+    ChevronRight,
     Copy,
+    Eye,
     FileCode2,
     Globe,
     Link2,
@@ -12,6 +15,7 @@ import {
     RefreshCw,
     Save,
     Settings2,
+    X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type {
@@ -50,6 +54,11 @@ interface EndpointModalProps {
     defaultServiceName?: string;
     onClose: () => void;
     onSaved: (endpoint: ApiLabEndpoint) => void;
+}
+
+interface ApiResponsePayload<T> {
+    data: T | null;
+    text: string;
 }
 
 function formatJson(value: JsonObject): string {
@@ -116,6 +125,25 @@ function toWebsocketBaseUrl(value: string): string {
 
 function normalizePath(path: string): string {
     return path.startsWith('/') ? path : `/${path}`;
+}
+
+async function readApiResponse<T>(response: Response): Promise<ApiResponsePayload<T>> {
+    const text = await response.text();
+    if (!text) {
+        return { data: null, text: '' };
+    }
+
+    try {
+        return {
+            data: JSON.parse(text) as T,
+            text,
+        };
+    } catch {
+        return {
+            data: null,
+            text,
+        };
+    }
 }
 
 function buildCurlPreview(args: {
@@ -384,6 +412,89 @@ function SectionTitle({ icon: Icon, title, action }: { icon: LucideIcon; title: 
                 </div>
             </div>
             {action}
+        </div>
+    );
+}
+
+function QuickViewModal({
+    title,
+    subtitle,
+    onClose,
+    action,
+    children,
+    maxWidthClass = 'max-w-4xl',
+}: {
+    title: string;
+    subtitle?: string;
+    onClose: () => void;
+    action?: ReactNode;
+    children: ReactNode;
+    maxWidthClass?: string;
+}) {
+    return (
+        <div
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm"
+            onClick={onClose}
+        >
+            <div
+                className={`w-full ${maxWidthClass} max-h-[86vh] overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.24)]`}
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                    <div className="min-w-0">
+                        <div className="text-lg font-semibold text-slate-900">{title}</div>
+                        {subtitle ? <div className="mt-1 text-sm text-slate-500">{subtitle}</div> : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {action}
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                </div>
+                <div className="max-h-[calc(86vh-78px)] overflow-auto px-5 py-5">{children}</div>
+            </div>
+        </div>
+    );
+}
+
+function DetailBlock({
+    label,
+    value,
+    mono = false,
+    onCopy,
+}: {
+    label: string;
+    value: string;
+    mono?: boolean;
+    onCopy?: () => void;
+}) {
+    return (
+        <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div>
+                {onCopy ? (
+                    <button
+                        type="button"
+                        onClick={onCopy}
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                    >
+                        <Copy size={12} />
+                        复制
+                    </button>
+                ) : null}
+            </div>
+            <pre
+                className={`whitespace-pre-wrap break-all text-sm leading-6 text-slate-700 ${
+                    mono ? 'font-mono text-xs' : ''
+                }`}
+            >
+                {value || '<empty>'}
+            </pre>
         </div>
     );
 }
@@ -705,6 +816,12 @@ export default function ApiLabClient() {
     const [editingEnv, setEditingEnv] = useState<ApiLabEnv | null>(null);
     const [showEndpointModal, setShowEndpointModal] = useState(false);
     const [editingEndpoint, setEditingEndpoint] = useState<ApiLabEndpoint | null>(null);
+    const [showEnvDetailModal, setShowEnvDetailModal] = useState(false);
+    const [showEndpointDetailModal, setShowEndpointDetailModal] = useState(false);
+    const [showCurlModal, setShowCurlModal] = useState(false);
+    const [requestTab, setRequestTab] = useState<'body' | 'query' | 'headers' | 'file'>('body');
+    const [activityTab, setActivityTab] = useState<'examples' | 'logs' | 'monitors'>('examples');
+    const [openEndpointGroups, setOpenEndpointGroups] = useState<Record<string, boolean>>({});
 
     const selectedEndpoint = useMemo(
         () => endpoints.find((item) => item.id === selectedEndpointId) || null,
@@ -738,15 +855,26 @@ export default function ApiLabClient() {
     }, [monitors, selectedEndpoint]);
 
     const groupedEndpoints = useMemo(() => {
-        const grouped = new Map<string, ApiLabEndpoint[]>();
+        const serviceMap = new Map<string, Map<string, ApiLabEndpoint[]>>();
         endpoints.forEach((endpoint) => {
-            const key = `${endpoint.serviceName} / ${endpoint.category}`;
-            if (!grouped.has(key)) {
-                grouped.set(key, []);
+            if (!serviceMap.has(endpoint.serviceName)) {
+                serviceMap.set(endpoint.serviceName, new Map());
             }
-            grouped.get(key)?.push(endpoint);
+            const categoryMap = serviceMap.get(endpoint.serviceName)!;
+            if (!categoryMap.has(endpoint.category)) {
+                categoryMap.set(endpoint.category, []);
+            }
+            categoryMap.get(endpoint.category)!.push(endpoint);
         });
-        return Array.from(grouped.entries());
+
+        return Array.from(serviceMap.entries()).map(([serviceName, categoryMap]) => ({
+            serviceName,
+            categories: Array.from(categoryMap.entries()).map(([category, items]) => ({
+                key: `${serviceName}::${category}`,
+                category,
+                items,
+            })),
+        }));
     }, [endpoints]);
 
     const curlPreview = useMemo(
@@ -766,6 +894,41 @@ export default function ApiLabClient() {
         const parts = [parseJsonText(bodyText), parseJsonText(queryText), parseJsonText(headerText)];
         return parts.find((item) => item.error)?.error || null;
     }, [bodyText, queryText, headerText]);
+
+    useEffect(() => {
+        if (!groupedEndpoints.length) {
+            return;
+        }
+
+        setOpenEndpointGroups((current) => {
+            const next = { ...current };
+            let changed = false;
+
+            groupedEndpoints.forEach((serviceGroup) => {
+                serviceGroup.categories.forEach((categoryGroup) => {
+                    if (next[categoryGroup.key] === undefined) {
+                        next[categoryGroup.key] = categoryGroup.items.some(
+                            (item) => item.id === selectedEndpointId,
+                        );
+                        changed = true;
+                    }
+                });
+            });
+
+            const activeGroup = groupedEndpoints
+                .flatMap((serviceGroup) => serviceGroup.categories)
+                .find((categoryGroup) =>
+                    categoryGroup.items.some((item) => item.id === selectedEndpointId),
+                );
+
+            if (activeGroup && !next[activeGroup.key]) {
+                next[activeGroup.key] = true;
+                changed = true;
+            }
+
+            return changed ? next : current;
+        });
+    }, [groupedEndpoints, selectedEndpointId]);
 
     const loadSummary = async (keepSelection = true) => {
         setRefreshing(true);
@@ -871,6 +1034,12 @@ export default function ApiLabClient() {
             });
     }, [selectedEndpointId, selectedEndpoint, serviceEnvs]);
 
+    useEffect(() => {
+        if (requestTab === 'file' && selectedEndpoint?.contentType !== 'multipart/form-data') {
+            setRequestTab('body');
+        }
+    }, [requestTab, selectedEndpoint]);
+
     const applyExample = (
         example: ApiLabExample,
         options?: { silent?: boolean; envOverride?: ApiLabEnv | null },
@@ -922,9 +1091,15 @@ export default function ApiLabClient() {
                 method: 'POST',
                 body: formData,
             });
-            const data = (await res.json()) as ApiLabRunResult | { error: string };
+            const payload = await readApiResponse<ApiLabRunResult | { error: string }>(res);
+            const data = payload.data;
             if (!res.ok) {
-                throw new Error('error' in data ? data.error : '执行失败');
+                throw new Error(
+                    data && 'error' in data ? data.error : payload.text || '执行失败',
+                );
+            }
+            if (!data) {
+                throw new Error(payload.text || '接口返回不是合法 JSON。');
             }
             setRunResult(data as ApiLabRunResult);
             await loadLogs(selectedEndpoint.id);
@@ -1097,21 +1272,21 @@ export default function ApiLabClient() {
     }
 
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.72),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.20),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-8 md:px-6 lg:px-10">
-            <div className="mx-auto max-w-7xl">
-                <div className="mb-6 overflow-hidden rounded-[34px] border border-white/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.96)_0%,rgba(30,41,59,0.88)_62%,rgba(14,116,144,0.82)_100%)] px-6 py-7 text-white shadow-[0_30px_90px_rgba(15,23,42,0.22)] md:px-8">
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                        <div className="max-w-3xl">
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-200">
+        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.72),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-4 md:px-6 lg:h-[calc(100vh-96px)] lg:overflow-hidden lg:px-8">
+            <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-4">
+                <div className="rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.96)_0%,rgba(30,41,59,0.88)_62%,rgba(14,116,144,0.82)_100%)] px-5 py-5 text-white shadow-[0_26px_80px_rgba(15,23,42,0.20)] md:px-6">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div className="min-w-0">
+                            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs uppercase tracking-[0.18em] text-slate-200">
                                 <Activity size={14} />
-                                API Lab
+                                Private API Lab
                             </div>
-                            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">把公司接口沉成你的可执行资产库</h1>
-                            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-200 md:text-base">
-                                这里优先解决 3 件事：快速切环境、直接复制可用 curl、保留最近一次可参考的返回值。
+                            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">只给 owenshen 用的接口执行台</h1>
+                            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-200">
+                                这里优先保留 4 件事：切环境、执行接口、复制 curl、查看样例返回。页面默认收紧，不再把常用信息全部摊开。
                             </p>
                         </div>
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-2">
                             <button type="button" onClick={() => void Promise.all([loadSummary(), loadMonitors()])} className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/16">
                                 <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                                 刷新
@@ -1128,339 +1303,579 @@ export default function ApiLabClient() {
                     </div>
                 </div>
 
-                {error ? <div className="mb-4 rounded-[24px] border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">{error}</div> : null}
-                {notice ? <div className="mb-4 rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">{notice}</div> : null}
+                {error ? <div className="rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
+                {notice ? <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div> : null}
 
-                <div className="grid gap-5 xl:grid-cols-[290px_minmax(0,1fr)_360px]">
-                    <aside className="rounded-[32px] border border-white/70 bg-white/78 p-5 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-                        <SectionTitle
-                            icon={FileCode2}
-                            title="接口目录"
-                            action={
-                                selectedEndpoint ? (
-                                    <button type="button" onClick={() => { setEditingEndpoint(selectedEndpoint); setShowEndpointModal(true); }} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                                        编辑
-                                    </button>
-                                ) : null
-                            }
-                        />
-                        <div className="space-y-4">
-                            {groupedEndpoints.map(([groupName, items]) => (
-                                <div key={groupName}>
-                                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{groupName}</div>
-                                    <div className="space-y-2">
-                                        {items.map((item) => {
-                                            const active = item.id === selectedEndpointId;
-                                            return (
-                                                <button
-                                                    key={item.id}
-                                                    type="button"
-                                                    onClick={() => setSelectedEndpointId(item.id)}
-                                                    className={`w-full rounded-[24px] border px-4 py-3 text-left transition ${
-                                                        active
-                                                            ? 'border-slate-900 bg-slate-900 text-white shadow-[0_18px_40px_rgba(15,23,42,0.16)]'
-                                                            : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div>
-                                                            <div className="font-medium">{item.name}</div>
-                                                            <div className={`mt-1 text-xs ${active ? 'text-slate-300' : 'text-slate-500'}`}>{item.path}</div>
-                                                        </div>
-                                                        {item.isSystem ? <span className={`rounded-full px-2 py-1 text-[10px] ${active ? 'bg-white/14 text-white' : 'bg-slate-200 text-slate-600'}`}>内置</span> : null}
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </aside>
-
-                    <section className="rounded-[32px] border border-white/70 bg-white/82 p-5 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-                        <SectionTitle
-                            icon={Settings2}
-                            title={selectedEndpoint ? selectedEndpoint.name : '接口调试'}
-                            action={
-                                selectedEndpoint?.docUrl ? (
-                                    <a href={selectedEndpoint.docUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                                        <Link2 size={14} />
-                                        文档
-                                    </a>
-                                ) : null
-                            }
-                        />
-
-                        {selectedEndpoint ? (
-                            <>
-                                <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                                    <div className="rounded-[28px] border border-slate-200 bg-slate-50/70 p-4">
-                                        <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-                                            <span className="rounded-full bg-slate-900 px-2.5 py-1 text-white">{selectedEndpoint.method}</span>
-                                            <span>{selectedEndpoint.serviceName}</span>
-                                            <span>/</span>
-                                            <span>{selectedEndpoint.category}</span>
-                                        </div>
-                                        <div className="mt-3 text-sm text-slate-700">{selectedEndpoint.description || '暂无描述'}</div>
-                                        <div className="mt-4 rounded-[22px] border border-slate-200 bg-white px-4 py-3">
-                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Path</div>
-                                            <div className="mt-1 break-all font-mono text-sm text-slate-900">{selectedEndpoint.path}</div>
-                                        </div>
-                                        {selectedEndpoint.notes ? (
-                                            <div className="mt-4 rounded-[22px] border border-slate-200 bg-white px-4 py-3 text-sm leading-7 text-slate-600">
-                                                {selectedEndpoint.notes}
-                                            </div>
-                                        ) : null}
-                                    </div>
-
-                                    <div className="rounded-[28px] border border-slate-200 bg-slate-50/70 p-4">
-                                        <div className="mb-2 text-sm font-medium text-slate-700">环境</div>
-                                        <div className="flex gap-2">
-                                            <select value={selectedEnvId} onChange={(event) => setSelectedEnvId(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-900">
-                                                {serviceEnvs.map((env) => (
-                                                    <option key={env.id} value={env.id}>
-                                                        {env.name} · {env.baseUrl}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {selectedEnv ? (
-                                                <button type="button" onClick={() => { setEditingEnv(selectedEnv); setShowEnvModal(true); }} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 transition hover:bg-white hover:text-slate-900">
-                                                    编辑
-                                                </button>
-                                            ) : null}
-                                        </div>
-                                        <div className="mt-4 grid gap-3 text-sm text-slate-600">
-                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3">
-                                                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Base URL</div>
-                                                <div className="mt-1 break-all font-mono text-[13px] text-slate-900">{selectedEnv?.baseUrl || '未选择环境'}</div>
-                                            </div>
-                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3">
-                                                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">WebSocket URL</div>
-                                                <div className="mt-1 break-all font-mono text-[13px] text-slate-900">{selectedEnv?.websocketUrl || '未配置'}</div>
-                                            </div>
-                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3">
-                                                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">API Key</div>
-                                                <div className="mt-1 break-all font-mono text-[13px] text-slate-900">{selectedEnv?.apiKey ? `${selectedEnv.apiKey.slice(0, 6)}******${selectedEnv.apiKey.slice(-4)}` : '未配置'}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_1fr]">
-                                    <div>
-                                        <div className="mb-2 text-sm font-medium text-slate-700">Headers 覆盖</div>
-                                        <textarea value={headerText} onChange={(event) => setHeaderText(event.target.value)} rows={10} className="w-full rounded-[28px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
-                                    </div>
-                                    <div>
-                                        <div className="mb-2 text-sm font-medium text-slate-700">Query 覆盖</div>
-                                        <textarea value={queryText} onChange={(event) => setQueryText(event.target.value)} rows={10} className="w-full rounded-[28px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
-                                    </div>
-                                </div>
-
-                                <div className="mt-4">
-                                    <div className="mb-2 flex items-center justify-between gap-3">
-                                        <div className="text-sm font-medium text-slate-700">请求体</div>
-                                        <button type="button" onClick={() => { setBodyText(formatJson(selectedEndpoint.requestTemplate)); setQueryText(formatJson(selectedEndpoint.queryTemplate)); setHeaderText(formatJson(selectedEndpoint.headerTemplate)); setSelectedFile(null); setNotice('已恢复为接口默认模板。'); }} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
-                                            重置为模板
-                                        </button>
-                                    </div>
-                                    <textarea value={bodyText} onChange={(event) => setBodyText(event.target.value)} rows={16} className="w-full rounded-[28px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
-                                </div>
-
-                                {selectedEndpoint.contentType === 'multipart/form-data' ? (
-                                    <div className="mt-4 rounded-[28px] border border-dashed border-slate-300 bg-slate-50/80 p-4">
-                                        <div className="mb-2 text-sm font-medium text-slate-700">上传文件</div>
-                                        <input type="file" accept={selectedEndpoint.fileAccept || undefined} onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700" />
-                                        <div className="mt-2 text-xs text-slate-500">字段名：{selectedEndpoint.fileFieldName || 'file'} {selectedEndpoint.fileAccept ? `· accept: ${selectedEndpoint.fileAccept}` : ''}</div>
-                                    </div>
-                                ) : null}
-
-                                <div className="mt-4 rounded-[28px] border border-slate-200 bg-slate-950 p-4 text-white">
-                                    <div className="mb-2 flex items-center justify-between gap-3">
-                                        <div className="text-sm font-medium text-slate-200">{selectedEndpoint?.method === 'WS' ? '连接命令预览' : 'curl 预览'}</div>
-                                        <button type="button" onClick={() => void copyToClipboard(curlPreview).then(() => setNotice(selectedEndpoint?.method === 'WS' ? '已复制当前连接命令。' : '已复制当前 curl。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14">
-                                            <Copy size={14} />
-                                            {selectedEndpoint?.method === 'WS' ? '复制命令' : '复制 curl'}
-                                        </button>
-                                    </div>
-                                    <pre className="max-h-[260px] overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-200">{curlPreview}</pre>
-                                </div>
-
-                                {currentJsonError ? <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">JSON 提示：{currentJsonError}</div> : null}
-
-                                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                                        <div className="flex flex-wrap gap-3">
-                                            <button type="button" onClick={runRequest} disabled={running || !selectedEnv || selectedEndpoint?.method === 'WS'} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
-                                                {running ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
-                                                {selectedEndpoint?.method === 'WS' ? '页面内暂不执行 WS' : running ? '执行中...' : '执行请求'}
-                                            </button>
-                                            <button type="button" onClick={saveCurrentAsExample} disabled={!runResult} className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
-                                                <Save size={16} />
-                                                保存为样例
-                                            </button>
-                                            <button type="button" onClick={createMonitor} disabled={!selectedEnv || selectedEndpoint?.method === 'WS'} className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
-                                                <Activity size={16} />
-                                                加入巡检
-                                            </button>
-                                        </div>
-                                        {runResult ? (
-                                            <div className={`rounded-full px-3 py-1 text-xs font-medium ${runResult.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                {runResult.status || 'ERR'} · {isExampleRunResult(runResult) ? '样例' : `${runResult.durationMs}ms`}
-                                            </div>
-                                        ) : null}
-                                    </div>
-                            </>
-                        ) : (
-                            <div className="flex min-h-[55vh] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 text-slate-500">还没有接口，先新增一个接口模板。</div>
-                        )}
-                    </section>
-
-                    <aside className="space-y-5">
-                        <div className="rounded-[32px] border border-white/70 bg-white/82 p-5 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+                <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)_420px]">
+                    <aside className="min-h-0 overflow-hidden rounded-[30px] border border-white/70 bg-white/82 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+                        <div className="flex h-full flex-col">
                             <SectionTitle
-                                icon={Globe}
-                                title="响应结果"
+                                icon={FileCode2}
+                                title="接口目录"
                                 action={
-                                    runResult ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const curlToCopy = isExampleRunResult(runResult) ? curlPreview : runResult.curlCommand;
-                                                void copyToClipboard(curlToCopy).then(() =>
-                                                    setNotice(
-                                                        isExampleRunResult(runResult)
-                                                            ? '已复制当前样例对应的 curl。'
-                                                            : '已复制最近执行生成的 curl。',
-                                                    ),
-                                                );
-                                            }}
-                                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
-                                        >
-                                            <Copy size={14} />
-                                            {isExampleRunResult(runResult) ? '当前 curl' : '最近 curl'}
+                                    selectedEndpoint ? (
+                                        <button type="button" onClick={() => { setEditingEndpoint(selectedEndpoint); setShowEndpointModal(true); }} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                                            编辑
                                         </button>
                                     ) : null
                                 }
                             />
-                            {runResult ? (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3 text-sm">
-                                        <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Status</div>
-                                            <div className={`mt-1 font-semibold ${runResult.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{runResult.status || 'ERR'}</div>
-                                        </div>
-                                        <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{isExampleRunResult(runResult) ? 'Preview' : 'Duration'}</div>
-                                            <div className="mt-1 font-semibold text-slate-900">{isExampleRunResult(runResult) ? '样例返回' : `${runResult.durationMs} ms`}</div>
+                            <div className="min-h-0 flex-1 space-y-4 overflow-auto pr-1">
+                                {groupedEndpoints.map((serviceGroup) => (
+                                    <div key={serviceGroup.serviceName}>
+                                        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{serviceGroup.serviceName}</div>
+                                        <div className="space-y-2">
+                                            {serviceGroup.categories.map((categoryGroup) => {
+                                                const open = openEndpointGroups[categoryGroup.key] ?? false;
+                                                return (
+                                                    <div key={categoryGroup.key} className="rounded-[22px] border border-slate-200 bg-slate-50/90 px-3 py-3">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setOpenEndpointGroups((current) => ({ ...current, [categoryGroup.key]: !open }))}
+                                                            className="flex w-full items-center justify-between gap-3 text-left"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                {open ? <ChevronDown size={16} className="text-slate-500" /> : <ChevronRight size={16} className="text-slate-500" />}
+                                                                <span className="text-sm font-medium capitalize text-slate-800">{categoryGroup.category}</span>
+                                                            </div>
+                                                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-500">
+                                                                {categoryGroup.items.length}
+                                                            </span>
+                                                        </button>
+                                                        {open ? (
+                                                            <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                                                                {categoryGroup.items.map((item) => {
+                                                                    const active = item.id === selectedEndpointId;
+                                                                    return (
+                                                                        <button
+                                                                            key={item.id}
+                                                                            type="button"
+                                                                            onClick={() => setSelectedEndpointId(item.id)}
+                                                                            className={`w-full rounded-[20px] border px-3 py-3 text-left transition ${
+                                                                                active
+                                                                                    ? 'border-slate-900 bg-slate-900 text-white shadow-[0_14px_32px_rgba(15,23,42,0.16)]'
+                                                                                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="flex items-start justify-between gap-3">
+                                                                                <div className="min-w-0">
+                                                                                    <div className="truncate font-medium">{item.name}</div>
+                                                                                    <div className={`mt-1 truncate text-xs ${active ? 'text-slate-300' : 'text-slate-500'}`}>{item.path}</div>
+                                                                                </div>
+                                                                                {item.isSystem ? <span className={`rounded-full px-2 py-1 text-[10px] ${active ? 'bg-white/14 text-white' : 'bg-slate-100 text-slate-500'}`}>内置</span> : null}
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
-                                    <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-                                        <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Request URL</div>
-                                        <div className="break-all font-mono text-xs leading-6 text-slate-700">{runResult.requestUrl}</div>
-                                    </div>
-                                    {runResult.errorMessage ? <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{runResult.errorMessage}</div> : null}
-                                    {isAudioResult(selectedEndpoint, runResult) && runResult.responseBody ? (
-                                        <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-                                            <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Audio Preview</div>
-                                            <audio controls className="w-full" src={`data:${typeof runResult.responseHeaders['content-type'] === 'string' ? runResult.responseHeaders['content-type'] : 'audio/mpeg'};base64,${runResult.responseBody}`} />
+                                ))}
+                            </div>
+                        </div>
+                    </aside>
+
+                    <section className="min-h-0 overflow-hidden rounded-[30px] border border-white/70 bg-white/84 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+                        {selectedEndpoint ? (
+                            <div className="flex h-full flex-col">
+                                <div className="rounded-[26px] border border-slate-200 bg-slate-50/90 p-4">
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
+                                                    <span className="rounded-full bg-slate-900 px-2.5 py-1 text-white">{selectedEndpoint.method}</span>
+                                                    <span>{selectedEndpoint.serviceName}</span>
+                                                    <span>/</span>
+                                                    <span>{selectedEndpoint.category}</span>
+                                                </div>
+                                                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{selectedEndpoint.name}</h2>
+                                                <p className="mt-2 text-sm leading-6 text-slate-600">{selectedEndpoint.description || '暂无描述'}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button type="button" onClick={() => setShowEndpointDetailModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
+                                                    <Eye size={15} />
+                                                    接口详情
+                                                </button>
+                                                <button type="button" onClick={() => { setEditingEndpoint(selectedEndpoint); setShowEndpointModal(true); }} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
+                                                    <Settings2 size={15} />
+                                                    编辑接口
+                                                </button>
+                                                {selectedEndpoint.docUrl ? (
+                                                    <a href={selectedEndpoint.docUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
+                                                        <Link2 size={15} />
+                                                        文档
+                                                    </a>
+                                                ) : null}
+                                            </div>
                                         </div>
-                                    ) : null}
-                                    <div className="rounded-[22px] border border-slate-200 bg-slate-950 px-4 py-3 text-white">
-                                        <div className="mb-2 flex items-center justify-between gap-3">
-                                            <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{isExampleRunResult(runResult) ? 'Example Response' : 'Response Body'}</div>
-                                            {runResult.responseBody ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
+
+                                        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                                            <div className="flex flex-wrap gap-2">
+                                                <select value={selectedEnvId} onChange={(event) => setSelectedEnvId(event.target.value)} className="min-w-[220px] rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-900">
+                                                    {serviceEnvs.map((env) => (
+                                                        <option key={env.id} value={env.id}>
+                                                            {env.name} · {env.baseUrl}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <button type="button" onClick={() => setShowEnvDetailModal(true)} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
+                                                    <Eye size={15} />
+                                                    环境详情
+                                                </button>
+                                                <button type="button" onClick={() => { if (selectedEnv) { setEditingEnv(selectedEnv); setShowEnvModal(true); } }} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
+                                                    <Settings2 size={15} />
+                                                    编辑环境
+                                                </button>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 xl:justify-end">
+                                                <button type="button" onClick={() => setShowCurlModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
+                                                    <Eye size={15} />
+                                                    {selectedEndpoint.method === 'WS' ? '查看连接命令' : '查看 curl'}
+                                                </button>
+                                                <button type="button" onClick={runRequest} disabled={running || !selectedEnv || selectedEndpoint.method === 'WS'} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
+                                                    {running ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
+                                                    {selectedEndpoint.method === 'WS' ? '页面内暂不执行 WS' : running ? '执行中...' : '执行请求'}
+                                                </button>
+                                                <button type="button" onClick={saveCurrentAsExample} disabled={!runResult} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+                                                    <Save size={16} />
+                                                    保存为样例
+                                                </button>
+                                                <button type="button" onClick={createMonitor} disabled={!selectedEnv || selectedEndpoint.method === 'WS'} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+                                                    <Activity size={16} />
+                                                    加入巡检
+                                                </button>
+                                            </div>
                                         </div>
-                                        <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-100">{runResult.responseBody || '<empty>'}</pre>
+
+                                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Path：{selectedEndpoint.path}</span>
+                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Base URL：{selectedEnv?.baseUrl || '未选择环境'}</span>
+                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">{selectedEnv?.apiKey ? `Key：${selectedEnv.apiKey.slice(0, 6)}******${selectedEnv.apiKey.slice(-4)}` : 'Key：未配置'}</span>
+                                            {runResult ? (
+                                                <span className={`rounded-full px-3 py-1 font-medium ${runResult.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                    {runResult.status || 'ERR'} · {isExampleRunResult(runResult) ? '样例' : `${runResult.durationMs}ms`}
+                                                </span>
+                                            ) : null}
+                                            {currentJsonError ? <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700">JSON 待修正</span> : null}
+                                        </div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="rounded-[26px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">执行一次接口，或加载推荐样例后，这里会显示状态码和返回体。</div>
-                            )}
+
+                                <div className="mt-4 min-h-0 flex flex-1 flex-col rounded-[26px] border border-slate-200 bg-white/92">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                                        <div className="inline-flex flex-wrap rounded-full border border-slate-200 bg-slate-50 p-1">
+                                            {[
+                                                { key: 'body', label: '请求体' },
+                                                { key: 'query', label: 'Query' },
+                                                { key: 'headers', label: 'Headers' },
+                                                ...(selectedEndpoint.contentType === 'multipart/form-data'
+                                                    ? [{ key: 'file', label: '文件' }]
+                                                    : []),
+                                            ].map((tab) => (
+                                                <button
+                                                    key={tab.key}
+                                                    type="button"
+                                                    onClick={() => setRequestTab(tab.key as 'body' | 'query' | 'headers' | 'file')}
+                                                    className={`rounded-full px-3 py-1.5 text-sm transition ${
+                                                        requestTab === tab.key
+                                                            ? 'bg-slate-900 text-white'
+                                                            : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                                                    }`}
+                                                >
+                                                    {tab.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button type="button" onClick={() => { setBodyText(formatJson(selectedEndpoint.requestTemplate)); setQueryText(formatJson(selectedEndpoint.queryTemplate)); setHeaderText(formatJson(selectedEndpoint.headerTemplate)); setSelectedFile(null); setNotice('已恢复为接口默认模板。'); }} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                                                重置为模板
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="min-h-0 flex-1 p-4">
+                                        {requestTab === 'body' ? (
+                                            <textarea value={bodyText} onChange={(event) => setBodyText(event.target.value)} rows={16} className="h-full min-h-[320px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
+                                        ) : null}
+                                        {requestTab === 'query' ? (
+                                            <textarea value={queryText} onChange={(event) => setQueryText(event.target.value)} rows={16} className="h-full min-h-[320px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
+                                        ) : null}
+                                        {requestTab === 'headers' ? (
+                                            <textarea value={headerText} onChange={(event) => setHeaderText(event.target.value)} rows={16} className="h-full min-h-[320px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
+                                        ) : null}
+                                        {requestTab === 'file' ? (
+                                            <div className="flex h-full min-h-[320px] items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-5">
+                                                <div className="w-full max-w-lg text-center">
+                                                    <div className="mb-3 text-sm font-medium text-slate-700">上传文件</div>
+                                                    <input type="file" accept={selectedEndpoint.fileAccept || undefined} onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700" />
+                                                    <div className="mt-3 text-xs text-slate-500">字段名：{selectedEndpoint.fileFieldName || 'file'} {selectedEndpoint.fileAccept ? `· accept: ${selectedEndpoint.fileAccept}` : ''}</div>
+                                                    {selectedFile ? <div className="mt-3 rounded-full bg-white px-3 py-2 text-xs text-slate-600">已选择：{selectedFile.name}</div> : null}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex h-full min-h-[55vh] items-center justify-center rounded-[28px] border border-dashed border-slate-300 bg-slate-50 text-slate-500">还没有接口，先新增一个接口模板。</div>
+                        )}
+                    </section>
+
+                    <aside className="min-h-0 flex flex-col gap-4">
+                        <div className="min-h-0 flex-[1.15] overflow-hidden rounded-[30px] border border-white/70 bg-white/84 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+                            <div className="flex h-full flex-col">
+                                <SectionTitle
+                                    icon={Globe}
+                                    title="响应结果"
+                                    action={
+                                        runResult ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const curlToCopy = isExampleRunResult(runResult) ? curlPreview : runResult.curlCommand;
+                                                    void copyToClipboard(curlToCopy).then(() =>
+                                                        setNotice(
+                                                            isExampleRunResult(runResult)
+                                                                ? '已复制当前样例对应的 curl。'
+                                                                : '已复制最近执行生成的 curl。',
+                                                        ),
+                                                    );
+                                                }}
+                                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                                            >
+                                                <Copy size={14} />
+                                                {isExampleRunResult(runResult) ? '当前 curl' : '最近 curl'}
+                                            </button>
+                                        ) : null
+                                    }
+                                />
+                                {runResult ? (
+                                    <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_1fr] gap-4">
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+                                                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Status</div>
+                                                <div className={`mt-1 font-semibold ${runResult.ok ? 'text-emerald-600' : 'text-rose-600'}`}>{runResult.status || 'ERR'}</div>
+                                            </div>
+                                            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+                                                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{isExampleRunResult(runResult) ? 'Preview' : 'Duration'}</div>
+                                                <div className="mt-1 font-semibold text-slate-900">{isExampleRunResult(runResult) ? '样例返回' : `${runResult.durationMs} ms`}</div>
+                                            </div>
+                                        </div>
+                                        <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+                                            <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Request URL</div>
+                                            <div className="break-all font-mono text-xs leading-6 text-slate-700">{runResult.requestUrl}</div>
+                                        </div>
+                                        <div className="min-h-0 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 px-4 py-3 text-white">
+                                            <div className="mb-2 flex items-center justify-between gap-3">
+                                                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{isExampleRunResult(runResult) ? 'Example Response' : 'Response Body'}</div>
+                                                <div className="flex items-center gap-2">
+                                                    {runResult.responseBody ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
+                                                    <button type="button" onClick={() => setShowCurlModal(true)} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14">
+                                                        <Eye size={14} />
+                                                        查看 curl
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {runResult.errorMessage ? <div className="mb-3 rounded-[18px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{runResult.errorMessage}</div> : null}
+                                            {isAudioResult(selectedEndpoint, runResult) && runResult.responseBody ? (
+                                                <div className="mb-3 rounded-[18px] border border-slate-800 bg-slate-900 px-3 py-3">
+                                                    <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Audio Preview</div>
+                                                    <audio controls className="w-full" src={`data:${typeof runResult.responseHeaders['content-type'] === 'string' ? runResult.responseHeaders['content-type'] : 'audio/mpeg'};base64,${runResult.responseBody}`} />
+                                                </div>
+                                            ) : null}
+                                            <pre className="h-full max-h-full overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-100">{runResult.responseBody || '<empty>'}</pre>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex h-full items-center justify-center rounded-[26px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">执行一次接口，或加载推荐样例后，这里会显示状态码和返回体。</div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="rounded-[32px] border border-white/70 bg-white/82 p-5 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-                            <SectionTitle icon={Save} title="样例与最近运行" />
-                            <div className="space-y-4">
-                                <div>
-                                    <div className="mb-2 flex items-center justify-between gap-3">
-                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">巡检</div>
+                        <div className="min-h-0 flex-1 overflow-hidden rounded-[30px] border border-white/70 bg-white/84 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+                            <div className="flex h-full flex-col">
+                                <div className="mb-4 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.14)]">
+                                            <Save size={18} />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-slate-900">样例 / 日志 / 巡检</h2>
+                                        </div>
+                                    </div>
+                                    {activityTab === 'monitors' ? (
                                         <button type="button" onClick={() => void runMonitors()} disabled={runningMonitors || !monitors.length} className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
                                             {runningMonitors ? <RefreshCw size={14} className="animate-spin" /> : <Activity size={14} />}
                                             运行全部
                                         </button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {visibleMonitors.length ? visibleMonitors.slice(0, 6).map((monitor) => {
-                                            const latestRun = latestMonitorRunById.get(monitor.id);
-                                            const env = envs.find((item) => item.id === monitor.envId);
-                                            return (
-                                                <div key={monitor.id} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div>
-                                                            <div className="font-medium text-slate-900">{monitor.name}</div>
-                                                            <div className="mt-1 text-xs text-slate-500">{env?.name || '未知环境'} · 期望 {monitor.expectedStatus} · {monitor.maxDurationMs}ms</div>
+                                    ) : null}
+                                </div>
+                                <div className="mb-3 inline-flex flex-wrap rounded-full border border-slate-200 bg-slate-50 p-1">
+                                    {[
+                                        { key: 'examples', label: `样例 (${examples.length})` },
+                                        { key: 'logs', label: `日志 (${logs.length})` },
+                                        { key: 'monitors', label: `巡检 (${visibleMonitors.length})` },
+                                    ].map((tab) => (
+                                        <button
+                                            key={tab.key}
+                                            type="button"
+                                            onClick={() => setActivityTab(tab.key as 'examples' | 'logs' | 'monitors')}
+                                            className={`rounded-full px-3 py-1.5 text-sm transition ${
+                                                activityTab === tab.key
+                                                    ? 'bg-slate-900 text-white'
+                                                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                                            }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="min-h-0 flex-1 overflow-auto pr-1">
+                                    {activityTab === 'examples' ? (
+                                        examples.length ? (
+                                            <div className="space-y-2">
+                                                {examples.map((example) => (
+                                                    <button key={example.id} type="button" onClick={() => applyExample(example)} className="w-full rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <div className="font-medium text-slate-900">{example.name}</div>
+                                                                <div className="mt-1 text-xs text-slate-500">{example.responseStatus || '--'} · {example.responseBodyFormat}</div>
+                                                            </div>
+                                                            {example.isRecommended ? <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-medium text-amber-700">推荐</span> : null}
                                                         </div>
-                                                        <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${monitor.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>{monitor.isActive ? '启用' : '暂停'}</span>
-                                                    </div>
-                                                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                                                        <button type="button" onClick={() => void runMonitors(monitor.id)} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-white hover:text-slate-900">
-                                                            运行
-                                                        </button>
-                                                        <button type="button" onClick={() => void toggleMonitor(monitor)} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-white hover:text-slate-900">
-                                                            {monitor.isActive ? '暂停' : '启用'}
-                                                        </button>
-                                                        {latestRun ? (
-                                                            <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${latestRun.isPassing ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                                {latestRun.statusCode || 'ERR'} · {latestRun.durationMs}ms
-                                                            </span>
-                                                        ) : null}
-                                                    </div>
-                                                    {latestRun?.failureReason ? <div className="mt-2 text-xs leading-5 text-rose-600">{latestRun.failureReason}</div> : null}
-                                                </div>
-                                            );
-                                        }) : <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">还没有巡检项，可以把当前接口加入巡检。</div>}
-                                    </div>
-                                </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">还没有样例，执行成功后可保存。</div>
+                                    ) : null}
 
-                                <div>
-                                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">推荐样例</div>
-                                    <div className="space-y-2">
-                                        {examples.length ? examples.map((example) => (
-                                            <button key={example.id} type="button" onClick={() => applyExample(example)} className="w-full rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div>
-                                                        <div className="font-medium text-slate-900">{example.name}</div>
-                                                        <div className="mt-1 text-xs text-slate-500">{example.responseStatus || '--'} · {example.responseBodyFormat}</div>
-                                                    </div>
-                                                    {example.isRecommended ? <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-medium text-amber-700">推荐</span> : null}
-                                                </div>
-                                            </button>
-                                        )) : <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">还没有样例，执行成功后可保存。</div>}
-                                    </div>
-                                </div>
+                                    {activityTab === 'logs' ? (
+                                        logs.length ? (
+                                            <div className="space-y-2">
+                                                {logs.map((log) => (
+                                                    <button key={log.id} type="button" onClick={() => { setRunResult(extractLogResult(log)); setNotice('已切换到历史运行记录。'); }} className="w-full rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white">
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <div>
+                                                                <div className="font-medium text-slate-900">{log.responseStatus || 'ERR'} · {log.durationMs}ms</div>
+                                                                <div className="mt-1 text-xs text-slate-500">{new Date(log.createdAt).toLocaleString()}</div>
+                                                            </div>
+                                                            <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${log.isSuccess ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{log.isSuccess ? '成功' : '失败'}</span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">还没有运行记录。</div>
+                                    ) : null}
 
-                                <div>
-                                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">最近运行</div>
-                                    <div className="space-y-2">
-                                        {logs.length ? logs.map((log) => (
-                                            <button key={log.id} type="button" onClick={() => { setRunResult(extractLogResult(log)); setNotice('已切换到历史运行记录。'); }} className="w-full rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-slate-300 hover:bg-white">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div>
-                                                        <div className="font-medium text-slate-900">{log.responseStatus || 'ERR'} · {log.durationMs}ms</div>
-                                                        <div className="mt-1 text-xs text-slate-500">{new Date(log.createdAt).toLocaleString()}</div>
-                                                    </div>
-                                                    <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${log.isSuccess ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{log.isSuccess ? '成功' : '失败'}</span>
-                                                </div>
-                                            </button>
-                                        )) : <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">还没有运行记录。</div>}
-                                    </div>
+                                    {activityTab === 'monitors' ? (
+                                        visibleMonitors.length ? (
+                                            <div className="space-y-2">
+                                                {visibleMonitors.map((monitor) => {
+                                                    const latestRun = latestMonitorRunById.get(monitor.id);
+                                                    const env = envs.find((item) => item.id === monitor.envId);
+                                                    return (
+                                                        <div key={monitor.id} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div>
+                                                                    <div className="font-medium text-slate-900">{monitor.name}</div>
+                                                                    <div className="mt-1 text-xs text-slate-500">{env?.name || '未知环境'} · 期望 {monitor.expectedStatus} · {monitor.maxDurationMs}ms</div>
+                                                                </div>
+                                                                <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${monitor.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>{monitor.isActive ? '启用' : '暂停'}</span>
+                                                            </div>
+                                                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                                <button type="button" onClick={() => void runMonitors(monitor.id)} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-white hover:text-slate-900">
+                                                                    运行
+                                                                </button>
+                                                                <button type="button" onClick={() => void toggleMonitor(monitor)} className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:bg-white hover:text-slate-900">
+                                                                    {monitor.isActive ? '暂停' : '启用'}
+                                                                </button>
+                                                                {latestRun ? (
+                                                                    <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${latestRun.isPassing ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                                                        {latestRun.statusCode || 'ERR'} · {latestRun.durationMs}ms
+                                                                    </span>
+                                                                ) : null}
+                                                            </div>
+                                                            {latestRun?.failureReason ? <div className="mt-2 text-xs leading-5 text-rose-600">{latestRun.failureReason}</div> : null}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">还没有巡检项，可以把当前接口加入巡检。</div>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
                     </aside>
                 </div>
             </div>
+            {showEnvDetailModal && selectedEnv ? (
+                <QuickViewModal
+                    title={`环境详情 · ${selectedEnv.name}`}
+                    subtitle={`${selectedEnv.serviceName} / ${selectedEnv.serviceKey}`}
+                    onClose={() => setShowEnvDetailModal(false)}
+                >
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <DetailBlock
+                            label="Base URL"
+                            value={selectedEnv.baseUrl}
+                            mono
+                            onCopy={() => void copyToClipboard(selectedEnv.baseUrl).then(() => setNotice('已复制 Base URL。'))}
+                        />
+                        <DetailBlock
+                            label="WebSocket URL"
+                            value={selectedEnv.websocketUrl || '未配置'}
+                            mono
+                            onCopy={() =>
+                                void copyToClipboard(selectedEnv.websocketUrl || '').then(() =>
+                                    setNotice('已复制 WebSocket URL。'),
+                                )
+                            }
+                        />
+                        <DetailBlock
+                            label="API Key"
+                            value={selectedEnv.apiKey || '未配置'}
+                            mono
+                            onCopy={() =>
+                                void copyToClipboard(selectedEnv.apiKey || '').then(() =>
+                                    setNotice('已复制 API Key。'),
+                                )
+                            }
+                        />
+                        <DetailBlock
+                            label="Timeout"
+                            value={`${selectedEnv.timeoutMs} ms`}
+                            onCopy={() =>
+                                void copyToClipboard(String(selectedEnv.timeoutMs)).then(() =>
+                                    setNotice('已复制 Timeout。'),
+                                )
+                            }
+                        />
+                    </div>
+                    <div className="mt-4">
+                        <DetailBlock
+                            label="Extra Headers"
+                            value={formatJson(selectedEnv.extraHeaders)}
+                            mono
+                            onCopy={() =>
+                                void copyToClipboard(formatJson(selectedEnv.extraHeaders)).then(() =>
+                                    setNotice('已复制额外 Headers。'),
+                                )
+                            }
+                        />
+                    </div>
+                </QuickViewModal>
+            ) : null}
+
+            {showEndpointDetailModal && selectedEndpoint ? (
+                <QuickViewModal
+                    title={`接口详情 · ${selectedEndpoint.name}`}
+                    subtitle={`${selectedEndpoint.serviceName} / ${selectedEndpoint.category}`}
+                    onClose={() => setShowEndpointDetailModal(false)}
+                    action={
+                        selectedEndpoint.docUrl ? (
+                            <a
+                                href={selectedEndpoint.docUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                            >
+                                <Link2 size={14} />
+                                打开文档
+                            </a>
+                        ) : null
+                    }
+                >
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <DetailBlock
+                            label="Path"
+                            value={selectedEndpoint.path}
+                            mono
+                            onCopy={() =>
+                                void copyToClipboard(selectedEndpoint.path).then(() =>
+                                    setNotice('已复制接口 Path。'),
+                                )
+                            }
+                        />
+                        <DetailBlock
+                            label="Notes"
+                            value={selectedEndpoint.notes || '暂无备注'}
+                            onCopy={() =>
+                                void copyToClipboard(selectedEndpoint.notes || '').then(() =>
+                                    setNotice('已复制接口备注。'),
+                                )
+                            }
+                        />
+                    </div>
+                    <div className="mt-4 grid gap-4">
+                        <DetailBlock
+                            label="Request Template"
+                            value={formatJson(selectedEndpoint.requestTemplate)}
+                            mono
+                            onCopy={() =>
+                                void copyToClipboard(formatJson(selectedEndpoint.requestTemplate)).then(() =>
+                                    setNotice('已复制请求模板。'),
+                                )
+                            }
+                        />
+                        <DetailBlock
+                            label="Query Template"
+                            value={formatJson(selectedEndpoint.queryTemplate)}
+                            mono
+                            onCopy={() =>
+                                void copyToClipboard(formatJson(selectedEndpoint.queryTemplate)).then(() =>
+                                    setNotice('已复制 Query 模板。'),
+                                )
+                            }
+                        />
+                        <DetailBlock
+                            label="Header Template"
+                            value={formatJson(selectedEndpoint.headerTemplate)}
+                            mono
+                            onCopy={() =>
+                                void copyToClipboard(formatJson(selectedEndpoint.headerTemplate)).then(() =>
+                                    setNotice('已复制 Header 模板。'),
+                                )
+                            }
+                        />
+                    </div>
+                </QuickViewModal>
+            ) : null}
+
+            {showCurlModal ? (
+                <QuickViewModal
+                    title={selectedEndpoint?.method === 'WS' ? '连接命令预览' : 'curl 预览'}
+                    subtitle={selectedEndpoint?.name || '未选择接口'}
+                    onClose={() => setShowCurlModal(false)}
+                    maxWidthClass="max-w-5xl"
+                    action={
+                        <button
+                            type="button"
+                            onClick={() =>
+                                void copyToClipboard(curlPreview).then(() =>
+                                    setNotice(
+                                        selectedEndpoint?.method === 'WS'
+                                            ? '已复制当前连接命令。'
+                                            : '已复制当前 curl。',
+                                    ),
+                                )
+                            }
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                        >
+                            <Copy size={14} />
+                            {selectedEndpoint?.method === 'WS' ? '复制命令' : '复制 curl'}
+                        </button>
+                    }
+                >
+                    <DetailBlock
+                        label={selectedEndpoint?.method === 'WS' ? 'Connection Command' : 'cURL'}
+                        value={curlPreview}
+                        mono
+                    />
+                </QuickViewModal>
+            ) : null}
 
             {showEnvModal ? (
                 <EnvModal

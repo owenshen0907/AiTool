@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withUser } from '@/lib/api/auth';
+import { withApiLabUser } from '@/lib/api-lab/access';
 import { listApiLabRunLogs } from '@/lib/repositories/apiLabRepository';
 
-export const GET = withUser(async (req: NextRequest, userId: string) => {
+export const GET = withApiLabUser(async (req: NextRequest, userId: string) => {
     const endpointId = req.nextUrl.searchParams.get('endpoint_id');
     const limit = Number(req.nextUrl.searchParams.get('limit') || 10);
 
