@@ -1608,175 +1608,357 @@ export default function ApiLabClient() {
                         {selectedEndpoint ? (
                             <div className="flex h-full flex-col">
                                 <div className="rounded-[26px] border border-slate-200 bg-slate-50/90 p-4">
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                                            <div className="min-w-0">
-                                                <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-                                                    <span className="rounded-full bg-slate-900 px-2.5 py-1 text-white">{selectedEndpoint.method}</span>
-                                                    <span>{selectedEndpoint.serviceName}</span>
-                                                    <span>/</span>
-                                                    <span>{selectedEndpoint.category}</span>
+                                    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.92fr)]">
+                                        <div className="rounded-[24px] border border-white/80 bg-white px-5 py-5 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+                                            <div className="flex flex-col gap-5">
+                                                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
+                                                            <span className="rounded-full bg-slate-900 px-2.5 py-1 text-white">
+                                                                {selectedEndpoint.method}
+                                                            </span>
+                                                            <span>{selectedEndpoint.serviceName}</span>
+                                                            <span>/</span>
+                                                            <span>{selectedEndpoint.category}</span>
+                                                        </div>
+                                                        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
+                                                            {selectedEndpoint.name}
+                                                        </h2>
+                                                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                                                            {selectedEndpoint.description || '暂无描述'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2 xl:justify-end">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowEndpointDetailModal(true)}
+                                                            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                                                        >
+                                                            <Eye size={15} />
+                                                            接口详情
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditingEndpoint(selectedEndpoint);
+                                                                setShowEndpointModal(true);
+                                                            }}
+                                                            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                                                        >
+                                                            <Settings2 size={15} />
+                                                            编辑接口
+                                                        </button>
+                                                        {selectedEndpoint.docUrl ? (
+                                                            <a
+                                                                href={selectedEndpoint.docUrl}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                                                            >
+                                                                <Link2 size={15} />
+                                                                文档
+                                                            </a>
+                                                        ) : null}
+                                                    </div>
                                                 </div>
-                                                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{selectedEndpoint.name}</h2>
-                                                <p className="mt-2 text-sm leading-6 text-slate-600">{selectedEndpoint.description || '暂无描述'}</p>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <button type="button" onClick={() => setShowEndpointDetailModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
-                                                    <Eye size={15} />
-                                                    接口详情
-                                                </button>
-                                                <button type="button" onClick={() => { setEditingEndpoint(selectedEndpoint); setShowEndpointModal(true); }} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
-                                                    <Settings2 size={15} />
-                                                    编辑接口
-                                                </button>
-                                                {selectedEndpoint.docUrl ? (
-                                                    <a href={selectedEndpoint.docUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
-                                                        <Link2 size={15} />
-                                                        文档
-                                                    </a>
-                                                ) : null}
+
+                                                <div className="rounded-[22px] bg-[linear-gradient(135deg,rgba(15,23,42,0.98)_0%,rgba(30,41,59,0.96)_58%,rgba(8,47,73,0.94)_100%)] px-4 py-4 text-white shadow-[0_18px_50px_rgba(15,23,42,0.16)]">
+                                                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                                                        <div>
+                                                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                                                实时请求 URL
+                                                            </div>
+                                                            <div className="mt-1 text-xs text-slate-400">
+                                                                随环境、Query 和请求体联动刷新
+                                                            </div>
+                                                        </div>
+                                                        {currentRequestPreview ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    void copyToClipboard(
+                                                                        currentRequestPreview.requestUrl,
+                                                                    ).then(() =>
+                                                                        setNotice('已复制实时请求 URL。'),
+                                                                    )
+                                                                }
+                                                                className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/8 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/14 hover:text-white"
+                                                            >
+                                                                <Copy size={12} />
+                                                                复制 URL
+                                                            </button>
+                                                        ) : null}
+                                                    </div>
+                                                    <div className="break-all font-mono text-xs leading-6 text-slate-100">
+                                                        {currentRequestPreview?.requestUrl || selectedEndpoint.path}
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid gap-3 md:grid-cols-3">
+                                                    <div className="rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 py-4">
+                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                                            执行上下文
+                                                        </div>
+                                                        <div className="mt-2 text-base font-semibold text-slate-900">
+                                                            {selectedEnv ? selectedEnv.name : '未选择环境'}
+                                                        </div>
+                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                                                                {selectedEndpoint.serviceName}
+                                                            </span>
+                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                                                                {selectedEndpoint.category}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 py-4">
+                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                                            当前状态
+                                                        </div>
+                                                        <div className="mt-2 text-base font-semibold text-slate-900">
+                                                            {runResult
+                                                                ? isExampleRunResult(runResult)
+                                                                    ? '已加载样例返回'
+                                                                    : '已完成最近一次执行'
+                                                                : '等待执行'}
+                                                        </div>
+                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                                                            {runResult ? (
+                                                                <span
+                                                                    className={`rounded-full px-2.5 py-1 font-medium ${
+                                                                        runResult.ok
+                                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                                            : 'bg-rose-100 text-rose-700'
+                                                                    }`}
+                                                                >
+                                                                    {runResult.status || 'ERR'} ·{' '}
+                                                                    {isExampleRunResult(runResult)
+                                                                        ? '样例'
+                                                                        : `${runResult.durationMs}ms`}
+                                                                </span>
+                                                            ) : null}
+                                                            <span
+                                                                className={`rounded-full px-2.5 py-1 font-medium ${
+                                                                    currentJsonError
+                                                                        ? 'bg-amber-100 text-amber-700'
+                                                                        : 'bg-emerald-100 text-emerald-700'
+                                                                }`}
+                                                            >
+                                                                {currentJsonError
+                                                                    ? 'JSON 待修正'
+                                                                    : 'JSON 正常'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="rounded-[22px] border border-slate-200 bg-slate-50/85 px-4 py-4">
+                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                                            请求特征
+                                                        </div>
+                                                        <div className="mt-2 text-base font-semibold text-slate-900">
+                                                            {selectedEndpoint.contentType}
+                                                        </div>
+                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                                                                返回 · {selectedEndpoint.responseType}
+                                                            </span>
+                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                                                                {selectedEndpoint.authType === 'none'
+                                                                    ? '免鉴权'
+                                                                    : `Auth · ${selectedEndpoint.authType}`}
+                                                            </span>
+                                                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                                                                Path · {selectedEndpoint.path}
+                                                            </span>
+                                                            {selectedFile ? (
+                                                                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                                                                    文件 · {selectedFile.name}
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-                                            <div className="flex flex-wrap gap-2">
+                                        <div className="grid gap-4">
+                                            <div className="rounded-[24px] border border-white/80 bg-white px-4 py-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                                                            当前环境
+                                                        </div>
+                                                        <div className="mt-2 text-lg font-semibold text-slate-900">
+                                                            {selectedEnv ? selectedEnv.name : '未选择环境'}
+                                                        </div>
+                                                    </div>
+                                                    {serviceEnvs.length ? (
+                                                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500">
+                                                            {serviceEnvs.length} 个环境
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+
                                                 {serviceEnvs.length ? (
                                                     <>
-                                                        <select value={selectedEnvId} onChange={(event) => setSelectedEnvId(event.target.value)} className="min-w-[220px] rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-900">
-                                                            {serviceEnvs.map((env) => (
-                                                                <option key={env.id} value={env.id}>
-                                                                    {env.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                        <button type="button" onClick={() => setShowEnvDetailModal(true)} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
-                                                            <Eye size={15} />
-                                                            环境详情
-                                                        </button>
-                                                        <button type="button" onClick={() => { if (selectedEnv) { setEditingEnv(selectedEnv); setShowEnvModal(true); } }} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
-                                                            <Settings2 size={15} />
-                                                            编辑环境
-                                                        </button>
+                                                        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                                                            <select
+                                                                value={selectedEnvId}
+                                                                onChange={(event) =>
+                                                                    setSelectedEnvId(event.target.value)
+                                                                }
+                                                                className="h-11 min-w-0 flex-1 rounded-[18px] border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-slate-900"
+                                                            >
+                                                                {serviceEnvs.map((env) => (
+                                                                    <option key={env.id} value={env.id}>
+                                                                        {env.name}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShowEnvDetailModal(true)}
+                                                                    disabled={!selectedEnv}
+                                                                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                    title="环境详情"
+                                                                >
+                                                                    <Eye size={16} />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        if (selectedEnv) {
+                                                                            setEditingEnv(selectedEnv);
+                                                                            setShowEnvModal(true);
+                                                                        }
+                                                                    }}
+                                                                    disabled={!selectedEnv}
+                                                                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                    title="编辑环境"
+                                                                >
+                                                                    <Settings2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                                                            {selectedEnv?.baseUrl ? (
+                                                                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                                    Base URL 已配置
+                                                                </span>
+                                                            ) : null}
+                                                            {selectedEnv?.apiKey ? (
+                                                                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                                    Key 已配置
+                                                                </span>
+                                                            ) : (
+                                                                <span className="rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-700">
+                                                                    Key 未配置
+                                                                </span>
+                                                            )}
+                                                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                                Timeout · {selectedEnv?.timeoutMs || '--'}ms
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-3 text-xs leading-5 text-slate-500">
+                                                            环境相关操作固定放在这里，不再和执行按钮挤在同一排。
+                                                        </div>
                                                     </>
                                                 ) : (
-                                                    <div className="flex min-h-[52px] items-center gap-3 rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                                        <span>当前还没有可用环境，请先新增你自己的环境配置。</span>
-                                                        <button type="button" onClick={() => { setEditingEnv(null); setShowEnvModal(true); }} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
+                                                    <div className="mt-4 rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                                                        <div>当前还没有可用环境，请先新增你自己的环境配置。</div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditingEnv(null);
+                                                                setShowEnvModal(true);
+                                                            }}
+                                                            className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                                                        >
                                                             <Plus size={14} />
                                                             新增环境
                                                         </button>
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex flex-wrap gap-2 xl:justify-end">
-                                                <button type="button" onClick={() => setShowPacketModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
-                                                    <FileCode2 size={15} />
-                                                    查看报文
-                                                </button>
-                                                <button type="button" onClick={() => setShowCurlModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
-                                                    <Eye size={15} />
-                                                    {selectedEndpoint.method === 'WS' ? '查看连接命令' : '查看 curl'}
-                                                </button>
-                                                <button type="button" onClick={runRequest} disabled={running || !selectedEnv || selectedEndpoint.method === 'WS'} className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
-                                                    {running ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
-                                                    {selectedEndpoint.method === 'WS' ? '页面内暂不执行 WS' : running ? '执行中...' : '执行请求'}
-                                                </button>
-                                                <button type="button" onClick={saveCurrentAsExample} disabled={!runResult} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
-                                                    <Save size={16} />
-                                                    保存为样例
-                                                </button>
-                                                <button type="button" onClick={createMonitor} disabled={!selectedEnv || selectedEndpoint.method === 'WS'} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
-                                                    <Activity size={16} />
-                                                    加入巡检
-                                                </button>
-                                            </div>
-                                        </div>
 
-                                        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(230px,0.8fr)_minmax(230px,0.95fr)]">
-                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
-                                                <div className="mb-2 flex items-center justify-between gap-3">
-                                                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">实时请求 URL</div>
-                                                    {currentRequestPreview ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                void copyToClipboard(
-                                                                    currentRequestPreview.requestUrl,
-                                                                ).then(() => setNotice('已复制实时请求 URL。'))
-                                                            }
-                                                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                                                        >
-                                                            <Copy size={12} />
-                                                            复制
-                                                        </button>
-                                                    ) : null}
-                                                </div>
-                                                <div className="break-all font-mono text-xs leading-6 text-slate-700">
-                                                    {currentRequestPreview?.requestUrl || selectedEndpoint.path}
-                                                </div>
-                                            </div>
-
-                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
-                                                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">执行上下文</div>
-                                                <div className="mt-2 text-sm font-semibold text-slate-900">
-                                                    {selectedEnv ? selectedEnv.name : '未选择环境'}
-                                                </div>
-                                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                                                        {selectedEndpoint.authType === 'none'
-                                                            ? '免鉴权'
-                                                            : `Auth · ${selectedEndpoint.authType}`}
-                                                    </span>
-                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                                                        {selectedEndpoint.contentType}
-                                                    </span>
-                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                                                        返回 · {selectedEndpoint.responseType}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
-                                                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">当前状态</div>
-                                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                                                        Path · {selectedEndpoint.path}
-                                                    </span>
-                                                    {runResult ? (
-                                                        <span
-                                                            className={`rounded-full px-2.5 py-1 font-medium ${
-                                                                runResult.ok
-                                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                                    : 'bg-rose-100 text-rose-700'
-                                                            }`}
-                                                        >
-                                                            {runResult.status || 'ERR'} ·{' '}
-                                                            {isExampleRunResult(runResult)
-                                                                ? '样例'
-                                                                : `${runResult.durationMs}ms`}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                                                            等待执行
-                                                        </span>
-                                                    )}
-                                                    {currentJsonError ? (
-                                                        <span className="rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-700">
-                                                            JSON 待修正
-                                                        </span>
-                                                    ) : (
-                                                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-medium text-emerald-700">
-                                                            JSON 正常
-                                                        </span>
-                                                    )}
-                                                    {selectedFile ? (
-                                                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                                                            文件 · {selectedFile.name}
+                                            <div className="rounded-[24px] border border-slate-900/5 bg-[linear-gradient(145deg,rgba(15,23,42,0.98)_0%,rgba(30,41,59,0.96)_60%,rgba(15,118,110,0.92)_100%)] px-4 py-4 text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
+                                                <div className="mb-4 flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                                                            快捷动作
+                                                        </div>
+                                                        <div className="mt-2 text-lg font-semibold text-white">
+                                                            执行、查看、沉淀样例
+                                                        </div>
+                                                    </div>
+                                                    {selectedEndpoint.method === 'WS' ? (
+                                                        <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-slate-200">
+                                                            WS 仅支持命令预览
                                                         </span>
                                                     ) : null}
                                                 </div>
-                                                <div className="mt-3 text-xs leading-5 text-slate-500">
-                                                    报文中心里可同时查看当前待发请求和最近一次真实执行记录。
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPacketModal(true)}
+                                                        className="inline-flex min-h-[54px] items-center justify-center gap-2 whitespace-nowrap rounded-[18px] border border-white/12 bg-white/8 px-4 text-sm font-medium text-white transition hover:bg-white/14"
+                                                    >
+                                                        <FileCode2 size={16} />
+                                                        查看报文
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowCurlModal(true)}
+                                                        className="inline-flex min-h-[54px] items-center justify-center gap-2 whitespace-nowrap rounded-[18px] border border-white/12 bg-white/8 px-4 text-sm font-medium text-white transition hover:bg-white/14"
+                                                    >
+                                                        <Eye size={16} />
+                                                        {selectedEndpoint.method === 'WS'
+                                                            ? '查看连接命令'
+                                                            : '查看 curl'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={runRequest}
+                                                        disabled={
+                                                            running ||
+                                                            !selectedEnv ||
+                                                            selectedEndpoint.method === 'WS'
+                                                        }
+                                                        className="inline-flex min-h-[60px] items-center justify-center gap-2 whitespace-nowrap rounded-[20px] bg-white px-4 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
+                                                    >
+                                                        {running ? (
+                                                            <RefreshCw size={16} className="animate-spin" />
+                                                        ) : (
+                                                            <Play size={16} />
+                                                        )}
+                                                        {selectedEndpoint.method === 'WS'
+                                                            ? '页面内暂不执行 WS'
+                                                            : running
+                                                              ? '执行中...'
+                                                              : '执行请求'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={saveCurrentAsExample}
+                                                        disabled={!runResult}
+                                                        className="inline-flex min-h-[54px] items-center justify-center gap-2 whitespace-nowrap rounded-[18px] border border-white/12 bg-white/8 px-4 text-sm font-medium text-white transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        <Save size={16} />
+                                                        保存为样例
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={createMonitor}
+                                                        disabled={
+                                                            !selectedEnv || selectedEndpoint.method === 'WS'
+                                                        }
+                                                        className="inline-flex min-h-[54px] items-center justify-center gap-2 whitespace-nowrap rounded-[18px] border border-white/12 bg-white/8 px-4 text-sm font-medium text-white transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        <Activity size={16} />
+                                                        加入巡检
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
