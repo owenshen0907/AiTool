@@ -70,6 +70,12 @@ interface RequestPreviewSnapshot {
     requestFiles: JsonObject;
 }
 
+interface FloatingToastProps {
+    message: string;
+    tone: 'success' | 'error';
+    onClose: () => void;
+}
+
 function formatJson(value: JsonObject): string {
     return JSON.stringify(value, null, 2);
 }
@@ -134,6 +140,39 @@ function toWebsocketBaseUrl(value: string): string {
 
 function normalizePath(path: string): string {
     return path.startsWith('/') ? path : `/${path}`;
+}
+
+function FloatingToast({ message, tone, onClose }: FloatingToastProps) {
+    const toneClassName =
+        tone === 'success'
+            ? 'border-emerald-200/80 bg-white/92 text-emerald-700 shadow-[0_20px_45px_rgba(16,185,129,0.18)]'
+            : 'border-rose-200/80 bg-white/94 text-rose-700 shadow-[0_20px_45px_rgba(244,63,94,0.18)]';
+
+    const label = tone === 'success' ? '已完成' : '需要处理';
+
+    return (
+        <div
+            className={`pointer-events-auto w-full max-w-[380px] rounded-[22px] border px-4 py-3 backdrop-blur-xl ${toneClassName}`}
+            role={tone === 'error' ? 'alert' : 'status'}
+        >
+            <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-current/65">
+                        {label}
+                    </div>
+                    <div className="mt-1 text-sm font-medium leading-6 text-current">{message}</div>
+                </div>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current/10 bg-white/60 text-current/70 transition hover:bg-white hover:text-current"
+                    aria-label="关闭提示"
+                >
+                    <X size={14} />
+                </button>
+            </div>
+        </div>
+    );
 }
 
 async function readApiResponse<T>(response: Response): Promise<ApiResponsePayload<T>> {
@@ -971,6 +1010,22 @@ export default function ApiLabClient() {
     const [responseTab, setResponseTab] = useState<'body' | 'request' | 'headers'>('body');
     const [openEndpointGroups, setOpenEndpointGroups] = useState<Record<string, boolean>>({});
 
+    useEffect(() => {
+        if (!notice) {
+            return undefined;
+        }
+        const timer = window.setTimeout(() => setNotice(null), 2600);
+        return () => window.clearTimeout(timer);
+    }, [notice]);
+
+    useEffect(() => {
+        if (!error) {
+            return undefined;
+        }
+        const timer = window.setTimeout(() => setError(null), 4200);
+        return () => window.clearTimeout(timer);
+    }, [error]);
+
     const selectedEndpoint = useMemo(
         () => endpoints.find((item) => item.id === selectedEndpointId) || null,
         [endpoints, selectedEndpointId],
@@ -1558,6 +1613,10 @@ export default function ApiLabClient() {
 
     return (
         <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.72),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-3 md:px-6 lg:h-screen lg:overflow-y-auto lg:px-8">
+            <div className="pointer-events-none fixed inset-x-4 top-4 z-[110] flex flex-col items-end gap-3 sm:left-auto sm:right-5 sm:top-5 sm:w-[380px]">
+                {error ? <FloatingToast message={error} tone="error" onClose={() => setError(null)} /> : null}
+                {notice ? <FloatingToast message={notice} tone="success" onClose={() => setNotice(null)} /> : null}
+            </div>
             <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-4">
                 <div className="rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.96)_0%,rgba(30,41,59,0.88)_62%,rgba(14,116,144,0.82)_100%)] px-5 py-5 text-white shadow-[0_26px_80px_rgba(15,23,42,0.20)] md:px-6">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -1587,9 +1646,6 @@ export default function ApiLabClient() {
                         </div>
                     </div>
                 </div>
-
-                {error ? <div className="rounded-[20px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-                {notice ? <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div> : null}
 
                 <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)_420px]">
                     <aside className="min-h-0 overflow-hidden rounded-[30px] border border-white/70 bg-white/82 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
