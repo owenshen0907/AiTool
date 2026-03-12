@@ -61,6 +61,15 @@ interface ApiResponsePayload<T> {
     text: string;
 }
 
+interface RequestPreviewSnapshot {
+    requestUrl: string;
+    requestMethod: ApiLabEndpoint['method'];
+    requestHeaders: JsonObject;
+    requestQuery: JsonObject;
+    requestBody: string | null;
+    requestFiles: JsonObject;
+}
+
 function formatJson(value: JsonObject): string {
     return JSON.stringify(value, null, 2);
 }
@@ -400,6 +409,93 @@ function buildExampleRunResult(args: {
     };
 }
 
+function buildDraftRequestPreview(args: {
+    endpoint: ApiLabEndpoint | null;
+    env: ApiLabEnv | null;
+    bodyText: string;
+    queryText: string;
+    headerText: string;
+    selectedFile: File | null;
+}): RequestPreviewSnapshot | null {
+    const { endpoint, env, bodyText, queryText, headerText, selectedFile } = args;
+    if (!endpoint || !env) {
+        return null;
+    }
+
+    const parsedBody = parseJsonText(bodyText);
+    const parsedQuery = parseJsonText(queryText);
+    const parsedHeader = parseJsonText(headerText);
+    if (parsedBody.error || parsedQuery.error || parsedHeader.error) {
+        return null;
+    }
+
+    const bodyPayload = mergeObjects(endpoint.requestTemplate, parsedBody.value);
+    const queryPayload = mergeObjects(endpoint.queryTemplate, parsedQuery.value);
+    const headers = mergeObjects(env.extraHeaders, endpoint.headerTemplate, parsedHeader.value);
+
+    if (endpoint.authType === 'bearer' && env.apiKey) {
+        headers[endpoint.authHeaderName || 'Authorization'] = `Bearer ${env.apiKey}`;
+    }
+    if (endpoint.authType === 'x-api-key' && env.apiKey) {
+        headers[endpoint.authHeaderName || 'x-api-key'] = env.apiKey;
+    }
+    if (endpoint.authType === 'custom' && env.apiKey && endpoint.authHeaderName) {
+        headers[endpoint.authHeaderName] = env.apiKey;
+    }
+    if (endpoint.contentType === 'application/json') {
+        headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+    }
+    if (endpoint.contentType === 'application/x-www-form-urlencoded') {
+        headers['Content-Type'] =
+            headers['Content-Type'] || 'application/x-www-form-urlencoded';
+    }
+
+    const requestFiles: JsonObject = {};
+    if (endpoint.contentType === 'multipart/form-data' && selectedFile) {
+        requestFiles[endpoint.fileFieldName || 'file'] = selectedFile.name;
+    }
+
+    let requestBody: string | null = null;
+    if (endpoint.method !== 'GET' && endpoint.contentType !== 'none') {
+        if (endpoint.contentType === 'application/x-www-form-urlencoded') {
+            const searchParams = new URLSearchParams();
+            Object.entries(bodyPayload).forEach(([key, value]) => {
+                if (value === undefined || value === null) {
+                    return;
+                }
+                searchParams.set(key, stringifyValue(value));
+            });
+            requestBody = searchParams.toString();
+        } else {
+            requestBody = formatJson(bodyPayload);
+        }
+    }
+
+    return {
+        requestUrl: buildRequestUrlPreview(endpoint, env, queryPayload),
+        requestMethod: endpoint.method,
+        requestHeaders: headers,
+        requestQuery: queryPayload,
+        requestBody,
+        requestFiles,
+    };
+}
+
+function getRequestTabLabel(tab: 'body' | 'query' | 'headers' | 'file') {
+    switch (tab) {
+        case 'body':
+            return '请求体';
+        case 'query':
+            return 'Query';
+        case 'headers':
+            return 'Headers';
+        case 'file':
+            return '文件';
+        default:
+            return '请求';
+    }
+}
+
 function SectionTitle({ icon: Icon, title, action }: { icon: LucideIcon; title: string; action?: ReactNode }) {
     return (
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -467,21 +563,39 @@ function DetailBlock({
     value,
     mono = false,
     onCopy,
+    tone = 'light',
 }: {
     label: string;
     value: string;
     mono?: boolean;
     onCopy?: () => void;
+    tone?: 'light' | 'dark';
 }) {
     return (
-        <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+        <div
+            className={`rounded-[24px] px-4 py-3 ${
+                tone === 'dark'
+                    ? 'border border-white/10 bg-white/5'
+                    : 'border border-slate-200 bg-slate-50/80'
+            }`}
+        >
             <div className="mb-2 flex items-center justify-between gap-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div>
+                <div
+                    className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                        tone === 'dark' ? 'text-slate-400' : 'text-slate-400'
+                    }`}
+                >
+                    {label}
+                </div>
                 {onCopy ? (
                     <button
                         type="button"
                         onClick={onCopy}
-                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                        className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs transition ${
+                            tone === 'dark'
+                                ? 'border border-white/10 bg-white/8 text-slate-200 hover:bg-white/14 hover:text-white'
+                                : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
                     >
                         <Copy size={12} />
                         复制
@@ -489,9 +603,9 @@ function DetailBlock({
                 ) : null}
             </div>
             <pre
-                className={`whitespace-pre-wrap break-all text-sm leading-6 text-slate-700 ${
-                    mono ? 'font-mono text-xs' : ''
-                }`}
+                className={`whitespace-pre-wrap break-all text-sm leading-6 ${
+                    tone === 'dark' ? 'text-slate-100' : 'text-slate-700'
+                } ${mono ? 'font-mono text-xs' : ''}`}
             >
                 {value || '<empty>'}
             </pre>
@@ -500,8 +614,8 @@ function DetailBlock({
 }
 
 function EnvModal({ env, defaultServiceKey, defaultServiceName, onClose, onSaved }: EnvModalProps) {
-    const [serviceKey, setServiceKey] = useState(env?.serviceKey || defaultServiceKey || 'stepfun');
-    const [serviceName, setServiceName] = useState(env?.serviceName || defaultServiceName || 'Stepfun');
+    const [serviceKey, setServiceKey] = useState(env?.serviceKey || defaultServiceKey || '');
+    const [serviceName, setServiceName] = useState(env?.serviceName || defaultServiceName || '');
     const [name, setName] = useState(env?.name || '');
     const [baseUrl, setBaseUrl] = useState(env?.baseUrl || '');
     const [websocketUrl, setWebsocketUrl] = useState(env?.websocketUrl || '');
@@ -819,6 +933,7 @@ export default function ApiLabClient() {
     const [showEnvDetailModal, setShowEnvDetailModal] = useState(false);
     const [showEndpointDetailModal, setShowEndpointDetailModal] = useState(false);
     const [showCurlModal, setShowCurlModal] = useState(false);
+    const [showPacketModal, setShowPacketModal] = useState(false);
     const [requestTab, setRequestTab] = useState<'body' | 'query' | 'headers' | 'file'>('body');
     const [activityTab, setActivityTab] = useState<'examples' | 'logs' | 'monitors'>('examples');
     const [responseTab, setResponseTab] = useState<'body' | 'request' | 'headers'>('body');
@@ -891,10 +1006,83 @@ export default function ApiLabClient() {
         [selectedEndpoint, selectedEnv, bodyText, queryText, headerText, selectedFile],
     );
 
+    const parsedBodyDraft = useMemo(() => parseJsonText(bodyText), [bodyText]);
+    const parsedQueryDraft = useMemo(() => parseJsonText(queryText), [queryText]);
+    const parsedHeaderDraft = useMemo(() => parseJsonText(headerText), [headerText]);
+
     const currentJsonError = useMemo(() => {
-        const parts = [parseJsonText(bodyText), parseJsonText(queryText), parseJsonText(headerText)];
+        const parts = [parsedBodyDraft, parsedQueryDraft, parsedHeaderDraft];
         return parts.find((item) => item.error)?.error || null;
-    }, [bodyText, queryText, headerText]);
+    }, [parsedBodyDraft, parsedQueryDraft, parsedHeaderDraft]);
+
+    const currentRequestPreview = useMemo(
+        () =>
+            buildDraftRequestPreview({
+                endpoint: selectedEndpoint,
+                env: selectedEnv,
+                bodyText,
+                queryText,
+                headerText,
+                selectedFile,
+            }),
+        [selectedEndpoint, selectedEnv, bodyText, queryText, headerText, selectedFile],
+    );
+
+    const packetModalCopyText = useMemo(() => {
+        if (currentRequestPreview) {
+            return JSON.stringify(
+                {
+                    draftRequest: {
+                        url: currentRequestPreview.requestUrl,
+                        method: currentRequestPreview.requestMethod,
+                        headers: currentRequestPreview.requestHeaders,
+                        query: currentRequestPreview.requestQuery,
+                        body: currentRequestPreview.requestBody,
+                        files: currentRequestPreview.requestFiles,
+                    },
+                    lastRun: runResult
+                        ? {
+                              status: runResult.status,
+                              durationMs: runResult.durationMs,
+                              requestUrl: runResult.requestUrl,
+                              requestMethod: runResult.requestMethod,
+                              requestHeaders: runResult.requestHeaders,
+                              requestQuery: runResult.requestQuery,
+                              requestBody: runResult.requestBody,
+                              requestFiles: runResult.requestFiles,
+                              responseHeaders: runResult.responseHeaders,
+                              responseBody: runResult.responseBody,
+                          }
+                        : null,
+                },
+                null,
+                2,
+            );
+        }
+
+        if (!runResult) {
+            return '';
+        }
+
+        return JSON.stringify(
+            {
+                lastRun: {
+                    status: runResult.status,
+                    durationMs: runResult.durationMs,
+                    requestUrl: runResult.requestUrl,
+                    requestMethod: runResult.requestMethod,
+                    requestHeaders: runResult.requestHeaders,
+                    requestQuery: runResult.requestQuery,
+                    requestBody: runResult.requestBody,
+                    requestFiles: runResult.requestFiles,
+                    responseHeaders: runResult.responseHeaders,
+                    responseBody: runResult.responseBody,
+                },
+            },
+            null,
+            2,
+        );
+    }, [currentRequestPreview, runResult]);
 
     useEffect(() => {
         if (!groupedEndpoints.length) {
@@ -1062,6 +1250,38 @@ export default function ApiLabClient() {
             );
         }
         setNotice(options?.silent ? null : `已加载样例：${example.name}，可以直接复制当前 curl 和样例返回。`);
+    };
+
+    const formatCurrentRequestTab = () => {
+        if (requestTab === 'file') {
+            setNotice('文件标签无需格式化。');
+            return;
+        }
+
+        const currentText =
+            requestTab === 'body'
+                ? bodyText
+                : requestTab === 'query'
+                  ? queryText
+                  : headerText;
+        const parsed = parseJsonText(currentText);
+        if (parsed.error) {
+            setError(`${getRequestTabLabel(requestTab)} JSON 有误：${parsed.error}`);
+            return;
+        }
+
+        const formatted = formatJson(parsed.value);
+        if (requestTab === 'body') {
+            setBodyText(formatted);
+        }
+        if (requestTab === 'query') {
+            setQueryText(formatted);
+        }
+        if (requestTab === 'headers') {
+            setHeaderText(formatted);
+        }
+        setError(null);
+        setNotice(`已格式化${getRequestTabLabel(requestTab)}。`);
     };
 
     const runRequest = async () => {
@@ -1269,7 +1489,7 @@ export default function ApiLabClient() {
                             <RefreshCw className="animate-spin" size={22} />
                         </div>
                         <div className="text-lg font-semibold text-slate-900">正在初始化 API Lab</div>
-                        <div className="mt-2 text-sm text-slate-500">首次打开会自动导入 Stepfun 的 chat / tts / asr / files 模板。</div>
+                        <div className="mt-2 text-sm text-slate-500">首次打开会自动导入常用接口模板。</div>
                     </div>
                 </div>
             </main>
@@ -1449,6 +1669,10 @@ export default function ApiLabClient() {
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap gap-2 xl:justify-end">
+                                                <button type="button" onClick={() => setShowPacketModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
+                                                    <FileCode2 size={15} />
+                                                    查看报文
+                                                </button>
                                                 <button type="button" onClick={() => setShowCurlModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
                                                     <Eye size={15} />
                                                     {selectedEndpoint.method === 'WS' ? '查看连接命令' : '查看 curl'}
@@ -1468,15 +1692,93 @@ export default function ApiLabClient() {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Path：{selectedEndpoint.path}</span>
-                                            {selectedEnv ? <span className="rounded-full border border-slate-200 bg-white px-3 py-1">环境：{selectedEnv.name}</span> : null}
-                                            {runResult ? (
-                                                <span className={`rounded-full px-3 py-1 font-medium ${runResult.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                                    {runResult.status || 'ERR'} · {isExampleRunResult(runResult) ? '样例' : `${runResult.durationMs}ms`}
-                                                </span>
-                                            ) : null}
-                                            {currentJsonError ? <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700">JSON 待修正</span> : null}
+                                        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(230px,0.8fr)_minmax(230px,0.95fr)]">
+                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+                                                <div className="mb-2 flex items-center justify-between gap-3">
+                                                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">实时请求 URL</div>
+                                                    {currentRequestPreview ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                void copyToClipboard(
+                                                                    currentRequestPreview.requestUrl,
+                                                                ).then(() => setNotice('已复制实时请求 URL。'))
+                                                            }
+                                                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                                                        >
+                                                            <Copy size={12} />
+                                                            复制
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                                <div className="break-all font-mono text-xs leading-6 text-slate-700">
+                                                    {currentRequestPreview?.requestUrl || selectedEndpoint.path}
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+                                                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">执行上下文</div>
+                                                <div className="mt-2 text-sm font-semibold text-slate-900">
+                                                    {selectedEnv ? selectedEnv.name : '未选择环境'}
+                                                </div>
+                                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                        {selectedEndpoint.authType === 'none'
+                                                            ? '免鉴权'
+                                                            : `Auth · ${selectedEndpoint.authType}`}
+                                                    </span>
+                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                        {selectedEndpoint.contentType}
+                                                    </span>
+                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                        返回 · {selectedEndpoint.responseType}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
+                                                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">当前状态</div>
+                                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                                                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                        Path · {selectedEndpoint.path}
+                                                    </span>
+                                                    {runResult ? (
+                                                        <span
+                                                            className={`rounded-full px-2.5 py-1 font-medium ${
+                                                                runResult.ok
+                                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                                    : 'bg-rose-100 text-rose-700'
+                                                            }`}
+                                                        >
+                                                            {runResult.status || 'ERR'} ·{' '}
+                                                            {isExampleRunResult(runResult)
+                                                                ? '样例'
+                                                                : `${runResult.durationMs}ms`}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                            等待执行
+                                                        </span>
+                                                    )}
+                                                    {currentJsonError ? (
+                                                        <span className="rounded-full bg-amber-100 px-2.5 py-1 font-medium text-amber-700">
+                                                            JSON 待修正
+                                                        </span>
+                                                    ) : (
+                                                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-medium text-emerald-700">
+                                                            JSON 正常
+                                                        </span>
+                                                    )}
+                                                    {selectedFile ? (
+                                                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                                            文件 · {selectedFile.name}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                                <div className="mt-3 text-xs leading-5 text-slate-500">
+                                                    报文中心里可同时查看当前待发请求和最近一次真实执行记录。
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1507,12 +1809,38 @@ export default function ApiLabClient() {
                                             ))}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
+                                            <button type="button" onClick={formatCurrentRequestTab} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
+                                                格式化当前
+                                            </button>
                                             <button type="button" onClick={() => { setBodyText(formatJson(selectedEndpoint.requestTemplate)); setQueryText(formatJson(selectedEndpoint.queryTemplate)); setHeaderText(formatJson(selectedEndpoint.headerTemplate)); setSelectedFile(null); setNotice('已恢复为接口默认模板。'); }} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-50 hover:text-slate-900">
                                                 重置为模板
                                             </button>
                                         </div>
                                     </div>
                                     <div className="min-h-0 flex-1 p-4">
+                                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                                            <div>
+                                                <div className="text-sm font-semibold text-slate-900">
+                                                    正在编辑：{getRequestTabLabel(requestTab)}
+                                                </div>
+                                                <div className="mt-1 text-xs text-slate-500">
+                                                    当前编辑区会实时影响请求 URL、curl 和报文预览。
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+                                                {selectedEnv ? (
+                                                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                                                        环境 · {selectedEnv.name}
+                                                    </span>
+                                                ) : null}
+                                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                                                    Method · {selectedEndpoint.method}
+                                                </span>
+                                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                                                    {selectedEndpoint.contentType}
+                                                </span>
+                                            </div>
+                                        </div>
                                         {requestTab === 'body' ? (
                                             <textarea value={bodyText} onChange={(event) => setBodyText(event.target.value)} rows={16} className="h-full min-h-[320px] w-full rounded-[24px] border border-slate-200 px-4 py-3 font-mono text-xs leading-6 text-slate-700 outline-none transition focus:border-slate-900" />
                                         ) : null}
@@ -1630,15 +1958,15 @@ export default function ApiLabClient() {
                                             ) : null}
                                             {responseTab === 'request' ? (
                                                 <div className="grid h-full max-h-full gap-3 overflow-auto">
-                                                    <DetailBlock label="Request Headers" value={formatJson(runResult.requestHeaders)} mono />
-                                                    <DetailBlock label="Request Query" value={formatJson(runResult.requestQuery)} mono />
-                                                    <DetailBlock label="Request Body" value={runResult.requestBody || '<empty>'} mono />
-                                                    <DetailBlock label="Uploaded Files" value={formatJson(runResult.requestFiles)} mono />
+                                                    <DetailBlock label="Request Headers" value={formatJson(runResult.requestHeaders)} mono tone="dark" />
+                                                    <DetailBlock label="Request Query" value={formatJson(runResult.requestQuery)} mono tone="dark" />
+                                                    <DetailBlock label="Request Body" value={runResult.requestBody || '<empty>'} mono tone="dark" />
+                                                    <DetailBlock label="Uploaded Files" value={formatJson(runResult.requestFiles)} mono tone="dark" />
                                                 </div>
                                             ) : null}
                                             {responseTab === 'headers' ? (
                                                 <div className="h-full max-h-full overflow-auto">
-                                                    <DetailBlock label="Response Headers" value={formatJson(runResult.responseHeaders)} mono />
+                                                    <DetailBlock label="Response Headers" value={formatJson(runResult.responseHeaders)} mono tone="dark" />
                                                 </div>
                                             ) : null}
                                         </div>
@@ -1928,6 +2256,164 @@ export default function ApiLabClient() {
                         value={curlPreview}
                         mono
                     />
+                </QuickViewModal>
+            ) : null}
+
+            {showPacketModal ? (
+                <QuickViewModal
+                    title="报文中心"
+                    subtitle={selectedEndpoint?.name || '未选择接口'}
+                    onClose={() => setShowPacketModal(false)}
+                    maxWidthClass="max-w-5xl"
+                    action={
+                        packetModalCopyText ? (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    void copyToClipboard(packetModalCopyText).then(() =>
+                                        setNotice('已复制当前报文视图。'),
+                                    )
+                                }
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                            >
+                                <Copy size={14} />
+                                复制报文
+                            </button>
+                        ) : null
+                    }
+                >
+                    {currentRequestPreview ? (
+                        <div>
+                            <div className="mb-4 flex flex-wrap items-center gap-2">
+                                <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">
+                                    当前待发请求
+                                </span>
+                                <span className="text-sm text-slate-500">
+                                    这里会跟随中间编辑区实时变化。
+                                </span>
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <DetailBlock
+                                    label="Request URL"
+                                    value={currentRequestPreview.requestUrl}
+                                    mono
+                                    onCopy={() =>
+                                        void copyToClipboard(
+                                            currentRequestPreview.requestUrl,
+                                        ).then(() => setNotice('已复制当前请求 URL。'))
+                                    }
+                                />
+                                <DetailBlock
+                                    label="Method / Env"
+                                    value={`${currentRequestPreview.requestMethod} · ${
+                                        selectedEnv?.name || '未选择环境'
+                                    }`}
+                                />
+                            </div>
+                            <div className="mt-4 grid gap-4">
+                                <DetailBlock
+                                    label="Request Headers"
+                                    value={formatJson(currentRequestPreview.requestHeaders)}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label="Request Query"
+                                    value={formatJson(currentRequestPreview.requestQuery)}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label="Request Body"
+                                    value={currentRequestPreview.requestBody || '<empty>'}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label="Uploaded Files"
+                                    value={formatJson(currentRequestPreview.requestFiles)}
+                                    mono
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="rounded-[22px] border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                            {currentJsonError
+                                ? `当前请求配置里有 JSON 错误：${currentJsonError}`
+                                : '先选择环境并补全请求配置后，这里会显示完整待发报文。'}
+                        </div>
+                    )}
+
+                    {runResult ? (
+                        <div className="mt-8">
+                            <div className="mb-4 flex flex-wrap items-center gap-2">
+                                <span
+                                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                        runResult.ok
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-rose-100 text-rose-700'
+                                    }`}
+                                >
+                                    最近一次执行
+                                </span>
+                                <span className="text-sm text-slate-500">
+                                    这里保留真实发出的请求和收到的响应。
+                                </span>
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <DetailBlock label="Status" value={String(runResult.status || 'ERR')} />
+                                <DetailBlock
+                                    label={isExampleRunResult(runResult) ? 'Preview' : 'Duration'}
+                                    value={
+                                        isExampleRunResult(runResult)
+                                            ? '样例返回'
+                                            : `${runResult.durationMs} ms`
+                                    }
+                                />
+                                <DetailBlock
+                                    label="Request URL"
+                                    value={runResult.requestUrl}
+                                    mono
+                                    onCopy={() =>
+                                        void copyToClipboard(runResult.requestUrl).then(() =>
+                                            setNotice('已复制最近一次请求 URL。'),
+                                        )
+                                    }
+                                />
+                            </div>
+                            <div className="mt-4 grid gap-4">
+                                <DetailBlock
+                                    label="Request Headers"
+                                    value={formatJson(runResult.requestHeaders)}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label="Request Query"
+                                    value={formatJson(runResult.requestQuery)}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label="Request Body"
+                                    value={runResult.requestBody || '<empty>'}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label="Uploaded Files"
+                                    value={formatJson(runResult.requestFiles)}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label="Response Headers"
+                                    value={formatJson(runResult.responseHeaders)}
+                                    mono
+                                />
+                                <DetailBlock
+                                    label={
+                                        isExampleRunResult(runResult) ? 'Example Response' : 'Response Body'
+                                    }
+                                    value={runResult.responseBody || '<empty>'}
+                                    mono
+                                />
+                            </div>
+                        </div>
+                    ) : null}
                 </QuickViewModal>
             ) : null}
 
