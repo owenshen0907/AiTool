@@ -983,6 +983,33 @@ async function insertSeedEnv(userId: string, env: ApiLabSeedEnv): Promise<boolea
     return (res.rowCount ?? 0) > 0;
 }
 
+async function cleanupLegacySeedEnvs(userId: string): Promise<void> {
+    await pool.query(
+        `DELETE FROM api_lab_envs env
+         WHERE env.user_id = $1
+           AND env.service_key = 'stepfun'
+           AND env.service_name = 'Stepfun'
+           AND env.name = 'production'
+           AND env.base_url = 'https://api.stepfun.com/v1'
+           AND COALESCE(env.websocket_url, '') = 'wss://api.stepfun.com/v1'
+           AND COALESCE(env.api_key, '') = ''
+           AND COALESCE(env.extra_headers, '{}'::jsonb) = '{}'::jsonb
+           AND env.timeout_ms = 30000
+           AND env.is_default = TRUE
+           AND NOT EXISTS (
+                SELECT 1
+                FROM api_lab_run_logs logs
+                WHERE logs.env_id = env.id
+           )
+           AND NOT EXISTS (
+                SELECT 1
+                FROM api_lab_monitors monitors
+                WHERE monitors.env_id = env.id
+           )`,
+        [userId],
+    );
+}
+
 async function insertSeedEndpoint(userId: string, endpoint: ApiLabSeedEndpoint): Promise<boolean> {
     const res = await pool.query(
         `INSERT INTO api_lab_endpoints (
@@ -1079,6 +1106,8 @@ export async function ensureApiLabSeedData(userId: string): Promise<ApiLabBootst
     let createdEnvCount = 0;
     let createdEndpointCount = 0;
     let createdExampleCount = 0;
+
+    await cleanupLegacySeedEnvs(userId);
 
     for (const env of apiLabSeedEnvs) {
         if (await insertSeedEnv(userId, env)) {

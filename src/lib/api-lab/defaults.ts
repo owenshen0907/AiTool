@@ -48,19 +48,7 @@ export interface ApiLabSeedExample {
     isRecommended: boolean;
 }
 
-export const apiLabSeedEnvs: ApiLabSeedEnv[] = [
-    {
-        serviceKey: 'stepfun',
-        serviceName: 'Stepfun',
-        name: 'production',
-        baseUrl: 'https://api.stepfun.com/v1',
-        websocketUrl: 'wss://api.stepfun.com/v1',
-        apiKey: '',
-        extraHeaders: {},
-        timeoutMs: 30000,
-        isDefault: true,
-    },
-];
+export const apiLabSeedEnvs: ApiLabSeedEnv[] = [];
 
 export const apiLabSeedEndpoints: ApiLabSeedEndpoint[] = [
     {

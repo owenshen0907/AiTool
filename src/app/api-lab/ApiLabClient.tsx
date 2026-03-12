@@ -821,6 +821,7 @@ export default function ApiLabClient() {
     const [showCurlModal, setShowCurlModal] = useState(false);
     const [requestTab, setRequestTab] = useState<'body' | 'query' | 'headers' | 'file'>('body');
     const [activityTab, setActivityTab] = useState<'examples' | 'logs' | 'monitors'>('examples');
+    const [responseTab, setResponseTab] = useState<'body' | 'request' | 'headers'>('body');
     const [openEndpointGroups, setOpenEndpointGroups] = useState<Record<string, boolean>>({});
 
     const selectedEndpoint = useMemo(
@@ -1039,6 +1040,10 @@ export default function ApiLabClient() {
             setRequestTab('body');
         }
     }, [requestTab, selectedEndpoint]);
+
+    useEffect(() => {
+        setResponseTab('body');
+    }, [selectedEndpointId, runResult?.runLogId]);
 
     const applyExample = (
         example: ApiLabExample,
@@ -1272,7 +1277,7 @@ export default function ApiLabClient() {
     }
 
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.72),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-4 md:px-6 lg:h-[calc(100vh-96px)] lg:overflow-hidden lg:px-8">
+        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.72),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-3 md:px-6 lg:h-screen lg:overflow-hidden lg:px-8">
             <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-4">
                 <div className="rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.96)_0%,rgba(30,41,59,0.88)_62%,rgba(14,116,144,0.82)_100%)] px-5 py-5 text-white shadow-[0_26px_80px_rgba(15,23,42,0.20)] md:px-6">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -1415,21 +1420,33 @@ export default function ApiLabClient() {
 
                                         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
                                             <div className="flex flex-wrap gap-2">
-                                                <select value={selectedEnvId} onChange={(event) => setSelectedEnvId(event.target.value)} className="min-w-[220px] rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-900">
-                                                    {serviceEnvs.map((env) => (
-                                                        <option key={env.id} value={env.id}>
-                                                            {env.name} · {env.baseUrl}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                                <button type="button" onClick={() => setShowEnvDetailModal(true)} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
-                                                    <Eye size={15} />
-                                                    环境详情
-                                                </button>
-                                                <button type="button" onClick={() => { if (selectedEnv) { setEditingEnv(selectedEnv); setShowEnvModal(true); } }} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
-                                                    <Settings2 size={15} />
-                                                    编辑环境
-                                                </button>
+                                                {serviceEnvs.length ? (
+                                                    <>
+                                                        <select value={selectedEnvId} onChange={(event) => setSelectedEnvId(event.target.value)} className="min-w-[220px] rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-slate-900">
+                                                            {serviceEnvs.map((env) => (
+                                                                <option key={env.id} value={env.id}>
+                                                                    {env.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        <button type="button" onClick={() => setShowEnvDetailModal(true)} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
+                                                            <Eye size={15} />
+                                                            环境详情
+                                                        </button>
+                                                        <button type="button" onClick={() => { if (selectedEnv) { setEditingEnv(selectedEnv); setShowEnvModal(true); } }} disabled={!selectedEnv} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60">
+                                                            <Settings2 size={15} />
+                                                            编辑环境
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex min-h-[52px] items-center gap-3 rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                                        <span>当前还没有可用环境，请先新增你自己的环境配置。</span>
+                                                        <button type="button" onClick={() => { setEditingEnv(null); setShowEnvModal(true); }} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
+                                                            <Plus size={14} />
+                                                            新增环境
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex flex-wrap gap-2 xl:justify-end">
                                                 <button type="button" onClick={() => setShowCurlModal(true)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
@@ -1453,8 +1470,7 @@ export default function ApiLabClient() {
 
                                         <div className="flex flex-wrap gap-2 text-xs text-slate-500">
                                             <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Path：{selectedEndpoint.path}</span>
-                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Base URL：{selectedEnv?.baseUrl || '未选择环境'}</span>
-                                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">{selectedEnv?.apiKey ? `Key：${selectedEnv.apiKey.slice(0, 6)}******${selectedEnv.apiKey.slice(-4)}` : 'Key：未配置'}</span>
+                                            {selectedEnv ? <span className="rounded-full border border-slate-200 bg-white px-3 py-1">环境：{selectedEnv.name}</span> : null}
                                             {runResult ? (
                                                 <span className={`rounded-full px-3 py-1 font-medium ${runResult.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                                                     {runResult.status || 'ERR'} · {isExampleRunResult(runResult) ? '样例' : `${runResult.durationMs}ms`}
@@ -1569,10 +1585,31 @@ export default function ApiLabClient() {
                                             <div className="break-all font-mono text-xs leading-6 text-slate-700">{runResult.requestUrl}</div>
                                         </div>
                                         <div className="min-h-0 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 px-4 py-3 text-white">
-                                            <div className="mb-2 flex items-center justify-between gap-3">
-                                                <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{isExampleRunResult(runResult) ? 'Example Response' : 'Response Body'}</div>
+                                            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                                <div className="inline-flex flex-wrap rounded-full border border-white/10 bg-white/5 p-1">
+                                                    {[
+                                                        { key: 'body', label: isExampleRunResult(runResult) ? '样例返回' : '返回体' },
+                                                        { key: 'request', label: '请求报文' },
+                                                        { key: 'headers', label: '响应头' },
+                                                    ].map((tab) => (
+                                                        <button
+                                                            key={tab.key}
+                                                            type="button"
+                                                            onClick={() => setResponseTab(tab.key as 'body' | 'request' | 'headers')}
+                                                            className={`rounded-full px-3 py-1.5 text-xs transition ${
+                                                                responseTab === tab.key
+                                                                    ? 'bg-white text-slate-900'
+                                                                    : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                                                            }`}
+                                                        >
+                                                            {tab.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                                 <div className="flex items-center gap-2">
-                                                    {runResult.responseBody ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
+                                                    {responseTab === 'body' && runResult.responseBody ? <button type="button" onClick={() => void copyToClipboard(runResult.responseBody || '').then(() => setNotice('已复制返回内容。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
+                                                    {responseTab === 'request' ? <button type="button" onClick={() => void copyToClipboard(JSON.stringify({ url: runResult.requestUrl, headers: runResult.requestHeaders, query: runResult.requestQuery, body: runResult.requestBody, files: runResult.requestFiles }, null, 2)).then(() => setNotice('已复制请求报文。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
+                                                    {responseTab === 'headers' ? <button type="button" onClick={() => void copyToClipboard(formatJson(runResult.responseHeaders)).then(() => setNotice('已复制响应头。'))} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14"><Copy size={14} />复制</button> : null}
                                                     <button type="button" onClick={() => setShowCurlModal(true)} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-1 text-xs text-slate-200 transition hover:bg-white/14">
                                                         <Eye size={14} />
                                                         查看 curl
@@ -1580,13 +1617,30 @@ export default function ApiLabClient() {
                                                 </div>
                                             </div>
                                             {runResult.errorMessage ? <div className="mb-3 rounded-[18px] border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{runResult.errorMessage}</div> : null}
-                                            {isAudioResult(selectedEndpoint, runResult) && runResult.responseBody ? (
-                                                <div className="mb-3 rounded-[18px] border border-slate-800 bg-slate-900 px-3 py-3">
-                                                    <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Audio Preview</div>
-                                                    <audio controls className="w-full" src={`data:${typeof runResult.responseHeaders['content-type'] === 'string' ? runResult.responseHeaders['content-type'] : 'audio/mpeg'};base64,${runResult.responseBody}`} />
+                                            {responseTab === 'body' ? (
+                                                <>
+                                                    {isAudioResult(selectedEndpoint, runResult) && runResult.responseBody ? (
+                                                        <div className="mb-3 rounded-[18px] border border-slate-800 bg-slate-900 px-3 py-3">
+                                                            <div className="mb-2 text-xs uppercase tracking-[0.16em] text-slate-400">Audio Preview</div>
+                                                            <audio controls className="w-full" src={`data:${typeof runResult.responseHeaders['content-type'] === 'string' ? runResult.responseHeaders['content-type'] : 'audio/mpeg'};base64,${runResult.responseBody}`} />
+                                                        </div>
+                                                    ) : null}
+                                                    <pre className="h-full max-h-full overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-100">{runResult.responseBody || '<empty>'}</pre>
+                                                </>
+                                            ) : null}
+                                            {responseTab === 'request' ? (
+                                                <div className="grid h-full max-h-full gap-3 overflow-auto">
+                                                    <DetailBlock label="Request Headers" value={formatJson(runResult.requestHeaders)} mono />
+                                                    <DetailBlock label="Request Query" value={formatJson(runResult.requestQuery)} mono />
+                                                    <DetailBlock label="Request Body" value={runResult.requestBody || '<empty>'} mono />
+                                                    <DetailBlock label="Uploaded Files" value={formatJson(runResult.requestFiles)} mono />
                                                 </div>
                                             ) : null}
-                                            <pre className="h-full max-h-full overflow-auto whitespace-pre-wrap break-all font-mono text-xs leading-6 text-slate-100">{runResult.responseBody || '<empty>'}</pre>
+                                            {responseTab === 'headers' ? (
+                                                <div className="h-full max-h-full overflow-auto">
+                                                    <DetailBlock label="Response Headers" value={formatJson(runResult.responseHeaders)} mono />
+                                                </div>
+                                            ) : null}
                                         </div>
                                     </div>
                                 ) : (
