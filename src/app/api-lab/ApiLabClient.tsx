@@ -1557,7 +1557,7 @@ export default function ApiLabClient() {
     }
 
     return (
-        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.72),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-3 md:px-6 lg:h-screen lg:overflow-hidden lg:px-8">
+        <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.72),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(251,191,36,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-3 md:px-6 lg:h-screen lg:overflow-y-auto lg:px-8">
             <div className="mx-auto flex h-full max-w-[1600px] flex-col gap-4">
                 <div className="rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(15,23,42,0.96)_0%,rgba(30,41,59,0.88)_62%,rgba(14,116,144,0.82)_100%)] px-5 py-5 text-white shadow-[0_26px_80px_rgba(15,23,42,0.20)] md:px-6">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -1664,9 +1664,9 @@ export default function ApiLabClient() {
                         </div>
                     </aside>
 
-                    <section className="min-h-0 overflow-hidden rounded-[30px] border border-white/70 bg-white/84 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+                    <section className="min-h-0 overflow-y-auto rounded-[30px] border border-white/70 bg-white/84 p-4 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
                         {selectedEndpoint ? (
-                            <div className="flex h-full flex-col">
+                            <div className="flex min-h-full flex-col">
                                 <div className="rounded-[26px] border border-slate-200 bg-slate-50/90 p-4">
                                     <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.92fr)]">
                                         <div className="rounded-[24px] border border-white/80 bg-white px-5 py-5 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
