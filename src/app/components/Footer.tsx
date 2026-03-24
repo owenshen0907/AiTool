@@ -14,7 +14,12 @@ const footerLinks = [
 export default function Footer() {
     const pathname = usePathname();
 
-    if (pathname === '/api-lab' || pathname?.startsWith('/api-lab/')) {
+    if (
+        pathname === '/api-lab' ||
+        pathname?.startsWith('/api-lab/') ||
+        pathname === '/trip' ||
+        pathname?.startsWith('/trip/')
+    ) {
         return null;
     }
 

@@ -49,6 +49,7 @@ AiTool 正在从“功能堆叠的 AI 工具箱”收敛成一个可持续使用
 - 图片生成 Agent
 - 视频配音 Agent
 - 网页生成 Agent
+- 行程 H5：公开旅行行程页，可按当前时间提示“现在该做什么”，并支持状态更新、备注和照片上传
 
 ### 内容与工具
 
@@ -147,6 +148,15 @@ CASDOOR_ENDPOINT=https://your-casdoor-domain.com
 CASDOOR_CLIENT_ID=your_client_id
 CASDOOR_CLIENT_SECRET=your_client_secret
 ```
+
+如果你要启用公开的旅行 H5 链接，额外补两项：
+
+```env
+TRIP_XIAN_VIEW_TOKEN=replace-with-a-long-view-token
+TRIP_XIAN_EDIT_TOKEN=replace-with-a-long-edit-token
+```
+
+旅行样例数据位于 `src/lib/trip/data/xian.ts`，页面入口是 `/trip/xian?token=...`。
 
 如果你要初始化数据库，请确保 `DATABASE_URL` 指向正确实例，并在执行 `npm run init-db` 前确认环境。
 

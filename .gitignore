@@ -41,4 +41,6 @@ yarn-error.log*
 next-env.d.ts
 cookie.txt
 /public/upload/
+/public/trip-assets/
+/data/trip-runtime/
 /docs/sql/backups/

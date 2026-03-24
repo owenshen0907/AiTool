@@ -103,7 +103,13 @@ export default function NavBar() {
     const [showAgentModal, setShowAgentModal] = useState(false);
     const hoverTimer = useRef<number>();
 
-    if (pathname === '/login-confirm' || pathname === '/api-lab' || pathname?.startsWith('/api-lab/')) {
+    if (
+        pathname === '/login-confirm' ||
+        pathname === '/api-lab' ||
+        pathname?.startsWith('/api-lab/') ||
+        pathname === '/trip' ||
+        pathname?.startsWith('/trip/')
+    ) {
         return null;
     }
 

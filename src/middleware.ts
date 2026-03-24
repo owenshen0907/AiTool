@@ -25,7 +25,11 @@ export function middleware(request: NextRequest) {
     /* 1️⃣ 放行  ── 认证相关 API、静态资源、公开页面 */
     if (
         pathname.startsWith('/api/auth/') ||               // Casdoor callback & logout
+        pathname.startsWith('/api/public/trip/') ||
         pathname === '/' ||
+        pathname === '/trip' ||
+        pathname.startsWith('/trip/') ||
+        pathname.startsWith('/trip-assets/') ||
         pathname.startsWith('/_next') ||
         pathname.startsWith('/favicon.ico') ||
         pathname.startsWith('/public') ||
