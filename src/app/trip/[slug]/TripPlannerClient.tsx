@@ -250,7 +250,7 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
     const [activeView, setActiveView] = useState<TripViewKey>('progress');
     const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
     const [isCondensed, setIsCondensed] = useState(false);
-    const [isViewMenuOpen, setIsViewMenuOpen] = useState(true);
+    const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
     const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>(() => {
         return Object.fromEntries(
             initialSnapshot.trip.items.map((item) => [item.id, initialSnapshot.state.items[item.id]?.note || ''])
@@ -276,6 +276,18 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
     }, []);
 
     useEffect(() => {
+        const media = window.matchMedia('(min-width: 1024px)');
+        const syncMenuState = (matches: boolean) => {
+            setIsViewMenuOpen(matches);
+        };
+
+        syncMenuState(media.matches);
+        const handleChange = (event: MediaQueryListEvent) => syncMenuState(event.matches);
+        media.addEventListener('change', handleChange);
+        return () => media.removeEventListener('change', handleChange);
+    }, []);
+
+    useEffect(() => {
         setNoteDrafts((prev) => {
             const next = { ...prev };
             for (const item of snapshot.trip.items) {
@@ -290,6 +302,9 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setIsCondensed(false);
+        if (window.innerWidth >= 1024) {
+            setIsViewMenuOpen(true);
+        }
     }, [activeView]);
 
     useEffect(() => {
@@ -759,28 +774,28 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                     </section>
                 </div>
 
-                <aside className="grid content-start gap-3">
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-1">
-                        {renderMiniItemCard(previousItem, '前一程')}
-                        {renderMiniItemCard(nextItem, '后一程')}
-                    </div>
+                <aside>
+                    <div className="flex gap-3 overflow-x-auto pb-2 xl:grid xl:grid-cols-1 xl:overflow-visible xl:pb-0">
+                        <div className="min-w-[224px] xl:min-w-0">{renderMiniItemCard(previousItem, '前一程')}</div>
+                        <div className="min-w-[224px] xl:min-w-0">{renderMiniItemCard(nextItem, '后一程')}</div>
 
-                    <div className="rounded-[26px] border border-[#e1d3c5] bg-[linear-gradient(145deg,#fff8ef_0%,#fff1dd_42%,#eef4f8_100%)] p-4 shadow-[0_14px_36px_rgba(75,43,22,0.08)]">
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <div className="text-[11px] uppercase tracking-[0.18em] text-[#9b7b67]">旅途进度</div>
-                                <div className="mt-2 text-3xl font-semibold tracking-tight text-[#2a1f18]">
-                                    {currentIndex + 1} / {decoratedItems.length}
+                        <div className="min-w-[224px] rounded-[26px] border border-[#e1d3c5] bg-[linear-gradient(145deg,#fff8ef_0%,#fff1dd_42%,#eef4f8_100%)] p-4 shadow-[0_14px_36px_rgba(75,43,22,0.08)] xl:min-w-0">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <div className="text-[11px] uppercase tracking-[0.18em] text-[#9b7b67]">旅途进度</div>
+                                    <div className="mt-2 text-3xl font-semibold tracking-tight text-[#2a1f18]">
+                                        {currentIndex + 1} / {decoratedItems.length}
+                                    </div>
                                 </div>
+                                <span className="rounded-full border border-white/80 bg-white/78 px-3 py-1.5 text-xs font-medium text-[#735c4d]">
+                                    {compactText(currentDay?.title || '现在', 10)}
+                                </span>
                             </div>
-                            <span className="rounded-full border border-white/80 bg-white/78 px-3 py-1.5 text-xs font-medium text-[#735c4d]">
-                                {compactText(currentDay?.title || '现在', 10)}
-                            </span>
-                        </div>
-                        <div className="mt-3 text-sm leading-6 text-[#715c4d]">
-                            {tripPhase === 'before'
-                                ? '还没正式出发也没关系，先把顺序记住就会很安心。'
-                                : '你只要看这一站，前后节奏我都放在旁边给你。'}
+                            <div className="mt-3 text-sm leading-6 text-[#715c4d]">
+                                {tripPhase === 'before'
+                                    ? '还没正式出发也没关系，先把顺序记住就会很安心。'
+                                    : '你只要看这一站，前后节奏我都放在旁边给你。'}
+                            </div>
                         </div>
                     </div>
                 </aside>
@@ -790,7 +805,7 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
 
     function renderOverviewView() {
         const overviewLead = '一眼看节奏就够了，细节都藏进每张小卡片里。';
-        const checklist = snapshot.trip.checklist.slice(0, 4);
+        const checklist = snapshot.trip.checklist.slice(0, 3);
 
         return (
             <div className="flex flex-col gap-3">
@@ -831,11 +846,16 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                         <span className="rounded-full border border-white/80 bg-white/82 px-3.5 py-2 text-xs font-medium text-[#5f4a3d]">
                             现在看 {compactText(currentItem?.title || '还没到第一段', 14)}
                         </span>
-                        <span className="rounded-full border border-white/80 bg-white/72 px-3.5 py-2 text-xs font-medium text-[#5f6985]">
+                        <span className="hidden rounded-full border border-white/80 bg-white/72 px-3.5 py-2 text-xs font-medium text-[#5f6985] sm:inline-flex">
                             {formatDateTime(now, timeZone)}
                         </span>
-                        {checklist.map((item) => (
-                            <span key={item} className="rounded-full border border-white/80 bg-white/72 px-3.5 py-2 text-xs text-[#5f4a3d]">
+                        {checklist.map((item, index) => (
+                            <span
+                                key={item}
+                                className={`rounded-full border border-white/80 bg-white/72 px-3.5 py-2 text-xs text-[#5f4a3d] ${
+                                    index > 0 ? 'hidden sm:inline-flex' : ''
+                                }`}
+                            >
                                 {compactText(item, 10)}
                             </span>
                         ))}
@@ -916,7 +936,7 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
             <div className="flex flex-col gap-3">
                 <section className="overflow-hidden rounded-[28px] border border-[#d9ccbf] bg-[#fffaf4] shadow-[0_18px_56px_rgba(75,43,22,0.08)]">
                     <div className="grid gap-0 md:grid-cols-[200px_minmax(0,1fr)]">
-                        <div className="relative h-32 md:h-full">
+                        <div className="relative h-24 sm:h-28 md:h-full">
                             {day.visual ? (
                                 <>
                                     <img
@@ -954,15 +974,15 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                                 <span className="rounded-full border border-[#ece0d5] bg-white px-3 py-2 text-xs font-medium text-[#705a4b]">
                                     {day.items.length} 个项目
                                 </span>
-                                <span className="rounded-full border border-[#ece0d5] bg-white px-3 py-2 text-xs font-medium text-[#705a4b]">
+                                <span className="hidden rounded-full border border-[#ece0d5] bg-white px-3 py-2 text-xs font-medium text-[#705a4b] sm:inline-flex">
                                     {closed} 个已收口
                                 </span>
                                 {day.visual?.title ? (
-                                    <span className="rounded-full border border-[#ece0d5] bg-white px-3 py-2 text-xs font-medium text-[#705a4b]">
+                                    <span className="hidden rounded-full border border-[#ece0d5] bg-white px-3 py-2 text-xs font-medium text-[#705a4b] sm:inline-flex">
                                         {compactText(day.visual.title, 12)}
                                     </span>
                                 ) : null}
-                                <span className="rounded-full border border-[#ece0d5] bg-white px-3 py-2 text-xs font-medium text-[#705a4b]">
+                                <span className="hidden rounded-full border border-[#ece0d5] bg-white px-3 py-2 text-xs font-medium text-[#705a4b] sm:inline-flex">
                                     {todayInView ? '慢慢玩' : '按点走'}
                                 </span>
                             </div>
@@ -1229,6 +1249,12 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
         );
     }
 
+    const activeViewDay = activeView !== 'progress' && activeView !== 'overview'
+        ? groupedDays.find((day) => day.date === activeView) || null
+        : null;
+    const activeViewDayIndex = activeViewDay ? groupedDays.findIndex((day) => day.date === activeViewDay.date) : -1;
+    const isDayView = Boolean(activeViewDay);
+
     const viewLabel =
         activeView === 'progress'
             ? '旅途进程'
@@ -1241,6 +1267,7 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
             : activeView === 'overview'
               ? '扫一眼就知道往哪走，不用被攻略淹没。'
               : '今天只保留主线，想细看再点卡片。';
+    const mobileViewLabel = isDayView && activeViewDayIndex >= 0 ? `D${activeViewDayIndex + 1}` : viewLabel;
     const topCompactLabel =
         activeView === 'progress'
             ? compactText(currentItem?.title || '还没到第一段', 12)
@@ -1252,7 +1279,9 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
             ? compactText(currentItem?.windowLabel || tripCountdownText || '现在', 14)
             : activeView === 'overview'
               ? `D1-D${groupedDays.length}`
-              : '';
+              : activeViewDay
+                ? formatDayLabel(activeViewDay.date, timeZone)
+                : '';
     const hasTopRightLabel = Boolean(topRightLabel);
 
     const viewOptions = [
@@ -1277,11 +1306,20 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                             </div>
                             <div className={`flex items-center gap-2 transition-all duration-500 ${isCondensed ? 'mt-1' : 'mt-1.5'}`}>
                                 <h1 className={`truncate font-semibold tracking-tight text-[#2c2018] transition-all duration-500 ${isCondensed ? 'text-lg md:text-xl' : 'text-[24px] md:text-[30px]'}`}>
-                                    {viewLabel}
+                                    {isDayView ? (
+                                        <>
+                                            <span className="sm:hidden">{mobileViewLabel}</span>
+                                            <span className="hidden sm:inline">{viewLabel}</span>
+                                        </>
+                                    ) : (
+                                        viewLabel
+                                    )}
                                 </h1>
                             </div>
                             <p
                                 className={`overflow-hidden text-[13px] leading-5 text-[#735f51] transition-all duration-500 ${
+                                    isDayView ? 'hidden sm:block ' : ''
+                                }${
                                     isCondensed ? 'mt-0 max-h-0 opacity-0' : 'mt-1 max-h-10 opacity-100'
                                 }`}
                             >
@@ -1336,7 +1374,7 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                                         setActiveView(view.key);
                                         setIsViewMenuOpen(false);
                                     }}
-                                    className={`min-w-[112px] rounded-full px-4 py-2.5 text-right text-sm font-medium transition ${
+                                    className={`min-w-[96px] rounded-full px-4 py-2.5 text-right text-sm font-medium transition md:min-w-[112px] ${
                                         active
                                             ? 'bg-[#8c5227] text-white shadow-[0_12px_28px_rgba(140,82,39,0.28)]'
                                             : 'border border-[#dfd1c2] bg-white/92 text-[#6b5749] shadow-[0_10px_24px_rgba(75,43,22,0.10)] hover:bg-[#f9f2e9]'
@@ -1351,15 +1389,15 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                     <button
                         type="button"
                         onClick={() => setIsViewMenuOpen((open) => !open)}
-                        className="flex items-center gap-3 rounded-[26px] border border-[#d8cabd] bg-white/94 px-4 py-3 shadow-[0_18px_55px_rgba(75,43,22,0.16)] backdrop-blur transition hover:-translate-y-[1px]"
+                        className="flex items-center gap-2 rounded-[26px] border border-[#d8cabd] bg-white/94 px-3 py-2.5 shadow-[0_18px_55px_rgba(75,43,22,0.16)] backdrop-blur transition hover:-translate-y-[1px] md:gap-3 md:px-4 md:py-3"
                         aria-expanded={isViewMenuOpen}
                         aria-label="展开旅途进程导航"
                     >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(145deg,#fff3e4_0%,#f6e3cd_100%)] text-[#8c5227]">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(145deg,#fff3e4_0%,#f6e3cd_100%)] text-[#8c5227] md:h-10 md:w-10">
                             <CalendarRange size={18} />
                         </div>
                         <div className="text-left">
-                            <div className="text-[10px] uppercase tracking-[0.2em] text-[#9a7b66]">旅途进程</div>
+                            <div className="hidden text-[10px] uppercase tracking-[0.2em] text-[#9a7b66] sm:block">旅途进程</div>
                             <div className="mt-0.5 text-sm font-semibold text-[#2a1f18]">
                                 {viewOptions.find((view) => view.key === activeView)?.label || viewLabel}
                             </div>
