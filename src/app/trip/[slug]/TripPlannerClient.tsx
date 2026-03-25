@@ -775,11 +775,11 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                 </div>
 
                 <aside>
-                    <div className="flex gap-3 overflow-x-auto pb-2 xl:grid xl:grid-cols-1 xl:overflow-visible xl:pb-0">
-                        <div className="min-w-[224px] xl:min-w-0">{renderMiniItemCard(previousItem, '前一程')}</div>
-                        <div className="min-w-[224px] xl:min-w-0">{renderMiniItemCard(nextItem, '后一程')}</div>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                        {renderMiniItemCard(previousItem, '前一程')}
+                        {renderMiniItemCard(nextItem, '后一程')}
 
-                        <div className="min-w-[224px] rounded-[26px] border border-[#e1d3c5] bg-[linear-gradient(145deg,#fff8ef_0%,#fff1dd_42%,#eef4f8_100%)] p-4 shadow-[0_14px_36px_rgba(75,43,22,0.08)] xl:min-w-0">
+                        <div className="rounded-[26px] border border-[#e1d3c5] bg-[linear-gradient(145deg,#fff8ef_0%,#fff1dd_42%,#eef4f8_100%)] p-4 shadow-[0_14px_36px_rgba(75,43,22,0.08)] md:col-span-2 xl:col-span-1">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <div className="text-[11px] uppercase tracking-[0.18em] text-[#9b7b67]">旅途进度</div>
@@ -862,7 +862,7 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                     </div>
                 </section>
 
-                <section className="flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible">
+                <section className="grid gap-3 md:grid-cols-3">
                     {groupedDays.map((day, index) => {
                         const dayClosed = day.items.filter((item) => isClosedStatus(item.status)).length;
                         const isToday = day.date === activeDay?.date;
@@ -871,7 +871,7 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                                 key={day.date}
                                 type="button"
                                 onClick={() => setActiveView(day.date)}
-                                className="group min-w-[248px] overflow-hidden rounded-[26px] border border-[#dfd3c7] bg-white text-left shadow-[0_16px_46px_rgba(75,43,22,0.08)] transition hover:-translate-y-[2px] hover:shadow-[0_20px_52px_rgba(75,43,22,0.12)] md:min-w-0"
+                                className="group overflow-hidden rounded-[26px] border border-[#dfd3c7] bg-white text-left shadow-[0_16px_46px_rgba(75,43,22,0.08)] transition hover:-translate-y-[2px] hover:shadow-[0_20px_52px_rgba(75,43,22,0.12)]"
                             >
                                 <div className="relative h-32 sm:h-36">
                                     {day.visual ? (
@@ -994,17 +994,17 @@ export default function TripPlannerClient({ initialSnapshot, token }: TripPlanne
                     <div className="flex items-end justify-between gap-3">
                         <div>
                             <div className="text-lg font-semibold text-[#2a1f18]">今天只看这些卡</div>
-                            <div className="mt-1 text-sm text-[#80695b]">左右滑一滑，想细看再点开。</div>
+                            <div className="mt-1 text-sm text-[#80695b]">往下看就行，想细看再点开。</div>
                         </div>
                     </div>
 
-                    <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+                    <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         {day.items.map((item) => (
                             <button
                                 type="button"
                                 key={item.id}
                                 onClick={() => setSelectedItemId(item.id)}
-                                className="group min-w-[220px] max-w-[220px] overflow-hidden rounded-[24px] border border-[#e7dbcf] bg-white/96 text-left shadow-[0_12px_34px_rgba(75,43,22,0.08)] transition hover:-translate-y-[2px] hover:shadow-[0_16px_40px_rgba(75,43,22,0.12)] sm:min-w-[236px] sm:max-w-[236px]"
+                                className="group overflow-hidden rounded-[24px] border border-[#e7dbcf] bg-white/96 text-left shadow-[0_12px_34px_rgba(75,43,22,0.08)] transition hover:-translate-y-[2px] hover:shadow-[0_16px_40px_rgba(75,43,22,0.12)]"
                             >
                                 {renderThumb(item, 'h-28 w-full sm:h-32')}
                                 <div className="space-y-2 p-3.5">
