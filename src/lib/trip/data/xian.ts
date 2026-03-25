@@ -2,6 +2,142 @@ import type { TripDefinitionPublic } from '@/lib/trip/types';
 
 // 这份配置已经换成当前这次真实的西安样例，后续如果日期或票面有变动，
 // 直接改这里即可，不需要先做后台编辑器。
+const xianCityWallVisual = {
+    title: '西安城墙',
+    caption: '适合作为整趟旅程的开场画面，先把城市气质立住。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Xi%27an_City_Wall_%2811523944773%29.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Xi%27an_City_Wall_(11523944773).jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'Edward Stojakovic',
+    license: 'CC BY 2.0',
+    objectPosition: 'center center',
+} as const;
+
+const terracottaArmyVisual = {
+    title: '兵马俑一号坑',
+    caption: '27 号白天最硬的门票时间，最好一眼就知道这段不能掉链子。',
+    imageUrl:
+        'https://upload.wikimedia.org/wikipedia/commons/a/a2/2023-10-08_Terracotta_Army_-_Pit_1_%E7%A7%A6%E5%85%B5%E9%A6%AC%E4%BF%91%E4%B8%80%E8%99%9F%E5%9D%91_04.jpg',
+    sourceUrl:
+        'https://commons.wikimedia.org/wiki/File:2023-10-08_Terracotta_Army_-_Pit_1_%E7%A7%A6%E5%85%B5%E9%A6%AC%E4%BF%91%E4%B8%80%E8%99%9F%E5%9D%91_04.jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'Yoshinobu Gen',
+    license: 'CC BY-SA 4.0',
+    objectPosition: 'center center',
+} as const;
+
+const olympicCenterVisual = {
+    title: '西安奥体中心',
+    caption: '28 号的主线就围着这里转，页面里应该给它更高的权重。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Xi%27an_Olympic_Sports_Center%28Aerial_image%29.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Xi%27an_Olympic_Sports_Center(Aerial_image).jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'Liuboyoupeter',
+    license: 'CC BY-SA 4.0',
+    objectPosition: 'center center',
+} as const;
+
+const giantWildGoosePagodaVisual = {
+    title: '大雁塔 / 大唐不夜城片区',
+    caption: '如果白天还想短停这片区，这张图能把“西安感”补得更完整。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/fd/Giant_Wild_Goose_Pagoda_%2854075270800%29.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Giant_Wild_Goose_Pagoda_(54075270800).jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'xiquinhosilva',
+    license: 'CC BY 2.0',
+    objectPosition: 'center center',
+} as const;
+
+const huaqingPalaceVisual = {
+    title: '华清宫',
+    caption: '长恨歌和临潼线都围着这里，适合做 27 号晚上的视觉锚点。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/%E5%8D%8E%E6%B8%85%E5%AE%AB.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:%E5%8D%8E%E6%B8%85%E5%AE%AB.jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'Gisling',
+    license: 'CC BY-SA 3.0',
+    objectPosition: 'center center',
+} as const;
+
+const songOfEverlastingSorrowVisual = {
+    title: '长恨歌实景演出',
+    caption: '这一场更重要的是舞台、水面和山体灯光的沉浸感，别再和白天景区图混成一张。',
+    imageUrl:
+        'https://commons.wikimedia.org/wiki/Special:Redirect/file/2023-10-08%20Dance%20drama%20%22the%20Song%20of%20Everlasting%20Sorrow%22%20%28%E9%95%B7%E6%81%A8%E6%AD%8C%29%20in%20Hsi-an%20%28%E8%A5%BF%E5%AE%89%29%2030.jpg',
+    sourceUrl:
+        'https://commons.wikimedia.org/wiki/File:2023-10-08_Dance_drama_%22the_Song_of_Everlasting_Sorrow%22_(%E9%95%B7%E6%81%A8%E6%AD%8C)_in_Hsi-an_(%E8%A5%BF%E5%AE%89)_30.jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'See source page',
+    license: 'See source page',
+    objectPosition: 'center center',
+} as const;
+
+const qingdaoNorthHallVisual = {
+    title: '青岛北站候车大厅',
+    caption: '凌晨出发这一段最重要的是把高铁和机场衔接稳住，不要在第一步就乱节奏。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/b8/Inside_the_main_departure_hall_at_Qingdao_North_Train_Station.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Inside_the_main_departure_hall_at_Qingdao_North_Train_Station.jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'Mark wyld',
+    license: 'CC BY-SA 4.0',
+    objectPosition: 'center center',
+} as const;
+
+const qingdaoNorthExteriorVisual = {
+    title: '青岛北站',
+    caption: '返程落地后的最后一段高铁，更适合用车站外观做终点感收束。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/48/Qingdao_China_North_Train_Station.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Qingdao_China_North_Train_Station.jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'Mark wyld',
+    license: 'CC BY-SA 4.0',
+    objectPosition: 'center center',
+} as const;
+
+const qingdaoJiaodongAirportVisual = {
+    title: '青岛胶东机场',
+    caption: '高铁转机场后，这段只需要盯住值机、安检和起飞，不要被别的信息打散。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/9f/Qingdao_Jiaodong_Airport_FA.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:Qingdao_Jiaodong_Airport_FA.jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: 'Ginbayashi',
+    license: 'CC BY-SA 4.0',
+    objectPosition: 'center center',
+} as const;
+
+const xianAirportTerminal5Visual = {
+    title: '西安咸阳机场 T5',
+    caption: '去程落地西安后的门户感很强，适合给“从机场直切临潼”这段当主图。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/3f/20250911_Xi%27an_Xianyang_International_Airport_-_Terminal_5.jpg',
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:20250911_Xi'an_Xianyang_International_Airport_-_Terminal_5.jpg",
+    sourceName: 'Wikimedia Commons',
+    credit: 'Windmemories',
+    license: 'CC BY-SA 4.0',
+    objectPosition: 'center center',
+} as const;
+
+const xianAirportHotelVisual = {
+    title: '机场片区航空大酒店',
+    caption: '晚场结束后回机场片区收口休息，这张图更像“今天终于到睡觉环节了”。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/02/%E8%88%AA%E7%A9%BA%E5%A4%A7%E9%85%92%E5%BA%97_-_panoramio.jpg',
+    sourceUrl: 'https://commons.wikimedia.org/wiki/File:%E8%88%AA%E7%A9%BA%E5%A4%A7%E9%85%92%E5%BA%97_-_panoramio.jpg',
+    sourceName: 'Wikimedia Commons',
+    credit: '天王星',
+    license: 'CC BY-SA 3.0',
+    objectPosition: 'center center',
+} as const;
+
+const xianAirportTerminalVisual = {
+    title: '西安咸阳国际机场',
+    caption: '返程日的主线就是退房、去机场、稳稳起飞，不再往行程里硬塞别的点。',
+    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/a7/Xi%27an_Xianyang_International_Airport.jpg',
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Xi'an_Xianyang_International_Airport.jpg",
+    sourceName: 'Wikimedia Commons',
+    credit: 'Ciked',
+    license: 'CC BY-SA 3.0',
+    objectPosition: 'center center',
+} as const;
+
 export const xianTrip: TripDefinitionPublic = {
     slug: 'xian',
     title: '西安 3 天 2 晚 · 兵马俑 + 长恨歌 + 郑润泽',
@@ -12,21 +148,31 @@ export const xianTrip: TripDefinitionPublic = {
     coverNote:
         '已按这次真实安排整理：Z271、MU2413、兵马俑、长恨歌第二场、郑润泽西安奥体、SC4962、D26。涉及航站楼、演出开场等公开信息的地方，统一以票面和当天公告为准。',
     checklist: ['27 号是最满的一天', '28 号只围着奥体主线安排', '29 号返程是飞机接高铁'],
+    heroVisuals: [
+        xianCityWallVisual,
+        terracottaArmyVisual,
+        xianAirportTerminal5Visual,
+        olympicCenterVisual,
+        giantWildGoosePagodaVisual,
+    ],
     days: [
         {
             date: '2026-03-27',
             title: 'Day 1 / 高铁 + 飞机 + 兵马俑 + 长恨歌',
             focus: '这天从凌晨一路赶到深夜：先去青岛，再飞西安，白天兵马俑，晚上长恨歌。主线已经很满，不再额外塞景点。',
+            visual: terracottaArmyVisual,
         },
         {
             date: '2026-03-28',
             title: 'Day 2 / 郑润泽奥体演唱会',
             focus: '这天就围着奥体演唱会走。大唐不夜城如果还想去，只能白天短停，不能拖到演唱会前后。',
+            visual: olympicCenterVisual,
         },
         {
             date: '2026-03-29',
             title: 'Day 3 / 西安飞青岛 + 高铁回潍坊',
             focus: '返程是双衔接：先飞青岛，再去青岛北坐 D26。前半天尽量只保退房和去机场，不再加别的安排。',
+            visual: xianCityWallVisual,
         },
     ],
     items: [
@@ -43,6 +189,7 @@ export const xianTrip: TripDefinitionPublic = {
             bookingNote: '订单号 EC91371163；截图显示 2026-03-27 03:08 发车。',
             highlight: '第一段交通别错，后面整天都会连锁受影响。',
             tips: ['身份证和手机别塞进行李最底下', '出站后尽快转去胶东机场'],
+            visual: qingdaoNorthHallVisual,
         },
         {
             id: 'go-flight-mu2413',
@@ -56,6 +203,7 @@ export const xianTrip: TripDefinitionPublic = {
             leaveAheadMin: 90,
             bookingNote: '2026-03-27 06:25 起飞，08:40 到达西安咸阳机场 T5。',
             tips: ['下机后先确认行李和证件', '如果时间紧，别先回机场酒店再折返'],
+            visual: qingdaoJiaodongAirportVisual,
         },
         {
             id: 'terracotta-ticket',
@@ -71,6 +219,18 @@ export const xianTrip: TripDefinitionPublic = {
             bookingNote: '2026-03-27，10:31-11:30 入园；成人票 2 张；凭身份证或护照等证件核验入园。',
             highlight: '这是 27 号白天最硬的门票时间。',
             tips: ['博物馆和丽山园当天一起走，不要把时间压太死', '如果航班稍有延误，第一时间重新核算去临潼时间'],
+            visual: terracottaArmyVisual,
+            playHighlights: ['先冲一号坑主展厅，最能一下子把气势看出来', '如果体力够，再补铜车马和丽山园，不要反复折返'],
+            knowledgeCards: [
+                {
+                    title: '为什么先看一号坑',
+                    text: '一号坑规模最大、队列最完整，第一次到兵马俑最容易在这里把“秦军阵列感”建立起来。',
+                },
+                {
+                    title: '别把行程压太死',
+                    text: '兵马俑和丽山园都值得看，但这天后面还有长恨歌，节奏上宁可留白，也别把晚上演出链路拖乱。',
+                },
+            ],
         },
         {
             id: 'huaqinggong-buffer',
@@ -84,6 +244,18 @@ export const xianTrip: TripDefinitionPublic = {
             leaveAheadMin: 20,
             bookingNote: '这段是建议缓冲，不是额外票务。',
             tips: ['早点吃完，留出换票和检票时间', '这天不要再安排大唐不夜城'],
+            visual: huaqingPalaceVisual,
+            playHighlights: ['先把晚饭吃稳，再顺手确认演出入口和取票方式', '如果现场人多，这段时间宁可提前排队，也别再折返回市区'],
+            knowledgeCards: [
+                {
+                    title: '为什么在这儿等',
+                    text: '兵马俑、华清宫、长恨歌都在临潼一线，这段缓冲的价值就是避免来回折返造成时间损耗。',
+                },
+                {
+                    title: '华清宫的背景',
+                    text: '华清宫背后是骊山温泉与唐代宫苑历史，很多人来看长恨歌时，也会顺手把这片区当成晚间主场景。',
+                },
+            ],
         },
         {
             id: 'song-of-everlasting-sorrow',
@@ -99,6 +271,18 @@ export const xianTrip: TripDefinitionPublic = {
             bookingNote: '当前按官方经典版第二场约 21:35 开始规划，最终以票面和景区当日公告为准。',
             highlight: '27 号晚上只盯这一场，不再往城南折返。',
             tips: ['提前确认取票 / 验票方式', '散场后直接回酒店休息'],
+            visual: songOfEverlastingSorrowVisual,
+            playHighlights: ['这场更适合把手机收一收，完整看舞台调度和山体实景', '散场后优先回酒店，不要再硬塞夜游点'],
+            knowledgeCards: [
+                {
+                    title: '它为什么有名',
+                    text: '长恨歌把骊山、水面、灯光和大型实景舞台绑在一起，卖点不是单纯剧情，而是“景区即舞台”的沉浸感。',
+                },
+                {
+                    title: '看点别只盯剧情',
+                    text: '如果你对故事本身不熟，也可以重点看音乐、山体灯光和演员调度，它更像一场文旅实景秀。',
+                },
+            ],
         },
         {
             id: 'hotel-checkin',
@@ -113,6 +297,7 @@ export const xianTrip: TripDefinitionPublic = {
             leaveAheadMin: 15,
             bookingNote: '虽然是两笔订单，但已经确认连续住同一房间，无需 3 月 28 日中途换房。',
             tips: ['这晚回酒店会比较晚，第二天不要起太早', '确认前台已经备注连住'],
+            visual: xianAirportHotelVisual,
         },
         {
             id: 'datang-night-city',
@@ -129,6 +314,18 @@ export const xianTrip: TripDefinitionPublic = {
             bookingNote: '这段不是硬票务，是候选安排；如果当天太累，可以直接跳过。',
             highlight: '大唐不夜城、长恨歌、奥体是三个方向，别把这段看成顺路。',
             tips: ['最晚 17:00 左右就该撤离去奥体', '别在这里把晚饭和排队时间耗太多'],
+            visual: giantWildGoosePagodaVisual,
+            playHighlights: ['如果想拍照，优先围着大雁塔和主街做短停，不要深逛', '这段最好控制在“打卡”而不是“沉浸逛街”'],
+            knowledgeCards: [
+                {
+                    title: '这片区好看在哪',
+                    text: '大唐不夜城不是一个单点景区，而是灯光、街演、商业街景和大雁塔片区共同组成的夜游氛围。',
+                },
+                {
+                    title: '为什么它是候选',
+                    text: '它和奥体不顺路，如果当天还想看演唱会，就只能把这里当成白天短停，不能拖到晚上。',
+                },
+            ],
         },
         {
             id: 'zhengrunze-concert',
@@ -144,6 +341,18 @@ export const xianTrip: TripDefinitionPublic = {
             bookingNote: '公开票务当前显示 2026-03-28 19:00 开演；如果你手里电子票写 19:30，请以票面为准。页面里的结束时间先按常规演唱会时长估算。',
             highlight: '这天围着演唱会走，别再把其他点塞太满。',
             tips: ['建议至少提前 60-90 分钟到奥体', '散场后直接回酒店，不再硬塞大唐不夜城'],
+            visual: olympicCenterVisual,
+            playHighlights: ['这段就把重心放在检票、找区、拍一两张入场照，别临场赶', '如果想买周边或打卡，至少比开场早一小时到'],
+            knowledgeCards: [
+                {
+                    title: '为什么要早到',
+                    text: '演唱会现场真正耗时间的往往不是演出本身，而是安检、入场、找座位和散场后的集体离场。',
+                },
+                {
+                    title: '奥体这天的策略',
+                    text: '这一天最好只围绕奥体轴线活动，把体力和通勤冗余都留给演唱会，不要在别处消耗掉。',
+                },
+            ],
         },
         {
             id: 'hotel-checkout',
@@ -156,6 +365,7 @@ export const xianTrip: TripDefinitionPublic = {
             leaveAheadMin: 20,
             bookingNote: '2026-03-29 离店，已确认是同一房间连续住 2 晚。',
             tips: ['重点检查身份证、充电器、耳机、化妆包', '若前台还没做连住备注，及时确认账单'],
+            visual: xianAirportHotelVisual,
         },
         {
             id: 'return-flight-sc4962',
@@ -170,6 +380,7 @@ export const xianTrip: TripDefinitionPublic = {
             bookingNote: '2026-03-29 14:50 起飞，17:10 到达；按机场官方当前国内出发航司分布，山东航空在西安咸阳 T2 办理，最终以当天机场公告为准。',
             highlight: '这是一段硬时间点，至少提前 2 小时到机场。',
             tips: ['前面不要再安排景点', '如果航班延误，第一时间评估晚上 D26 的衔接'],
+            visual: xianAirportTerminalVisual,
         },
         {
             id: 'return-train-d26',
@@ -184,6 +395,7 @@ export const xianTrip: TripDefinitionPublic = {
             bookingNote: '订单号 EC84643173；截图显示 2026-03-29 20:45 发车。',
             highlight: '返程最后一段，别因为前面航班落地后磨蹭耽误。',
             tips: ['落地后优先去青岛北，不再额外停留', '若行李多，优先选择最快的接驳方式'],
+            visual: qingdaoNorthExteriorVisual,
         },
     ],
 };

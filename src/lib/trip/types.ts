@@ -4,10 +4,27 @@ export type TripManualStatus = 'pending' | 'doing' | 'done' | 'skipped';
 
 export type TripDerivedStatus = 'pending' | 'leave' | 'doing' | 'missed' | 'done' | 'skipped';
 
+export interface TripVisual {
+    title: string;
+    caption: string;
+    imageUrl: string;
+    sourceUrl: string;
+    sourceName: string;
+    credit: string;
+    license: string;
+    objectPosition?: string;
+}
+
+export interface TripKnowledgeCard {
+    title: string;
+    text: string;
+}
+
 export interface TripDay {
     date: string;
     title: string;
     focus: string;
+    visual?: TripVisual;
 }
 
 export interface TripItem {
@@ -26,6 +43,9 @@ export interface TripItem {
     bookingNote?: string;
     highlight?: string;
     isOptional?: boolean;
+    visual?: TripVisual;
+    playHighlights?: string[];
+    knowledgeCards?: TripKnowledgeCard[];
 }
 
 export interface TripPhoto {
@@ -61,6 +81,7 @@ export interface TripDefinitionPublic {
     intro: string;
     coverNote: string;
     checklist: string[];
+    heroVisuals?: TripVisual[];
     days: TripDay[];
     items: TripItem[];
 }
