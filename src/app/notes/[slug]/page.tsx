@@ -1,190 +1,134 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, BookOpen, CalendarDays } from 'lucide-react';
-import { getAllPosts, getPostBySlug, getSeriesByTitle } from '@/lib/posts';
+import { ArrowLeft, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { getAllPosts, getPostBySlug } from '@/lib/posts';
+import { getProject } from '@/lib/projects';
 import MarkdownView from '../MarkdownView';
 
 export const dynamic = 'force-dynamic';
-
 interface Props {
-    params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: Props) {
-    const { slug } = await params;
-    const post = getPostBySlug(slug);
-    if (!post) return { title: 'Not found' };
-    return {
-        title: `${post.title} - Owen 的记录`,
-        description: post.excerpt ?? undefined,
-    };
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
+  return {
+    title: post?.title || '手记未找到',
+    description: post?.excerpt || undefined,
+  };
 }
 
 export default async function PostPage({ params }: Props) {
-    const { slug } = await params;
-    const post = getPostBySlug(slug);
-    if (!post) notFound();
-
-    const all = getAllPosts();
-    const idx = all.findIndex((p) => p.slug === slug);
-    const prev = idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
-    const next = idx > 0 ? all[idx - 1] : null;
-    const currentSeries = post.series ? getSeriesByTitle(post.series, all) : null;
-    const seriesPosts = post.series ? all.filter((item) => item.series === post.series) : [];
-    const recommendedPosts = all
-        .filter((item) => item.slug !== post.slug && (!post.series || item.series !== post.series))
-        .slice(0, 5);
-
-    return (
-        <main className="min-h-screen bg-[linear-gradient(180deg,#f8faf9_0%,#ffffff_55%,#f4f6f4_100%)] px-4 py-10 md:px-8 md:py-14">
-            <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,760px)_320px] lg:items-start">
-                <article className="min-w-0">
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
+  if (!post) notFound();
+  const all = getAllPosts();
+  const position = all.findIndex((item) => item.slug === post.slug);
+  const older = all[position + 1];
+  const newer = position > 0 ? all[position - 1] : null;
+  const related = post.projects.map(getProject).filter(Boolean);
+  const seriesPosts = post.series
+    ? all.filter((item) => item.series === post.series)
+    : [];
+  return (
+    <main className="studio-page">
+      <div className="studio-container">
+        <Link className="back-link" href="/notes">
+          <ArrowLeft size={16} />
+          回到手记
+        </Link>
+        <header className="article-header">
+          <div className="post-meta">
+            <span>手记 / NOTE</span>
+            <time dateTime={post.date}>{post.date.replaceAll('-', '.')}</time>
+            {post.series && (
+              <Link href={`/notes?series=${encodeURIComponent(post.series)}`}>
+                {post.series}
+              </Link>
+            )}
+          </div>
+          <h1>{post.title}</h1>
+          {post.excerpt && <p>{post.excerpt}</p>}
+        </header>
+        <div className="article-layout">
+          <article className="article-body">
+            <MarkdownView content={post.content} />
+            <nav className="article-pagination" aria-label="前后文章">
+              {newer ? (
+                <Link href={`/notes/${newer.slug}`}>
+                  <span>
+                    <ArrowLeft size={14} />
+                    较新的手记
+                  </span>
+                  <strong>{newer.title}</strong>
+                </Link>
+              ) : (
+                <div />
+              )}
+              {older && (
+                <Link href={`/notes/${older.slug}`}>
+                  <span>
+                    较早的手记
+                    <ArrowRight size={14} />
+                  </span>
+                  <strong>{older.title}</strong>
+                </Link>
+              )}
+            </nav>
+          </article>
+          <aside className="article-aside">
+            {related.length > 0 && (
+              <section>
+                <h2>这篇手记来自</h2>
+                {related.map(
+                  (project) =>
+                    project && (
+                      <Link key={project.id} href={`/products/${project.id}`}>
+                        {project.name}
+                        <ArrowUpRight size={15} />
+                      </Link>
+                    ),
+                )}
+              </section>
+            )}
+            {post.series && (
+              <section>
+                <h2>{post.series}</h2>
+                {seriesPosts.map((item) => (
+                  <Link
+                    key={item.slug}
+                    href={`/notes/${item.slug}`}
+                    aria-current={item.slug === post.slug ? 'page' : undefined}
+                  >
+                    {item.title}
+                  </Link>
+                ))}
+              </section>
+            )}
+            {post.tags.length > 0 && (
+              <section>
+                <h2>沿着这些线索</h2>
+                <div className="notes-tag-list">
+                  {post.tags.map((tag) => (
                     <Link
-                        href="/notes"
-                        className="inline-flex items-center gap-2 text-sm text-slate-500 transition hover:text-slate-900"
+                      key={tag}
+                      href={`/notes?tag=${encodeURIComponent(tag)}`}
                     >
-                        <ArrowLeft size={14} />
-                        回到记录列表
+                      #{tag}
                     </Link>
-
-                    <header className="mt-6 border-b border-slate-200 pb-8">
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                            <CalendarDays size={14} />
-                            <time dateTime={post.date} className="font-mono">{post.date}</time>
-                            {post.series ? (
-                                <Link
-                                    href={`/notes?series=${encodeURIComponent(post.series)}`}
-                                    className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
-                                >
-                                    <BookOpen size={13} />
-                                    {post.series}
-                                </Link>
-                            ) : null}
-                        </div>
-                        <h1 className="mt-4 text-4xl font-bold tracking-tight text-slate-950 md:text-5xl">
-                            {post.title}
-                        </h1>
-                        {post.excerpt ? (
-                            <p className="mt-5 text-lg leading-8 text-slate-600">{post.excerpt}</p>
-                        ) : null}
-                    </header>
-
-                    {post.cover ? (
-                        <figure className="mt-8">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={post.cover} alt={post.title} className="w-full rounded-2xl border border-slate-200" />
-                        </figure>
-                    ) : null}
-
-                    <div className="mt-8">
-                        <MarkdownView content={post.content} />
-                    </div>
-
-                    <nav className="mt-12 grid gap-3 border-t border-slate-200 pt-8 sm:grid-cols-2">
-                        {prev ? (
-                            <Link
-                                href={`/notes/${prev.slug}`}
-                                className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400"
-                            >
-                                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">上一篇</div>
-                                <div className="mt-2 text-sm font-semibold text-slate-950 line-clamp-2">{prev.title}</div>
-                            </Link>
-                        ) : <div />}
-                        {next ? (
-                            <Link
-                                href={`/notes/${next.slug}`}
-                                className="rounded-2xl border border-slate-200 bg-white p-4 text-right transition hover:border-slate-400"
-                            >
-                                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">下一篇</div>
-                                <div className="mt-2 text-sm font-semibold text-slate-950 line-clamp-2">{next.title}</div>
-                            </Link>
-                        ) : null}
-                    </nav>
-                </article>
-
-                <aside className="space-y-5 lg:sticky lg:top-28">
-                    {post.series ? (
-                        <section className="rounded-[24px] border border-slate-200 bg-white/85 p-4 shadow-[0_12px_34px_rgba(15,23,42,0.04)] backdrop-blur">
-                            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-950">
-                                <BookOpen size={15} />
-                                专栏目录
-                            </h2>
-                            <p className="mt-2 text-xs leading-6 text-slate-500">
-                                {currentSeries?.excerpt ?? post.series}
-                            </p>
-                            <Link
-                                href={`/notes?series=${encodeURIComponent(post.series)}`}
-                                className="mt-3 inline-flex rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-100"
-                            >
-                                查看专栏全部文章
-                            </Link>
-                            <div className="mt-4 space-y-2">
-                                {seriesPosts.map((item) => {
-                                    const active = item.slug === post.slug;
-                                    return (
-                                        <Link
-                                            key={item.slug}
-                                            href={`/notes/${item.slug}`}
-                                            className={
-                                                active
-                                                    ? 'block rounded-2xl border border-slate-950 bg-slate-950 px-3 py-3 text-white'
-                                                    : 'block rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 transition hover:border-slate-200 hover:bg-white'
-                                            }
-                                        >
-                                            <time dateTime={item.date} className="font-mono text-xs text-slate-400">
-                                                {item.date}
-                                            </time>
-                                            <span className={active ? 'mt-1 block text-sm font-semibold leading-6 text-white' : 'mt-1 block text-sm font-semibold leading-6 text-slate-800'}>
-                                                {item.title}
-                                            </span>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        </section>
-                    ) : null}
-
-                    {post.tags.length > 0 ? (
-                        <section className="rounded-[24px] border border-slate-200 bg-white/85 p-4 shadow-[0_12px_34px_rgba(15,23,42,0.04)] backdrop-blur">
-                            <h2 className="text-sm font-semibold text-slate-950">标签</h2>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {post.tags.map((tag) => (
-                                    <Link
-                                        key={tag}
-                                        href={`/notes?tag=${encodeURIComponent(tag)}`}
-                                        className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-200 hover:text-slate-950"
-                                    >
-                                        #{tag}
-                                    </Link>
-                                ))}
-                            </div>
-                        </section>
-                    ) : null}
-
-                    <section className="rounded-[24px] border border-slate-200 bg-white/85 p-4 shadow-[0_12px_34px_rgba(15,23,42,0.04)] backdrop-blur">
-                        <h2 className="text-sm font-semibold text-slate-950">推荐阅读</h2>
-                        <div className="mt-3 space-y-2">
-                            {recommendedPosts.map((item) => (
-                                <Link
-                                    key={item.slug}
-                                    href={`/notes/${item.slug}`}
-                                    className="block rounded-2xl border border-slate-100 bg-slate-50 px-3 py-3 transition hover:border-slate-200 hover:bg-white"
-                                >
-                                    <time dateTime={item.date} className="font-mono text-xs text-slate-400">
-                                        {item.date}
-                                    </time>
-                                    <span className="mt-1 block text-sm font-semibold leading-6 text-slate-800">
-                                        {item.title}
-                                    </span>
-                                </Link>
-                            ))}
-                            {recommendedPosts.length === 0 ? (
-                                <p className="text-xs leading-6 text-slate-500">暂时没有更多推荐内容。</p>
-                            ) : null}
-                        </div>
-                    </section>
-                </aside>
+                  ))}
+                </div>
+              </section>
+            )}
+            <div className="article-margin-note">
+              一个阶段的想法，
+              <br />
+              也可以在后来改变。
             </div>
-        </main>
-    );
+          </aside>
+        </div>
+      </div>
+    </main>
+  );
 }
