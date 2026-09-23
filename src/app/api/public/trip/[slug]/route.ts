@@ -10,9 +10,10 @@ function readToken(req: NextRequest) {
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { slug: string } }
+    { params }: { params: Promise<{ slug: string }> }
 ) {
-    const snapshot = await getTripSnapshot(params.slug, readToken(req));
+    const { slug } = await params;
+    const snapshot = await getTripSnapshot(slug, readToken(req));
     if (!snapshot) {
         return NextResponse.json({ error: '无效链接或 token 失效' }, { status: 401 });
     }

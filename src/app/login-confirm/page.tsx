@@ -5,14 +5,13 @@ import {
     normalizeLoginNext,
 } from '@/lib/auth/loginModal';
 
-export default function LoginConfirm({
+export default async function LoginConfirm({
     searchParams,
 }: {
-    searchParams?: { next?: string | string[] };
+    searchParams?: Promise<{ next?: string | string[] }>;
 }) {
-    const rawNext = Array.isArray(searchParams?.next)
-        ? searchParams?.next[0]
-        : searchParams?.next;
+    const { next } = (await searchParams) ?? {};
+    const rawNext = Array.isArray(next) ? next[0] : next;
 
     redirect(buildLoginModalHomePath(normalizeLoginNext(rawNext, DEFAULT_POST_LOGIN_PATH)));
 }

@@ -131,7 +131,7 @@ function ExternalCard({ item }: { item: NavLink }) {
 }
 
 export default async function DashboardPage() {
-    const token = cookies().get('sessionToken')?.value;
+    const token = (await cookies()).get('sessionToken')?.value;
     if (!token) {
         redirect(buildLoginModalHomePath('/dashboard'));
     }

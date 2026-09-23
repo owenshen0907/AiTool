@@ -9,9 +9,10 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({
     params,
 }: {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-    if (params.slug === 'xian') {
+    const { slug } = await params;
+    if (slug === 'xian') {
         return {
             title: `${xianTrip.title} | AiTool`,
             description: xianTrip.intro,
@@ -37,11 +38,12 @@ export default async function TripPage({
     params,
     searchParams,
 }: {
-    params: { slug: string };
-    searchParams?: Record<string, string | string[] | undefined>;
+    params: Promise<{ slug: string }>;
+    searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-    const token = readToken(searchParams?.token);
-    const snapshot = await getTripSnapshot(params.slug, token);
+    const [{ slug }, query] = await Promise.all([params, searchParams]);
+    const token = readToken(query?.token);
+    const snapshot = await getTripSnapshot(slug, token);
 
     if (!snapshot) {
         return (
@@ -55,7 +57,7 @@ export default async function TripPage({
                         一般是因为链接里缺少 `token`，或者你拿到的已经不是完整分享链接。直接把原始链接重新发一次就行。
                     </p>
                     <div className="mt-6 rounded-[24px] border border-[#ead8c5] bg-[#fff8ef] px-5 py-4 text-left text-sm leading-7 text-[#7a5d45]">
-                        示例：`/trip/{params.slug}?token=你的分享口令`
+                        示例：`/trip/{slug}?token=你的分享口令`
                     </div>
                 </section>
             </main>
