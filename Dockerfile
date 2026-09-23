@@ -1,36 +1,25 @@
-# ─────────────────────────────────────────────────
-# 基础镜像
-# ─────────────────────────────────────────────────
-FROM node:18.20.7-alpine
-LABEL maintainer="owenshen"
+FROM node:22-alpine AS builder
 
 WORKDIR /app
-
-# ①（可选）替换 Alpine 镜像源
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' \
-    /etc/apk/repositories
-
-# ② 安装系统依赖
-RUN apk add --no-cache python3 make g++ git bash openssl
-
-# ③ 仅复制依赖声明，做缓存层
+RUN apk add --no-cache python3 make g++ git
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
-
-# ④ 复制全部源码
 COPY . .
-
-# ⑤ 构建 Next.js 产物
 RUN npm run build
 
-# ⑥ 安装 PM2 全局
-RUN npm i -g pm2
+FROM node:22-alpine
 
-# ⑦ 生产环境变量
+WORKDIR /app
+RUN apk add --no-cache git && \
+    git config --system --add safe.directory /AiTool-content
 ENV NODE_ENV=production
 
-# ⑧ 暴露 Next.js
-EXPOSE 3000
+COPY --chown=node:node --from=builder /app/package.json ./package.json
+COPY --chown=node:node --from=builder /app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /app/.next ./.next
+COPY --chown=node:node --from=builder /app/public ./public
+COPY --chown=node:node --from=builder /app/next.config.mjs ./next.config.mjs
 
-# ⑨ 启动 Web 进程
-CMD ["pm2-runtime", "ecosystem.config.cjs"]
+USER node
+EXPOSE 3000
+CMD ["./node_modules/.bin/next", "start", "-p", "3000"]

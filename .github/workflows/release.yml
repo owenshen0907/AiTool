@@ -1,0 +1,158 @@
+name: Publish and deploy
+
+# CI must have passed on a push to the current main tip. PR runs never receive
+# deployment credentials, and older queued runs cannot deploy over newer code.
+"on":
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Recovery action
+        required: true
+        type: choice
+        options: [rollback]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aitool-production
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish approved image
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+      sha: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4.4.0
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Require the current main tip
+        env:
+          APPROVED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          current_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$APPROVED_SHA" = "$current_sha"
+          test "$APPROVED_SHA" = "$(git rev-parse HEAD)"
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish the immutable image
+        id: image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/owenshen0907/aitool:sha-${{ github.event.workflow_run.head_sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/owenshen0907/AiTool
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+
+  deploy:
+    name: Deploy production
+    needs: publish
+    if: vars.AITOOL_RELEASE_READY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    environment: production
+    steps:
+      - name: Require the current main tip
+        env:
+          APPROVED_SHA: ${{ needs.publish.outputs.sha }}
+        run: |
+          current_sha="$(git ls-remote https://github.com/owenshen0907/AiTool.git refs/heads/main | awk '{print $1}')"
+          test "$APPROVED_SHA" = "$current_sha"
+      - name: Prepare pinned SSH host and limited deploy key
+        env:
+          DEPLOY_KEY: ${{ secrets.AITOOL_WEB_DEPLOY_KEY }}
+          HOST_KEY: ${{ vars.AITOOL_DEPLOY_HOST_KEY }}
+        run: |
+          test -n "$DEPLOY_KEY"
+          test -n "$HOST_KEY"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$HOST_KEY" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+      - name: Deploy exact image and verify public routes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_HOST: ${{ vars.AITOOL_DEPLOY_HOST }}
+          DEPLOY_SHA: ${{ needs.publish.outputs.sha }}
+          DEPLOY_DIGEST: ${{ needs.publish.outputs.digest }}
+          DEPLOY_ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_HOST"
+          ssh_args=(-i "$HOME/.ssh/id_ed25519" -p 322
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes)
+          printf '%s\n' "$GH_TOKEN" |
+            ssh "${ssh_args[@]}" "aitoolwebdeploy@$DEPLOY_HOST" \
+              "deploy $DEPLOY_SHA $DEPLOY_DIGEST $DEPLOY_ACTOR"
+          if ! curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            --max-time 10 https://owenshen.top/ > /dev/null ||
+            ! curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            --max-time 10 https://owenshen.top/notes > /dev/null; then
+            echo "Public smoke check failed; requesting rollback." >&2
+            ssh "${ssh_args[@]}" "aitoolwebdeploy@$DEPLOY_HOST" rollback
+            exit 1
+          fi
+          echo "Production is healthy at $DEPLOY_SHA ($DEPLOY_DIGEST)"
+
+  rollback:
+    name: Roll back production
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    environment: production
+    steps:
+      - name: Prepare pinned SSH host and limited deploy key
+        env:
+          DEPLOY_KEY: ${{ secrets.AITOOL_WEB_DEPLOY_KEY }}
+          HOST_KEY: ${{ vars.AITOOL_DEPLOY_HOST_KEY }}
+        run: |
+          test -n "$DEPLOY_KEY"
+          test -n "$HOST_KEY"
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$HOST_KEY" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+      - name: Restore the previous healthy image
+        env:
+          DEPLOY_HOST: ${{ vars.AITOOL_DEPLOY_HOST }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          ssh -i "$HOME/.ssh/id_ed25519" -p 322 \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "aitoolwebdeploy@$DEPLOY_HOST" rollback
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            --max-time 10 https://owenshen.top/ > /dev/null
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 \
+            --max-time 10 https://owenshen.top/notes > /dev/null
