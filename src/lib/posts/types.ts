@@ -9,6 +9,8 @@ export interface PostFrontmatter {
     cover?: string | null;
     excerpt?: string | null;
     draft?: boolean;
+    visibility?: 'public' | 'private';
+    projects?: string[];
 }
 
 export interface PostMeta {
@@ -20,6 +22,7 @@ export interface PostMeta {
     series: string | null;
     cover: string | null;
     excerpt: string | null;
+    projects: string[];
 }
 
 export interface Post extends PostMeta {
@@ -31,6 +34,7 @@ export interface SeriesFrontmatter {
     order?: number;
     excerpt?: string | null;
     draft?: boolean;
+    visibility?: 'public' | 'private';
 }
 
 export interface SeriesInfo {

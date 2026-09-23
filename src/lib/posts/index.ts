@@ -3,6 +3,8 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 import matter from 'gray-matter';
 import type { Post, PostFrontmatter, PostMeta, SeriesFrontmatter, SeriesInfo } from './types';
+import { isPersonalContent } from './editorial';
+import { isProjectId } from '../projects';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -116,7 +118,7 @@ function parseFile(file: string): Post | null {
     const { data, content } = matter(raw);
     const fm = data as PostFrontmatter;
 
-    if (fm.draft === true) return null;
+    if (!isPersonalContent(raw, fm)) return null;
     if (!fm.title || typeof fm.title !== 'string') return null;
     let dateStr: string | undefined;
     if (fm.date instanceof Date) {
@@ -135,6 +137,7 @@ function parseFile(file: string): Post | null {
         series: normalizeSeries(fm.series),
         cover: typeof fm.cover === 'string' ? fm.cover : null,
         excerpt: pickExcerpt(fm, content),
+        projects: Array.isArray(fm.projects) ? Array.from(new Set(fm.projects.filter(isProjectId))) : [],
         content,
     };
 }
@@ -151,7 +154,7 @@ function parseSeriesFile(file: string): SeriesInfo | null {
 
     const { data, content } = matter(raw);
     const fm = data as SeriesFrontmatter;
-    if (fm.draft === true) return null;
+    if (!isPersonalContent(raw, fm)) return null;
 
     const slug = slugFromFile(file);
     const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title.trim() : titleFromSlug(slug);
@@ -210,6 +213,7 @@ export function getAllPosts(): PostMeta[] {
 }
 
 export function getPostBySlug(slug: string): Post | null {
+    if (!slug || /[\\/]/.test(slug) || slug === '.' || slug === '..') return null;
     return parseFile(`${slug}.md`);
 }
 

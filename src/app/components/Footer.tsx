@@ -1,71 +1,49 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Github, Sparkles } from "lucide-react";
-
-const footerLinks = [
-  { title: "工具目录", href: "/tools" },
-  { title: "产品介绍", href: "/products" },
-  { title: "想法记录", href: "/notes" },
-  { title: "常用链接", href: "/links" },
-  { title: "支持", href: "/support" },
-  { title: "隐私政策", href: "/legal/apple-privacy" },
-  { title: "使用条款", href: "/legal/terms" },
-];
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { ArrowUpRight } from 'lucide-react';
+import { buildLoginModalPath } from '@/lib/auth/loginModal';
 
 export default function Footer() {
-  const pathname = usePathname();
-
-  if (pathname === "/trip" || pathname?.startsWith("/trip/")) {
-    return null;
-  }
-
+  const pathname = usePathname() || '/';
+  const params = useSearchParams();
+  if (pathname === '/trip' || pathname.startsWith('/trip/')) return null;
   return (
-    <footer className="border-t border-[#181b1a]/10 bg-[linear-gradient(180deg,rgba(235,229,216,0.88)_0%,rgba(247,244,236,0.92)_100%)] backdrop-blur-sm">
-      <div className="mx-auto flex max-w-7xl flex-col gap-7 px-6 py-10 md:flex-row md:items-center md:justify-between md:py-12">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-[linear-gradient(135deg,#20342b_0%,#5f6b3f_55%,#d49b42_100%)] text-white">
-            <Sparkles size={15} />
-          </div>
+    <footer className="studio-footer">
+      <div className="studio-container">
+        <div className="footer-top">
           <div>
-            <div className="font-stamp text-sm font-black tracking-tight text-[#181b1a]">
-              AiTool 2.0
-            </div>
-            <div className="font-data text-[10px] uppercase tracking-[0.18em] text-[#5d625a]">
-              WORK NOTEBOOK
-            </div>
+            <span className="studio-eyebrow">OWEN SHEN / 个人网站</span>
+            <p>下次来，可能又多了一页。</p>
           </div>
+          <Link href="/about" className="text-link">
+            认识一下 <ArrowUpRight size={18} />
+          </Link>
         </div>
-
-        <nav className="flex flex-wrap items-center gap-4 md:justify-center md:gap-6">
-          {footerLinks.map((link) => (
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} Owen Shen</span>
+          <nav aria-label="更多入口">
+            <Link href="/tools">工具箱</Link>
+            <Link href="/links">常用链接</Link>
+            <Link href="/support">产品支持</Link>
+            <Link href="/legal/apple-privacy">隐私</Link>
+            <Link href="/legal/terms">条款</Link>
+            <Link href="/legal/data-deletion">数据删除</Link>
+            <Link href="/legal/app-store-checklist">上架材料</Link>
             <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm font-semibold text-slate-600 transition-colors duration-200 hover:text-slate-900"
+              href={buildLoginModalPath(
+                pathname,
+                params?.toString(),
+                '/dashboard',
+              )}
+              scroll={false}
             >
-              {link.title}
+              账号
             </Link>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-4">
-          <a
-            href="https://github.com/owenshen0907/AiTool"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slate-600 transition-colors duration-200 hover:text-slate-900"
-            aria-label="GitHub"
-          >
-            <Github size={18} />
-          </a>
-          <span className="text-xs text-slate-500">
-            &copy; {new Date().getFullYear()} Owen Shen
-          </span>
+          </nav>
         </div>
       </div>
-      <div className="aios-barcode mx-auto mb-8 max-w-xs opacity-55" />
     </footer>
   );
 }
