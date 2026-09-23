@@ -58,8 +58,6 @@
   // 指定要纳入编辑器 / 编译的文件
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.d.ts", ".next/types/**/*.ts"],
 
-  // 排除依赖和一份 Next 生成错误的汇总校验文件
-  // Next 15.5.26 的汇总 validator 对 src/app 生成了错误的根目录导入；
-  // 保留 .next/types/app 下逐路由校验，只排除这份重复的错误生成文件。
-  "exclude": ["node_modules", ".next/types/validator.ts"]
+  // 排除 node_modules 目录
+  "exclude": ["node_modules"]
 }
