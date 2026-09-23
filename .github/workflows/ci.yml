@@ -1,0 +1,28 @@
+name: CI
+
+"on":
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18.20.7'
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run check:security
+      - run: npm run --if-present test:studio
+      - run: npm run build
