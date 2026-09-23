@@ -22,7 +22,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const tokenCookie = cookies().get("sessionToken")?.value;
+  const tokenCookie = (await cookies()).get("sessionToken")?.value;
   let initialUser: User | null = null;
 
   if (tokenCookie) {

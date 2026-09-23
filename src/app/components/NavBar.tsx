@@ -31,7 +31,7 @@ function HoverMenu({
   level?: number;
 }) {
   const [open, setOpen] = useState(false);
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
   const active = isMenuItemActive(item, pathname);
   const isRoot = level === 0;
 
@@ -109,7 +109,7 @@ export default function NavBar() {
   const searchParams = useSearchParams();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
-  const hoverTimer = useRef<number>();
+  const hoverTimer = useRef<number | undefined>(undefined);
 
   if (
     pathname === "/login-confirm" ||

@@ -10,13 +10,14 @@ function readToken(req: NextRequest) {
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { slug: string; itemId: string } }
+    { params }: { params: Promise<{ slug: string; itemId: string }> }
 ) {
     try {
+        const { slug, itemId } = await params;
         const body = await req.json();
         const snapshot = await updateTripItem({
-            slug: params.slug,
-            itemId: params.itemId,
+            slug,
+            itemId,
             token: readToken(req),
             note: typeof body?.note === 'string' ? body.note : undefined,
             action: body?.action,

@@ -8,7 +8,7 @@ import React, {
     useRef,
     useCallback
 } from 'react';
-import Lottie from 'lottie-react';
+import Lottie, { type LottieRefCurrentProps } from 'lottie-react';
 import { loadingConfig, LoadingSceneConfig } from './config';
 
 interface LoadingIndicatorProps {
@@ -17,13 +17,16 @@ interface LoadingIndicatorProps {
 }
 
 export default function LoadingIndicator({ scene }: LoadingIndicatorProps) {
-    // ---------- 读取配置 ----------
     const cfg: LoadingSceneConfig | undefined = loadingConfig[scene];
     if (!cfg) {
         console.warn(`LoadingIndicator: 未配置场景 ${scene}`);
         return null;
     }
 
+    return <ConfiguredLoadingIndicator scene={scene} cfg={cfg} />;
+}
+
+function ConfiguredLoadingIndicator({ scene, cfg }: { scene: string; cfg: LoadingSceneConfig }) {
     const {
         animationData,
         tipList,
@@ -59,7 +62,7 @@ export default function LoadingIndicator({ scene }: LoadingIndicatorProps) {
     const [distance, setDistance] = useState<number | null>(null); // 滑动距离
 
     // ---------- Lottie 引用 ----------
-    const lottieRef = useRef<any>(null);
+    const lottieRef = useRef<LottieRefCurrentProps | null>(null);
 
     /* 设置 Lottie 播放速率 */
     useEffect(() => {

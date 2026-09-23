@@ -10,17 +10,18 @@ function readToken(req: NextRequest) {
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { slug: string; itemId: string } }
+    { params }: { params: Promise<{ slug: string; itemId: string }> }
 ) {
     try {
+        const { slug, itemId } = await params;
         const form = await req.formData();
         const files = Array.from(form.values()).filter(
             (value): value is File => value instanceof File
         );
 
         const snapshot = await uploadTripPhotos({
-            slug: params.slug,
-            itemId: params.itemId,
+            slug,
+            itemId,
             token: readToken(req),
             files: files.map((file) => ({
                 name: file.name,
