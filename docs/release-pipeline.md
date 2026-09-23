@@ -12,8 +12,13 @@
    `Publish and deploy`；PR 的 CI 结果不能触发发布。
 3. 发布工作流再次核对该 SHA 仍是 `main` 最新提交，构建镜像并推至 GHCR，
    标记 OCI revision，输出不可变 digest。部署前再次核对主线 SHA。
+   CI、镜像构建、部署和回滚均运行在自有隔离 runner `aitool-ci`；Mac 睡眠或
+   离线时任务会排队，恢复在线后继续，不会切到 GitHub 托管 runner。
+   runner VM 预装 Ubuntu Docker 与 qemu-user-static；工作流不安装特权
+   QEMU 模拟器，也不允许来自 fork 的 PR 工作流直接运行。
 4. 服务器仅接受精确 SHA + digest 的受限 SSH 命令，拉取镜像后检查 revision，
-   再切换容器；本机 `/`、`/notes` 健康检查失败会自动恢复旧容器。
+   再切换容器；保留上一只容器的原始挂载和启动命令，本机 `/`、`/notes`
+   健康检查失败会自动恢复它。
 5. GitHub 再检查公网 `/`、`/notes`；失败时调用同一受限 SSH 入口回滚，
    并将工作流标为失败。部署工作流使用 `production` environment，
    仅允许 `main`，不与 PR 共享密钥。
@@ -55,9 +60,9 @@ SSH 标准输入传入；服务器拉取后清理临时 Docker 登录配置。�
 ## 回滚和排障
 
 GitHub Actions 的 `Publish and deploy` 可手工运行，选择 `rollback`，
-恢复上一枚镜像并复查公网路由。容器切换失败会自动恢复旧容器。
-回滚保留当前镜像作为下一次的 previous，便于定位；如上一次镜像本身不健康，
-不要反复切换，应先看 Nginx、容器日志和内容挂载。
+恢复上一只完整容器并复查公网路由。容器切换失败会自动恢复旧容器。
+一次回滚后不会自动把失败版本设为下一次回滚目标；如果旧容器也不健康，
+应先检查 Nginx、容器日志和内容挂载。
 
 审计时记录 CI run、发布 run、主线 SHA、镜像 digest、服务器输出的镜像 ID、
 公网检查结果和 Notes 仓库自己的同步 run。不要把部署私钥、GHCR token、
