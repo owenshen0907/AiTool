@@ -1,19 +1,14 @@
-version: "3.8"
-
 services:
   aitool:
-    build:            # 也可以直接 image: aitool-runtime:latest
+    build:
       context: .
       dockerfile: Dockerfile
+    image: aitool-runtime:local
     container_name: aitool
     ports:
-      - "3000:3000"   # Next.js
+      - "127.0.0.1:3000:3000"
     env_file:
       - .env.local
     volumes:
-      # 挂代码方便热更新；生产可去掉
-      - ./src:/app/src
-      - ./public:/app/public
-      - ./ecosystem.config.cjs:/app/ecosystem.config.cjs
       - ../AiTool-content:/AiTool-content:ro
     restart: unless-stopped
