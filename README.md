@@ -123,6 +123,8 @@ npm run start
 
 `check:security` 会阻止已废弃的服务端模型代理、供应商密钥配置和“只解码、不验签”的 JWT 鉴权重新进入公开站。公开页面不依赖登录中间件；`/dashboard` 与账号 API 会把 session token 交给 unified-app-backend 实际校验。StepFun 文件工具只转发用户在当前请求中提供的 Bearer token；站点不持久化该 token。
 
+CI 只在本仓库分支的 `push` 上运行，使用标有 `aitool-ci` 的自托管 runner，不使用 GitHub 托管 runner。公开仓库的 fork PR 工作流已设为所有外部贡献者均需人工批准；不要批准未审查的外部工作流，外部改动应先由维护者审查，再放入本仓库受控分支跑 CI。`main` 的必需 `CI` 检查在 runner 离线时会保持未通过，不能合并；runner 应是无生产密钥、不接入生产私网的专用隔离环境。
+
 ## 内容仓库 (AiTool-content)
 
 公开记录的所有 Markdown 都在独立仓库 `AiTool-content` 里,网站只负责渲染。完整的 frontmatter 规范、写作流程见 [`AiTool-content/README.md`](../AiTool-content/README.md)。
