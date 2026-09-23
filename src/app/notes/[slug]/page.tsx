@@ -7,19 +7,21 @@ import MarkdownView from '../MarkdownView';
 
 export const dynamic = 'force-dynamic';
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
-export function generateMetadata({ params }: Props) {
-  const post = getPostBySlug(params.slug);
+export async function generateMetadata({ params }: Props) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
   return {
     title: post?.title || '手记未找到',
     description: post?.excerpt || undefined,
   };
 }
 
-export default function PostPage({ params }: Props) {
-  const post = getPostBySlug(params.slug);
+export default async function PostPage({ params }: Props) {
+  const { slug } = await params;
+  const post = getPostBySlug(slug);
   if (!post) notFound();
   const all = getAllPosts();
   const position = all.findIndex((item) => item.slug === post.slug);

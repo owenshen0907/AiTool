@@ -15,16 +15,17 @@ export const metadata = {
   description: '写在过程中的实验、判断、学习和日常观察。',
 };
 interface Props {
-  searchParams?: { view?: string; tag?: string; series?: string };
+  searchParams?: Promise<{ view?: string; tag?: string; series?: string }>;
 }
 
-export default function NotesPage({ searchParams = {} }: Props) {
-  const view = QUICK_VIEWS.some((item) => item.id === searchParams.view)
-    ? (searchParams.view as QuickView)
+export default async function NotesPage({ searchParams }: Props) {
+  const query = (await searchParams) ?? {};
+  const view = QUICK_VIEWS.some((item) => item.id === query.view)
+    ? (query.view as QuickView)
     : 'all';
-  const tag = typeof searchParams.tag === 'string' ? searchParams.tag : '';
+  const tag = typeof query.tag === 'string' ? query.tag : '';
   const series =
-    typeof searchParams.series === 'string' ? searchParams.series : '';
+    typeof query.series === 'string' ? query.series : '';
   const all = getAllPosts();
   const posts = all.filter(
     (post) =>

@@ -10,19 +10,21 @@ import {
 } from '../../components/studio/StudioElements';
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 export const dynamic = 'force-dynamic';
-export function generateMetadata({ params }: Props) {
-  const project = getProject(params.slug);
+export async function generateMetadata({ params }: Props) {
+  const { slug } = await params;
+  const project = getProject(slug);
   return {
     title: project?.name || '项目未找到',
     description: project?.summary,
   };
 }
 
-export default function ProjectPage({ params }: Props) {
-  const project = getProject(params.slug);
+export default async function ProjectPage({ params }: Props) {
+  const { slug } = await params;
+  const project = getProject(slug);
   if (!project) notFound();
   const posts = getAllPosts().filter((post) =>
     post.projects.includes(project.id),
