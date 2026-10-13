@@ -12,9 +12,12 @@ jobs:
     name: CI
     runs-on: [self-hosted, aitool-ci]
     timeout-minutes: 25
-    env:
-      npm_config_cache: ${{ runner.tool_cache }}/npm-cache/aitool
     steps:
+      - name: Configure runner-local caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'npm_config_cache=%s/npm-cache/aitool\n' "${RUNNER_TOOL_CACHE:?}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4.4.0
         with:
           persist-credentials: false
