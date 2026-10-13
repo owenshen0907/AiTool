@@ -12,6 +12,8 @@ jobs:
     name: CI
     runs-on: [self-hosted, aitool-ci]
     timeout-minutes: 25
+    env:
+      npm_config_cache: ${{ runner.tool_cache }}/npm-cache/aitool
     steps:
       - uses: actions/checkout@v4.4.0
         with:
@@ -19,7 +21,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npm run check:security
       - run: npm run --if-present test:studio
