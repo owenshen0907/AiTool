@@ -13,13 +13,17 @@ jobs:
     runs-on: [self-hosted, aitool-ci]
     timeout-minutes: 25
     steps:
+      - name: Configure runner-local caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'npm_config_cache=%s/npm-cache/aitool\n' "${RUNNER_TOOL_CACHE:?}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4.4.0
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npm run check:security
       - run: npm run --if-present test:studio
