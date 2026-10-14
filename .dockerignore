@@ -1,0 +1,14 @@
+.git
+.github
+.next
+node_modules
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.bak
+*.bak-*
+docker-compose.override.yml*
+tests
